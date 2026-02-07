@@ -490,7 +490,6 @@ class PS2TextureSorter(ctk.CTk):
             child.pack_forget()
             child.place_forget()
             child.grid_forget()
-            child.master = container
             try:
                 child.pack(in_=container, fill="both", expand=True, padx=5, pady=5)
             except Exception:
@@ -516,7 +515,6 @@ class PS2TextureSorter(ctk.CTk):
             child.pack_forget()
             child.place_forget()
             child.grid_forget()
-            child.master = tab_frame
             try:
                 child.pack(in_=tab_frame, fill="both", expand=True, padx=5, pady=5)
             except Exception:
