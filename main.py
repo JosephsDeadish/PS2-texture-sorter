@@ -246,22 +246,24 @@ class PS2TextureSorter(ctk.CTk):
         self._load_initial_theme()
         
         # Configure window
-        self.title(f"{APP_NAME} v{APP_VERSION}")
+        self.title(f"🐼 {APP_NAME} v{APP_VERSION}")
         self.geometry("1200x800")
-        self.minsize(800, 600)  # Ensure critical UI elements remain accessible
+        self.minsize(900, 650)  # Minimum window size per requirements
         
-        # Set window icon
+        # Set window icon (both .ico for Windows and .png for fallback)
         try:
-            icon_path = Path(__file__).parent / "assets" / "icon.png"
-            if icon_path.exists():
-                from PIL import Image, ImageTk
-                icon_image = Image.open(str(icon_path))
-                self._icon_photo = ImageTk.PhotoImage(icon_image)
-                self.iconphoto(True, self._icon_photo)
+            # Try .ico first (better for Windows taskbar)
+            ico_path = Path(__file__).parent / "assets" / "icon.ico"
+            if ico_path.exists() and sys.platform == 'win32':
+                self.iconbitmap(str(ico_path))
             else:
-                ico_path = Path(__file__).parent / "assets" / "icon.ico"
-                if ico_path.exists():
-                    self.iconbitmap(str(ico_path))
+                # Fallback to .png
+                icon_path = Path(__file__).parent / "assets" / "icon.png"
+                if icon_path.exists():
+                    from PIL import Image, ImageTk
+                    icon_image = Image.open(str(icon_path))
+                    self._icon_photo = ImageTk.PhotoImage(icon_image)
+                    self.iconphoto(True, self._icon_photo)
         except Exception as e:
             logger.debug(f"Could not set window icon: {e}")
         
@@ -346,7 +348,7 @@ class PS2TextureSorter(ctk.CTk):
         self.destroy()
     
     def _load_initial_theme(self):
-        """Load theme settings from config on startup"""
+        """Load theme and UI scaling settings from config on startup"""
         try:
             # Get theme from config
             theme = config.get('ui', 'theme', default='dark')
@@ -358,6 +360,17 @@ class PS2TextureSorter(ctk.CTk):
                 ctk.set_appearance_mode('dark')
             
             ctk.set_default_color_theme("blue")
+            
+            # Load and apply UI scaling
+            scale_value = config.get('ui', 'scale', default='100%')
+            try:
+                scale_percent = int(scale_value.rstrip('%'))
+                scale_factor = scale_percent / 100.0
+                ctk.set_widget_scaling(scale_factor)
+                ctk.set_window_scaling(scale_factor)
+            except Exception as scale_err:
+                print(f"Warning: Failed to apply UI scaling: {scale_err}")
+                
         except Exception as e:
             print(f"Warning: Failed to load theme: {e}")
             ctk.set_appearance_mode("dark")
@@ -433,8 +446,8 @@ class PS2TextureSorter(ctk.CTk):
         self.tabview = ctk.CTkTabview(main_frame)
         self.tabview.pack(fill="both", expand=True)
         
-        # Create tabs
-        self.tab_sort = self.tabview.add("🗂️ Sort Textures")
+        # Create tabs with panda emojis on key tabs
+        self.tab_sort = self.tabview.add("🐼 Sort Textures")
         self.tab_convert = self.tabview.add("🔄 Convert Files")
         self.tab_browser = self.tabview.add("📁 File Browser")
         self.tab_achievements = self.tabview.add("🏆 Achievements")
@@ -651,13 +664,13 @@ class PS2TextureSorter(ctk.CTk):
         button_frame = ctk.CTkFrame(self.tab_sort)
         button_frame.pack(fill="x", padx=10, pady=10)
         
-        self.start_button = ctk.CTkButton(button_frame, text="▶️ Start Sorting", 
+        self.start_button = ctk.CTkButton(button_frame, text="🐼 Start Sorting", 
                                            command=self.start_sorting, 
                                            width=150, height=40,
                                            font=("Arial Bold", 14))
         self.start_button.pack(side="left", padx=10)
         
-        self.organize_button = ctk.CTkButton(button_frame, text="📂 Organize Now",
+        self.organize_button = ctk.CTkButton(button_frame, text="🐼 Organize Now",
                                               command=self.start_sorting,
                                               width=150, height=40,
                                               font=("Arial Bold", 14),
@@ -795,16 +808,27 @@ class PS2TextureSorter(ctk.CTk):
         button_frame = ctk.CTkFrame(content_frame)
         button_frame.pack(fill="x", padx=10, pady=10)
         
-        self.convert_start_button = ctk.CTkButton(button_frame, text="🔄 Start Conversion", 
-                                                  command=self.start_conversion,
-                                                  width=150, height=40,
-                                                  font=("Arial Bold", 14))
-        self.convert_start_button.pack(side="left", padx=10)
+        # BIGGER, MORE VISIBLE Start Conversion button with panda emoji
+        self.convert_start_button = ctk.CTkButton(
+            button_frame, 
+            text="🐼 START CONVERSION 🐼", 
+            command=self.start_conversion,
+            width=250, 
+            height=60,
+            font=("Arial Bold", 18),
+            fg_color="#2B7A0B",  # Prominent green color
+            hover_color="#368B14"
+        )
+        self.convert_start_button.pack(side="left", padx=20, pady=10)
     
     def start_conversion(self):
         """Start batch conversion"""
+        # Read ALL tkinter variable values BEFORE starting thread (thread-safety fix)
         input_path = self.convert_input_var.get()
         output_path = self.convert_output_var.get()
+        from_format = self.convert_from_var.get().lower()
+        to_format = self.convert_to_var.get().lower()
+        recursive = self.convert_recursive_var.get()
         
         if not input_path:
             self.convert_log("⚠️ Please select an input directory")
@@ -812,9 +836,6 @@ class PS2TextureSorter(ctk.CTk):
         if not output_path:
             self.convert_log("⚠️ Please select an output directory")
             return
-        
-        from_format = self.convert_from_var.get().lower()
-        to_format = self.convert_to_var.get().lower()
         
         if from_format == to_format:
             self.convert_log("⚠️ Source and target formats are the same")
@@ -830,17 +851,20 @@ class PS2TextureSorter(ctk.CTk):
         # Disable start button
         self.convert_start_button.configure(state="disabled")
         
-        # Start conversion in background thread
-        threading.Thread(target=self.conversion_thread, daemon=True).start()
+        # Start conversion in background thread with all parameters
+        threading.Thread(
+            target=self.conversion_thread,
+            args=(input_path, output_path, from_format, to_format, recursive),
+            daemon=True
+        ).start()
     
-    def conversion_thread(self):
+    def conversion_thread(self, input_path_str, output_path_str, from_format, to_format, recursive):
         """Background thread for file conversion"""
         try:
-            input_path = Path(self.convert_input_var.get())
-            output_path = Path(self.convert_output_var.get())
-            from_format = f".{self.convert_from_var.get().lower()}"
-            to_format = f".{self.convert_to_var.get().lower()}"
-            recursive = self.convert_recursive_var.get()
+            input_path = Path(input_path_str)
+            output_path = Path(output_path_str)
+            from_format = f".{from_format}"
+            to_format = f".{to_format}"
             
             # Scan for files
             self.after(0, lambda: self.convert_progress_bar.set(0.1))
@@ -926,16 +950,136 @@ class PS2TextureSorter(ctk.CTk):
         self.convert_log_text.see("end")
     
     def create_browser_tab(self):
-        """Create file browser tab"""
-        ctk.CTkLabel(self.tab_browser, text="Sorted Files Browser",
-                     font=("Arial Bold", 16)).pack(pady=20)
+        """Create file browser tab with directory browsing and file preview"""
+        # Header
+        header_frame = ctk.CTkFrame(self.tab_browser)
+        header_frame.pack(fill="x", padx=10, pady=10)
         
-        info_frame = ctk.CTkFrame(self.tab_browser)
-        info_frame.pack(pady=50, padx=50, fill="both", expand=True)
+        ctk.CTkLabel(header_frame, text="📁 File Browser",
+                     font=("Arial Bold", 16)).pack(side="left", padx=10)
         
-        ctk.CTkLabel(info_frame,
-                     text="🚧 File browser coming soon! 🚧\n\nNavigate and preview sorted textures.",
-                     font=("Arial", 14)).pack(expand=True)
+        # Browse button
+        ctk.CTkButton(header_frame, text="📂 Browse Directory", 
+                     command=self.browser_select_directory,
+                     width=150).pack(side="right", padx=10)
+        
+        # Refresh button
+        ctk.CTkButton(header_frame, text="🔄 Refresh", 
+                     command=self.browser_refresh,
+                     width=100).pack(side="right", padx=5)
+        
+        # Path display
+        path_frame = ctk.CTkFrame(self.tab_browser)
+        path_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(path_frame, text="Path:").pack(side="left", padx=5)
+        self.browser_path_var = ctk.StringVar(value="No directory selected")
+        self.browser_path_label = ctk.CTkLabel(path_frame, textvariable=self.browser_path_var,
+                                               font=("Arial", 10), anchor="w")
+        self.browser_path_label.pack(side="left", fill="x", expand=True, padx=5)
+        
+        # Main content area - split into two panes
+        content_frame = ctk.CTkFrame(self.tab_browser)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Left pane - Directory tree (placeholder)
+        left_pane = ctk.CTkFrame(content_frame, width=250)
+        left_pane.pack(side="left", fill="both", expand=False, padx=(0, 5))
+        
+        ctk.CTkLabel(left_pane, text="📂 Folders", 
+                    font=("Arial Bold", 12)).pack(pady=5)
+        
+        self.browser_folder_list = ctk.CTkTextbox(left_pane, width=250, height=500)
+        self.browser_folder_list.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Right pane - File list with info
+        right_pane = ctk.CTkFrame(content_frame)
+        right_pane.pack(side="left", fill="both", expand=True)
+        
+        ctk.CTkLabel(right_pane, text="📄 Files", 
+                    font=("Arial Bold", 12)).pack(pady=5)
+        
+        # File list (scrollable)
+        self.browser_file_list = ctk.CTkScrollableFrame(right_pane, height=450)
+        self.browser_file_list.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Info panel at bottom
+        info_panel = ctk.CTkFrame(right_pane)
+        info_panel.pack(fill="x", padx=5, pady=5)
+        
+        ctk.CTkLabel(info_panel, text="ℹ️ File Info:", 
+                    font=("Arial Bold", 11)).pack(anchor="w", padx=5, pady=2)
+        self.browser_file_info = ctk.CTkLabel(info_panel, 
+                                              text="No file selected",
+                                              font=("Arial", 10),
+                                              anchor="w",
+                                              justify="left")
+        self.browser_file_info.pack(anchor="w", padx=5, pady=2)
+        
+        # Status
+        self.browser_status = ctk.CTkLabel(self.tab_browser, 
+                                           text="Select a directory to browse",
+                                           font=("Arial", 9))
+        self.browser_status.pack(pady=5)
+    
+    def browser_select_directory(self):
+        """Select directory for file browser"""
+        directory = filedialog.askdirectory(title="Select Directory to Browse")
+        if directory:
+            self.browser_path_var.set(directory)
+            self.browser_current_dir = Path(directory)
+            self.browser_refresh()
+    
+    def browser_refresh(self):
+        """Refresh file browser content"""
+        if not hasattr(self, 'browser_current_dir'):
+            return
+        
+        try:
+            # Clear current file list
+            for widget in self.browser_file_list.winfo_children():
+                widget.destroy()
+            
+            # Get all texture files
+            texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+            files = [f for f in self.browser_current_dir.iterdir() 
+                    if f.is_file() and f.suffix.lower() in texture_extensions]
+            
+            # Display files
+            if not files:
+                ctk.CTkLabel(self.browser_file_list, 
+                           text="No texture files found in this directory",
+                           font=("Arial", 11)).pack(pady=20)
+            else:
+                for file in sorted(files)[:100]:  # Limit to first 100 for performance
+                    self._create_file_entry(file)
+            
+            # Update folder list
+            self.browser_folder_list.delete("1.0", "end")
+            folders = [f for f in self.browser_current_dir.iterdir() if f.is_dir()]
+            for folder in sorted(folders):
+                self.browser_folder_list.insert("end", f"📁 {folder.name}\n")
+            
+            # Update status
+            self.browser_status.configure(text=f"Found {len(files)} texture file(s)")
+            
+        except Exception as e:
+            self.browser_status.configure(text=f"Error: {e}")
+    
+    def _create_file_entry(self, file_path):
+        """Create a file entry widget"""
+        entry_frame = ctk.CTkFrame(self.browser_file_list)
+        entry_frame.pack(fill="x", padx=5, pady=2)
+        
+        # File icon and name
+        file_info = f"📄 {file_path.name}"
+        file_size = file_path.stat().st_size
+        size_str = f"{file_size / 1024:.1f} KB" if file_size < 1024*1024 else f"{file_size / (1024*1024):.1f} MB"
+        
+        ctk.CTkLabel(entry_frame, text=file_info, 
+                    font=("Arial", 10), anchor="w").pack(side="left", fill="x", expand=True)
+        ctk.CTkLabel(entry_frame, text=size_str, 
+                    font=("Arial", 9), text_color="gray").pack(side="right", padx=5)
     
     def apply_theme(self, theme_name):
         """Apply selected theme"""
@@ -944,6 +1088,28 @@ class PS2TextureSorter(ctk.CTk):
             self.log(f"Theme changed to: {theme_name}")
         else:
             self.log(f"Custom theme '{theme_name}' - feature coming soon!")
+    
+    def apply_ui_scaling(self, scale_value):
+        """Apply UI scaling"""
+        try:
+            # Extract percentage value (e.g., "100%" -> 1.0)
+            scale_percent = int(scale_value.rstrip('%'))
+            scale_factor = scale_percent / 100.0
+            
+            # Apply scaling
+            ctk.set_widget_scaling(scale_factor)
+            ctk.set_window_scaling(scale_factor)
+            
+            # Save to config
+            config.set('ui', 'scale', value=scale_value)
+            
+            self.log(f"✅ UI scale set to {scale_value}")
+            if GUI_AVAILABLE:
+                messagebox.showinfo("UI Scale", 
+                    f"UI scale set to {scale_value}.\n"
+                    "Some changes may require restarting the application.")
+        except Exception as e:
+            self.log(f"❌ Error applying UI scale: {e}")
     
     def open_customization(self):
         """Open UI customization dialog"""
@@ -1020,11 +1186,11 @@ class PS2TextureSorter(ctk.CTk):
         cache_entry = ctk.CTkEntry(cache_frame, textvariable=cache_var, width=100)
         cache_entry.pack(side="left", padx=10)
         
-        # === UI SETTINGS ===
+        # === APPEARANCE & CUSTOMIZATION (merged UI Settings + UI Customization) ===
         ui_frame = ctk.CTkFrame(settings_scroll)
         ui_frame.pack(fill="x", padx=10, pady=10)
         
-        ctk.CTkLabel(ui_frame, text="🎨 UI Settings", 
+        ctk.CTkLabel(ui_frame, text="🎨 Appearance & Customization", 
                      font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
         
         # Theme
@@ -1034,9 +1200,26 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(theme_frame, text="Theme:").pack(side="left", padx=10)
         theme_var = ctk.StringVar(value=config.get('ui', 'theme', default='dark'))
         theme_menu = ctk.CTkOptionMenu(theme_frame, variable=theme_var,
-                                       values=["dark", "light", "cyberpunk", "neon", "classic"],
+                                       values=["dark", "light", "cyberpunk", "neon_dreams", 
+                                              "classic_windows", "vulgar_panda"],
                                        command=self.apply_theme)
         theme_menu.pack(side="left", padx=10)
+        
+        # UI Scaling
+        scale_frame = ctk.CTkFrame(ui_frame)
+        scale_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(scale_frame, text="UI Scale:").pack(side="left", padx=10)
+        scale_var = ctk.StringVar(value=config.get('ui', 'scale', default='100%'))
+        scale_menu = ctk.CTkOptionMenu(
+            scale_frame, 
+            variable=scale_var,
+            values=["80%", "90%", "100%", "110%", "120%", "130%", "150%"],
+            command=lambda val: self.apply_ui_scaling(val)
+        )
+        scale_menu.pack(side="left", padx=10)
+        ctk.CTkLabel(scale_frame, text="(applies immediately)", 
+                    font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
         # Tooltip verbosity
         tooltip_frame = ctk.CTkFrame(ui_frame)
@@ -1056,6 +1239,22 @@ class PS2TextureSorter(ctk.CTk):
         cursor_var = ctk.StringVar(value=config.get('ui', 'cursor_style', default='default'))
         cursor_menu = ctk.CTkOptionMenu(cursor_frame, variable=cursor_var,
                                         values=["default", "skull", "panda", "sword"])
+        cursor_menu.pack(side="left", padx=10)
+        
+        # Panda Mode toggle
+        panda_var = ctk.BooleanVar(value=config.get('ui', 'panda_mode_enabled', default=True))
+        ctk.CTkCheckBox(ui_frame, text="🐼 Enable Panda Mode", 
+                       variable=panda_var).pack(anchor="w", padx=20, pady=5)
+        
+        # Vulgar Mode toggle (for panda)
+        vulgar_var = ctk.BooleanVar(value=config.get('ui', 'vulgar_mode', default=False))
+        ctk.CTkCheckBox(ui_frame, text="💀 Vulgar Panda Mode (uncensored responses)", 
+                       variable=vulgar_var).pack(anchor="w", padx=20, pady=3)
+        
+        # Advanced Customization button
+        ctk.CTkButton(ui_frame, text="🎨 Advanced Color & Font Customization",
+                     command=self.open_customization,
+                     width=280, height=35).pack(padx=20, pady=10)
         cursor_menu.pack(side="left", padx=10)
         
         # === FILE HANDLING SETTINGS ===
@@ -1122,17 +1321,6 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkCheckBox(notif_frame, text="Alert on operation completion", 
                        variable=completion_var).pack(anchor="w", padx=20, pady=3)
         
-        # === CUSTOMIZATION SECTION ===
-        custom_frame = ctk.CTkFrame(settings_scroll)
-        custom_frame.pack(fill="x", padx=10, pady=10)
-        
-        ctk.CTkLabel(custom_frame, text="🎨 UI Customization", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
-        
-        ctk.CTkButton(custom_frame, text="Open Customization Panel",
-                     command=self.open_customization,
-                     width=250, height=35).pack(padx=20, pady=10)
-        
         # === SAVE BUTTON ===
         def save_settings_window():
             try:
@@ -1141,10 +1329,13 @@ class PS2TextureSorter(ctk.CTk):
                 config.set('performance', 'memory_limit_mb', value=int(memory_var.get()))
                 config.set('performance', 'thumbnail_cache_size', value=int(cache_var.get()))
                 
-                # UI
+                # UI / Appearance & Customization
                 config.set('ui', 'theme', value=theme_var.get())
+                config.set('ui', 'scale', value=scale_var.get())
                 config.set('ui', 'tooltip_mode', value=tooltip_var.get())
                 config.set('ui', 'cursor_style', value=cursor_var.get())
+                config.set('ui', 'panda_mode_enabled', value=panda_var.get())
+                config.set('ui', 'vulgar_mode', value=vulgar_var.get())
                 
                 # File Handling
                 config.set('file_handling', 'create_backup', value=backup_var.get())
@@ -1314,41 +1505,164 @@ class PS2TextureSorter(ctk.CTk):
                         font=("Arial", 12)).pack(pady=20)
     
     def create_notepad_tab(self):
-        """Create notepad tab"""
-        ctk.CTkLabel(self.tab_notepad, text="Personal Notes",
-                     font=("Arial Bold", 16)).pack(pady=10)
+        """Create notepad tab with multiple note tabs support"""
+        # Header with title
+        header_frame = ctk.CTkFrame(self.tab_notepad)
+        header_frame.pack(fill="x", pady=10, padx=10)
         
-        self.notepad_text = ctk.CTkTextbox(self.tab_notepad, width=1000, height=600)
-        self.notepad_text.pack(padx=20, pady=10, fill="both", expand=True)
+        ctk.CTkLabel(header_frame, text="📝 Personal Notes",
+                     font=("Arial Bold", 16)).pack(side="left", padx=10)
         
-        # Load saved notes
-        self.load_notes()
+        # Add new note button
+        ctk.CTkButton(header_frame, text="➕ New Note", width=100,
+                     command=self.add_new_note_tab).pack(side="right", padx=10)
+        
+        # Tabview for multiple notes
+        self.notes_tabview = ctk.CTkTabview(self.tab_notepad)
+        self.notes_tabview.pack(padx=10, pady=10, fill="both", expand=True)
+        
+        # Dictionary to store note textboxes
+        self.note_textboxes = {}
+        
+        # Load all notes or create default
+        self.load_all_notes()
         
         # Buttons
         button_frame = ctk.CTkFrame(self.tab_notepad)
         button_frame.pack(pady=10)
         
-        ctk.CTkButton(button_frame, text="Save Notes", width=100, command=self.save_notes).pack(side="left", padx=5)
-        ctk.CTkButton(button_frame, text="Clear", width=100, command=self.clear_notes).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="💾 Save All Notes", width=130, 
+                     command=self.save_all_notes).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="🗑️ Delete Current Note", width=150,
+                     command=self.delete_current_note).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="✏️ Rename Current Note", width=150,
+                     command=self.rename_current_note).pack(side="left", padx=5)
     
-    def load_notes(self):
-        """Load notes from config directory"""
+    def add_new_note_tab(self, name=None, content=""):
+        """Add a new note tab"""
+        if name is None:
+            # Ask for note name
+            import tkinter.simpledialog as simpledialog
+            name = simpledialog.askstring("New Note", "Enter note name:", 
+                                         initialvalue=f"Note {len(self.note_textboxes) + 1}")
+            if not name:
+                return  # User cancelled
+        
+        # Limit to 20 tabs
+        if len(self.note_textboxes) >= 20:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Limit Reached", "Maximum 20 note tabs allowed.")
+            return
+        
+        # Check if name already exists
+        if name in self.note_textboxes:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Duplicate Name", "A note with this name already exists.")
+            return
+        
+        # Create new tab
+        new_tab = self.notes_tabview.add(name)
+        
+        # Create textbox in the tab
+        textbox = ctk.CTkTextbox(new_tab, width=1000, height=550)
+        textbox.pack(padx=5, pady=5, fill="both", expand=True)
+        textbox.insert("1.0", content)
+        
+        # Store reference
+        self.note_textboxes[name] = textbox
+        
+        # Switch to new tab
+        self.notes_tabview.set(name)
+    
+    def delete_current_note(self):
+        """Delete the currently selected note tab"""
+        current_tab = self.notes_tabview.get()
+        
+        # Don't delete if it's the last tab
+        if len(self.note_textboxes) <= 1:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Cannot Delete", "You must have at least one note tab.")
+            return
+        
+        # Confirm deletion
+        if GUI_AVAILABLE:
+            result = messagebox.askyesno("Delete Note", 
+                                        f"Are you sure you want to delete '{current_tab}'? This cannot be undone.")
+            if not result:
+                return
+        
+        # Remove from dictionary
+        if current_tab in self.note_textboxes:
+            del self.note_textboxes[current_tab]
+        
+        # Delete the tab
+        self.notes_tabview.delete(current_tab)
+        
+        # Save after deletion
+        self.save_all_notes()
+    
+    def rename_current_note(self):
+        """Rename the currently selected note tab"""
+        current_tab = self.notes_tabview.get()
+        
+        # Ask for new name
+        import tkinter.simpledialog as simpledialog
+        new_name = simpledialog.askstring("Rename Note", "Enter new name:", 
+                                         initialvalue=current_tab)
+        if not new_name or new_name == current_tab:
+            return  # User cancelled or same name
+        
+        # Check if new name already exists
+        if new_name in self.note_textboxes:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Duplicate Name", "A note with this name already exists.")
+            return
+        
+        # Get current content
+        content = self.note_textboxes[current_tab].get("1.0", "end-1c")
+        
+        # Delete old tab
+        del self.note_textboxes[current_tab]
+        self.notes_tabview.delete(current_tab)
+        
+        # Create new tab with new name
+        self.add_new_note_tab(name=new_name, content=content)
+        
+        # Save after rename
+        self.save_all_notes()
+    
+    def load_all_notes(self):
+        """Load all notes from config directory"""
         try:
             import json
             notes_file = Path.home() / ".ps2_texture_sorter" / "notes.json"
+            
             if notes_file.exists():
                 with open(notes_file, 'r', encoding='utf-8') as f:
                     notes_data = json.load(f)
-                    content = notes_data.get('content', '')
-                    self.notepad_text.delete("1.0", "end")
-                    self.notepad_text.insert("1.0", content)
-        except (json.JSONDecodeError, IOError, PermissionError) as e:
-            logger.warning(f"Failed to load notes (file may be corrupted or inaccessible): {e}")
+                    
+                    # Load multiple notes
+                    if 'notes' in notes_data and isinstance(notes_data['notes'], dict):
+                        for name, content in notes_data['notes'].items():
+                            self.add_new_note_tab(name=name, content=content)
+                    # Legacy: load old single note format
+                    elif 'content' in notes_data:
+                        self.add_new_note_tab(name="General Notes", content=notes_data['content'])
+                    else:
+                        # Empty file, create default
+                        self.add_new_note_tab(name="General Notes", content="")
+            else:
+                # No file, create default
+                self.add_new_note_tab(name="General Notes", content="")
+                
         except Exception as e:
             logger.warning(f"Failed to load notes: {e}")
+            # Create default on error
+            if len(self.note_textboxes) == 0:
+                self.add_new_note_tab(name="General Notes", content="")
     
-    def save_notes(self):
-        """Save notes to config directory"""
+    def save_all_notes(self):
+        """Save all notes to config directory"""
         try:
             import json
             from datetime import datetime
@@ -1357,95 +1671,233 @@ class PS2TextureSorter(ctk.CTk):
             config_dir = Path.home() / ".ps2_texture_sorter"
             config_dir.mkdir(parents=True, exist_ok=True)
             
-            # Get current content
-            content = self.notepad_text.get("1.0", "end-1c")
+            # Collect all notes
+            all_notes = {}
+            for name, textbox in self.note_textboxes.items():
+                content = textbox.get("1.0", "end-1c")
+                all_notes[name] = content
             
             # Save to JSON
             notes_file = config_dir / "notes.json"
             
-            # Get existing created timestamp if file exists
-            created_timestamp = datetime.now().isoformat()
-            if notes_file.exists():
-                try:
-                    with open(notes_file, 'r', encoding='utf-8') as f:
-                        existing_data = json.load(f)
-                        created_timestamp = existing_data.get('created', created_timestamp)
-                except Exception:
-                    pass  # Use new timestamp if can't read existing
-            
             notes_data = {
-                'content': content,
-                'last_modified': datetime.now().isoformat(),
-                'created': created_timestamp
+                'notes': all_notes,
+                'last_modified': datetime.now().isoformat()
             }
             
             with open(notes_file, 'w', encoding='utf-8') as f:
                 json.dump(notes_data, f, indent=2)
             
             if GUI_AVAILABLE:
-                messagebox.showinfo("Notes Saved", "Your notes have been saved successfully!")
+                messagebox.showinfo("Notes Saved", f"All {len(all_notes)} note(s) have been saved successfully!")
         except Exception as e:
             logger.error(f"Failed to save notes: {e}")
             if GUI_AVAILABLE:
                 messagebox.showerror("Error", f"Failed to save notes: {e}")
     
+    # Keep legacy methods for compatibility but update them
+    def load_notes(self):
+        """Legacy method - redirects to load_all_notes"""
+        self.load_all_notes()
+    
+    def save_notes(self):
+        """Legacy method - redirects to save_all_notes"""
+        self.save_all_notes()
+    
     def clear_notes(self):
-        """Clear notepad content with confirmation"""
-        if GUI_AVAILABLE:
-            result = messagebox.askyesno("Clear Notes", "Are you sure you want to clear all notes? This cannot be undone.")
-            if result:
-                self.notepad_text.delete("1.0", "end")
-                self.save_notes()  # Save the empty state
-        else:
-            self.notepad_text.delete("1.0", "end")
+        """Clear current note content with confirmation"""
+        current_tab = self.notes_tabview.get()
+        if current_tab in self.note_textboxes:
+            if GUI_AVAILABLE:
+                result = messagebox.askyesno("Clear Note", 
+                                            f"Are you sure you want to clear '{current_tab}'? This cannot be undone.")
+                if result:
+                    self.note_textboxes[current_tab].delete("1.0", "end")
+                    self.save_all_notes()
+            else:
+                self.note_textboxes[current_tab].delete("1.0", "end")
     
     def create_about_tab(self):
-        """Create about tab"""
-        about_frame = ctk.CTkFrame(self.tab_about)
-        about_frame.pack(pady=50, padx=50, fill="both", expand=True)
+        """Create comprehensive about tab with hotkeys, features, and panda info"""
+        # Create scrollable frame for all content
+        scrollable_frame = ctk.CTkScrollableFrame(self.tab_about)
+        scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Title
-        ctk.CTkLabel(about_frame, text=f"🐼 {APP_NAME} 🐼",
-                     font=("Arial Bold", 24)).pack(pady=20)
+        # ============= TITLE & VERSION =============
+        ctk.CTkLabel(scrollable_frame, text=f"🐼 {APP_NAME} 🐼",
+                     font=("Arial Bold", 28)).pack(pady=15)
         
-        # Version
-        ctk.CTkLabel(about_frame, text=f"Version {APP_VERSION}",
-                     font=("Arial", 14)).pack(pady=5)
+        ctk.CTkLabel(scrollable_frame, text=f"Version {APP_VERSION}",
+                     font=("Arial", 16)).pack(pady=5)
         
-        # Author
-        ctk.CTkLabel(about_frame, text=f"Author: {APP_AUTHOR}",
-                     font=("Arial", 12)).pack(pady=5)
+        ctk.CTkLabel(scrollable_frame, text=f"by {APP_AUTHOR}",
+                     font=("Arial", 14), text_color="gray").pack(pady=5)
         
-        # Description
-        desc_text = """
-A professional, single-executable Windows application for automatically 
+        # ============= DESCRIPTION =============
+        desc_frame = ctk.CTkFrame(scrollable_frame)
+        desc_frame.pack(fill="x", padx=20, pady=15)
+        
+        desc_text = """A professional, single-executable Windows application for automatically 
 sorting PS2 texture dumps with advanced AI classification and massive-scale 
-support (200,000+ textures).
-
-Features:
-• 50+ texture categories with AI classification
-• LOD detection and grouping
-• DDS ↔ PNG conversion
-• Database indexing for massive libraries
-• Multiple organization styles
-• Panda-themed modern UI
-• 100% offline operation
-        """
+support (200,000+ textures). 100% offline operation."""
         
-        ctk.CTkLabel(about_frame, text=desc_text,
-                     font=("Arial", 11), justify="left").pack(pady=20)
+        ctk.CTkLabel(desc_frame, text=desc_text,
+                     font=("Arial", 12), justify="left", wraplength=900).pack(pady=15, padx=15)
+        
+        # ============= KEYBOARD SHORTCUTS =============
+        hotkeys_frame = ctk.CTkFrame(scrollable_frame)
+        hotkeys_frame.pack(fill="x", padx=20, pady=15)
+        
+        ctk.CTkLabel(hotkeys_frame, text="⌨️ KEYBOARD SHORTCUTS",
+                     font=("Arial Bold", 18)).pack(pady=10)
+        
+        # Define hotkeys by category
+        hotkey_categories = {
+            "📁 File Operations": [
+                ("Ctrl+O", "Open files"),
+                ("Ctrl+S", "Save results"),
+                ("Ctrl+E", "Export data"),
+                ("Alt+F4", "Close application")
+            ],
+            "⚙️ Processing": [
+                ("Ctrl+P", "Start processing"),
+                ("Ctrl+Shift+P", "Pause processing"),
+                ("Ctrl+Shift+S", "Stop processing"),
+                ("Ctrl+R", "Resume processing")
+            ],
+            "👁️ View": [
+                ("Ctrl+T", "Toggle preview panel"),
+                ("F5", "Refresh view"),
+                ("F11", "Toggle fullscreen"),
+                ("Ctrl+B", "Toggle sidebar")
+            ],
+            "🧭 Navigation": [
+                ("Right Arrow", "Next texture"),
+                ("Left Arrow", "Previous texture"),
+                ("Home", "First texture"),
+                ("End", "Last texture")
+            ],
+            "✅ Selection": [
+                ("Ctrl+A", "Select all"),
+                ("Ctrl+D", "Deselect all"),
+                ("Ctrl+I", "Invert selection")
+            ],
+            "🔧 Tools": [
+                ("Ctrl+F", "Search"),
+                ("Ctrl+Shift+F", "Filter"),
+                ("Ctrl+,", "Settings"),
+                ("Ctrl+Shift+T", "Statistics")
+            ],
+            "🐼 Special Features": [
+                ("Ctrl+Shift+A", "View achievements"),
+                ("Ctrl+M", "Toggle sound"),
+                ("F1", "Help / Tutorial")
+            ],
+            "🌍 Global (works when app not focused)": [
+                ("Ctrl+Alt+P", "Global start processing"),
+                ("Ctrl+Alt+Space", "Global pause")
+            ]
+        }
+        
+        # Display hotkeys by category
+        for category, hotkeys in hotkey_categories.items():
+            cat_frame = ctk.CTkFrame(hotkeys_frame)
+            cat_frame.pack(fill="x", padx=15, pady=8)
+            
+            ctk.CTkLabel(cat_frame, text=category,
+                        font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+            
+            for key, description in hotkeys:
+                hotkey_row = ctk.CTkFrame(cat_frame)
+                hotkey_row.pack(fill="x", padx=20, pady=2)
+                
+                ctk.CTkLabel(hotkey_row, text=key,
+                            font=("Courier Bold", 11), width=180, 
+                            anchor="w").pack(side="left", padx=5)
+                ctk.CTkLabel(hotkey_row, text=description,
+                            font=("Arial", 11), anchor="w").pack(side="left", padx=5)
+        
+        # ============= FEATURES =============
+        features_frame = ctk.CTkFrame(scrollable_frame)
+        features_frame.pack(fill="x", padx=20, pady=15)
+        
+        ctk.CTkLabel(features_frame, text="✨ FEATURES",
+                     font=("Arial Bold", 18)).pack(pady=10)
+        
+        features_list = [
+            "🎯 50+ texture categories with AI classification",
+            "🔍 LOD detection and grouping",
+            "🔄 DDS ↔ PNG conversion",
+            "💾 Database indexing for massive libraries (200,000+ textures)",
+            "📂 Multiple organization styles (Sims, Neopets, Flat, Game Area, etc.)",
+            "🎨 Modern panda-themed UI with multiple themes",
+            "🏆 Achievement system with unlockables",
+            "📊 Statistics and analytics tracking",
+            "🔎 Advanced search and filtering",
+            "📝 Built-in notepad for project notes",
+            "🖼️ File browser with thumbnail preview",
+            "🎮 Panda Mode with fun animations and quotes",
+            "🔊 Sound effects and audio feedback",
+            "📚 Interactive tutorial system",
+            "⚡ Batch processing and automation",
+            "🛡️ 100% offline operation - no network calls"
+        ]
+        
+        for feature in features_list:
+            ctk.CTkLabel(features_frame, text=feature,
+                        font=("Arial", 11), anchor="w").pack(anchor="w", padx=20, pady=3)
+        
+        # ============= PANDA MODE =============
+        panda_frame = ctk.CTkFrame(scrollable_frame)
+        panda_frame.pack(fill="x", padx=20, pady=15)
+        
+        ctk.CTkLabel(panda_frame, text="🐼 PANDA MODE",
+                     font=("Arial Bold", 18)).pack(pady=10)
+        
+        panda_text = """Panda Mode adds personality and fun to the texture sorting experience!
+
+• Random panda facts and jokes during processing
+• Encouraging messages and progress celebrations
+• Easter eggs and surprises hidden throughout the app
+• Vulgar Mode toggle for uncensored panda commentary (off by default)
+• Animated panda helper that reacts to your actions
+• Click the panda for random responses and interactions
+
+Panda Mode can be customized in Settings → Appearance & Customization."""
+        
+        ctk.CTkLabel(panda_frame, text=panda_text,
+                     font=("Arial", 11), justify="left", wraplength=900).pack(pady=10, padx=20)
+        
+        # ============= CREDITS =============
+        credits_frame = ctk.CTkFrame(scrollable_frame)
+        credits_frame.pack(fill="x", padx=20, pady=15)
+        
+        ctk.CTkLabel(credits_frame, text="👥 CREDITS",
+                     font=("Arial Bold", 18)).pack(pady=10)
+        
+        credits_text = """Developed with 🐼 by Dead On The Inside / JosephsDeadish
+
+Built with:
+• Python 3.8+
+• CustomTkinter for modern UI
+• PIL/Pillow for image processing
+• NumPy for texture analysis
+• And lots of bamboo 🎋"""
+        
+        ctk.CTkLabel(credits_frame, text=credits_text,
+                     font=("Arial", 11), justify="left").pack(pady=10, padx=20)
         
         # Repository link
-        ctk.CTkLabel(about_frame, 
+        ctk.CTkLabel(credits_frame, 
                      text="Repository: JosephsDeadish/PS2-texture-sorter",
                      font=("Arial", 10), text_color="gray").pack(pady=5)
     
     def create_status_bar(self):
-        """Create bottom status bar"""
+        """Create bottom status bar with panda indicator"""
         status_frame = ctk.CTkFrame(self, height=30, corner_radius=0)
         status_frame.pack(fill="x", side="bottom")
         
-        self.status_label = ctk.CTkLabel(status_frame, text="Ready", font=("Arial", 10))
+        self.status_label = ctk.CTkLabel(status_frame, text="🐼 Ready", font=("Arial", 10))
         self.status_label.pack(side="left", padx=10, pady=5)
     
     def browse_input(self):
@@ -1470,8 +1922,14 @@ Features:
     
     def start_sorting(self):
         """Start texture sorting operation"""
+        # Read ALL tkinter variable values BEFORE starting thread (thread-safety fix)
         input_path = self.input_path_var.get()
         output_path = self.output_path_var.get()
+        mode = self.mode_var.get()
+        style = self.style_var.get()
+        detect_lods = self.detect_lods_var.get()
+        group_lods = self.group_lods_var.get()
+        detect_duplicates = self.detect_duplicates_var.get()
         
         if not input_path or not output_path:
             messagebox.showerror("Error", "Please select both input and output directories")
@@ -1485,8 +1943,8 @@ Features:
         self.log("Starting texture sorting operation...")
         self.log(f"Input: {input_path}")
         self.log(f"Output: {output_path}")
-        self.log(f"Mode: {self.mode_var.get()}")
-        self.log(f"Style: {self.style_var.get()}")
+        self.log(f"Mode: {mode}")
+        self.log(f"Style: {style}")
         self.log("=" * 60)
         
         # Disable start buttons
@@ -1495,20 +1953,18 @@ Features:
         self.pause_button.configure(state="normal")
         self.stop_button.configure(state="normal")
         
-        # Start sorting in background thread
-        threading.Thread(target=self.sort_textures_thread, daemon=True).start()
+        # Start sorting in background thread with all parameters
+        threading.Thread(
+            target=self.sort_textures_thread,
+            args=(input_path, output_path, mode, style, detect_lods, group_lods, detect_duplicates),
+            daemon=True
+        ).start()
     
-    def sort_textures_thread(self):
+    def sort_textures_thread(self, input_path_str, output_path_str, mode, style_name, detect_lods, group_lods, detect_duplicates):
         """Background thread for texture sorting with full organization system"""
         try:
-            input_path = Path(self.input_path_var.get())
-            output_path = Path(self.output_path_var.get())
-            
-            # Get options
-            detect_lods = self.detect_lods_var.get()
-            group_lods = self.group_lods_var.get()
-            detect_duplicates = self.detect_duplicates_var.get()
-            style_name = self.style_var.get()
+            input_path = Path(input_path_str)
+            output_path = Path(output_path_str)
             
             # Scan for texture files
             self.update_progress(0.05, "Scanning directory...")
