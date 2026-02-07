@@ -5,7 +5,7 @@ Automatically detects and groups LOD textures
 
 import re
 from pathlib import Path
-from typing import List, Dict, Set, Tuple
+from typing import List, Dict, Set, Tuple, Optional
 from collections import defaultdict
 
 

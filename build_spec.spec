@@ -23,6 +23,11 @@ SCRIPT_DIR = Path(SPECPATH)
 SRC_DIR = SCRIPT_DIR / 'src'
 RESOURCES_DIR = SRC_DIR / 'resources'
 
+# Check if custom icon exists
+ICON_PATH = RESOURCES_DIR / 'icons' / 'panda_icon.ico'
+if not ICON_PATH.exists():
+    ICON_PATH = None  # Will use default PyInstaller icon
+
 # Collect all Python files
 a = Analysis(
     ['main.py'],
@@ -94,7 +99,7 @@ exe = EXE(
     entitlements_file=None,
     # Windows-specific options
     version='file_version_info.txt',  # Version info file
-    icon='src/resources/icons/panda_icon.ico',  # Application icon
+    icon=str(ICON_PATH) if ICON_PATH else None,  # Application icon (use default if not found)
     uac_admin=False,  # Don't require admin
     uac_uiaccess=False,
 )
