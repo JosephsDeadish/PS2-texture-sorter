@@ -221,6 +221,20 @@ class TutorialManager:
         # Dark background
         overlay_frame = ctk.CTkFrame(self.overlay, fg_color="#000000")
         overlay_frame.pack(fill="both", expand=True)
+        
+        # Add click handler to overlay to prevent getting stuck
+        # Clicking the overlay will bring tutorial window to front or close tutorial if window is gone
+        overlay_frame.bind("<Button-1>", self._on_overlay_click)
+    
+    def _on_overlay_click(self, event=None):
+        """Handle clicks on the overlay - bring tutorial to front or close if missing"""
+        if self.tutorial_window and self.tutorial_window.winfo_exists():
+            # Tutorial window exists, bring it to front
+            self.tutorial_window.lift()
+            self.tutorial_window.focus_force()
+        else:
+            # Tutorial window is gone but overlay remains - clean up
+            self._complete_tutorial()
     
     def _show_step(self, step_index: int):
         """Display a tutorial step"""
@@ -238,6 +252,10 @@ class TutorialManager:
         self.tutorial_window = ctk.CTkToplevel(self.master)
         self.tutorial_window.title(step.title)
         self.tutorial_window.attributes('-topmost', True)
+        
+        # Set protocol handler for window close button (X)
+        # This ensures overlay is properly destroyed when user closes the window
+        self.tutorial_window.protocol("WM_DELETE_WINDOW", self._complete_tutorial)
         
         # Center the window
         window_width = 500
@@ -332,8 +350,21 @@ class TutorialManager:
     
     def _skip_tutorial(self):
         """Skip the tutorial"""
-        if messagebox.askyesno("Skip Tutorial", "Are you sure you want to skip the tutorial? You can restart it later from Settings."):
-            self._complete_tutorial()
+        # Temporarily lower overlay so messagebox is visible
+        if self.overlay:
+            self.overlay.attributes('-topmost', False)
+        
+        try:
+            result = messagebox.askyesno(
+                "Skip Tutorial", 
+                "Are you sure you want to skip the tutorial? You can restart it later from Settings."
+            )
+            if result:
+                self._complete_tutorial()
+        finally:
+            # Restore overlay topmost if tutorial is still active
+            if self.overlay and self.tutorial_active:
+                self.overlay.attributes('-topmost', True)
     
     def _complete_tutorial(self):
         """Complete and close the tutorial"""
