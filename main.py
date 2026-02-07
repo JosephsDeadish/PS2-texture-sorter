@@ -1066,11 +1066,11 @@ class PS2TextureSorter(ctk.CTk):
         cache_entry = ctk.CTkEntry(cache_frame, textvariable=cache_var, width=100)
         cache_entry.pack(side="left", padx=10)
         
-        # === UI SETTINGS ===
+        # === APPEARANCE & CUSTOMIZATION (merged UI Settings + UI Customization) ===
         ui_frame = ctk.CTkFrame(settings_scroll)
         ui_frame.pack(fill="x", padx=10, pady=10)
         
-        ctk.CTkLabel(ui_frame, text="🎨 UI Settings", 
+        ctk.CTkLabel(ui_frame, text="🎨 Appearance & Customization", 
                      font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
         
         # Theme
@@ -1080,7 +1080,8 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(theme_frame, text="Theme:").pack(side="left", padx=10)
         theme_var = ctk.StringVar(value=config.get('ui', 'theme', default='dark'))
         theme_menu = ctk.CTkOptionMenu(theme_frame, variable=theme_var,
-                                       values=["dark", "light", "cyberpunk", "neon", "classic"],
+                                       values=["dark", "light", "cyberpunk", "neon_dreams", 
+                                              "classic_windows", "vulgar_panda"],
                                        command=self.apply_theme)
         theme_menu.pack(side="left", padx=10)
         
@@ -1097,7 +1098,7 @@ class PS2TextureSorter(ctk.CTk):
             command=lambda val: self.apply_ui_scaling(val)
         )
         scale_menu.pack(side="left", padx=10)
-        ctk.CTkLabel(scale_frame, text="(requires restart)", 
+        ctk.CTkLabel(scale_frame, text="(applies immediately)", 
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
         # Tooltip verbosity
@@ -1118,6 +1119,22 @@ class PS2TextureSorter(ctk.CTk):
         cursor_var = ctk.StringVar(value=config.get('ui', 'cursor_style', default='default'))
         cursor_menu = ctk.CTkOptionMenu(cursor_frame, variable=cursor_var,
                                         values=["default", "skull", "panda", "sword"])
+        cursor_menu.pack(side="left", padx=10)
+        
+        # Panda Mode toggle
+        panda_var = ctk.BooleanVar(value=config.get('ui', 'panda_mode_enabled', default=True))
+        ctk.CTkCheckBox(ui_frame, text="🐼 Enable Panda Mode", 
+                       variable=panda_var).pack(anchor="w", padx=20, pady=5)
+        
+        # Vulgar Mode toggle (for panda)
+        vulgar_var = ctk.BooleanVar(value=config.get('ui', 'vulgar_mode', default=False))
+        ctk.CTkCheckBox(ui_frame, text="💀 Vulgar Panda Mode (uncensored responses)", 
+                       variable=vulgar_var).pack(anchor="w", padx=20, pady=3)
+        
+        # Advanced Customization button
+        ctk.CTkButton(ui_frame, text="🎨 Advanced Color & Font Customization",
+                     command=self.open_customization,
+                     width=280, height=35).pack(padx=20, pady=10)
         cursor_menu.pack(side="left", padx=10)
         
         # === FILE HANDLING SETTINGS ===
@@ -1184,17 +1201,6 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkCheckBox(notif_frame, text="Alert on operation completion", 
                        variable=completion_var).pack(anchor="w", padx=20, pady=3)
         
-        # === CUSTOMIZATION SECTION ===
-        custom_frame = ctk.CTkFrame(settings_scroll)
-        custom_frame.pack(fill="x", padx=10, pady=10)
-        
-        ctk.CTkLabel(custom_frame, text="🎨 UI Customization", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
-        
-        ctk.CTkButton(custom_frame, text="Open Customization Panel",
-                     command=self.open_customization,
-                     width=250, height=35).pack(padx=20, pady=10)
-        
         # === SAVE BUTTON ===
         def save_settings_window():
             try:
@@ -1203,11 +1209,13 @@ class PS2TextureSorter(ctk.CTk):
                 config.set('performance', 'memory_limit_mb', value=int(memory_var.get()))
                 config.set('performance', 'thumbnail_cache_size', value=int(cache_var.get()))
                 
-                # UI
+                # UI / Appearance & Customization
                 config.set('ui', 'theme', value=theme_var.get())
                 config.set('ui', 'scale', value=scale_var.get())
                 config.set('ui', 'tooltip_mode', value=tooltip_var.get())
                 config.set('ui', 'cursor_style', value=cursor_var.get())
+                config.set('ui', 'panda_mode_enabled', value=panda_var.get())
+                config.set('ui', 'vulgar_mode', value=vulgar_var.get())
                 
                 # File Handling
                 config.set('file_handling', 'create_backup', value=backup_var.get())
