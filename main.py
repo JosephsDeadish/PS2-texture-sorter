@@ -950,16 +950,136 @@ class PS2TextureSorter(ctk.CTk):
         self.convert_log_text.see("end")
     
     def create_browser_tab(self):
-        """Create file browser tab"""
-        ctk.CTkLabel(self.tab_browser, text="Sorted Files Browser",
-                     font=("Arial Bold", 16)).pack(pady=20)
+        """Create file browser tab with directory browsing and file preview"""
+        # Header
+        header_frame = ctk.CTkFrame(self.tab_browser)
+        header_frame.pack(fill="x", padx=10, pady=10)
         
-        info_frame = ctk.CTkFrame(self.tab_browser)
-        info_frame.pack(pady=50, padx=50, fill="both", expand=True)
+        ctk.CTkLabel(header_frame, text="📁 File Browser",
+                     font=("Arial Bold", 16)).pack(side="left", padx=10)
         
-        ctk.CTkLabel(info_frame,
-                     text="🚧 File browser coming soon! 🚧\n\nNavigate and preview sorted textures.",
-                     font=("Arial", 14)).pack(expand=True)
+        # Browse button
+        ctk.CTkButton(header_frame, text="📂 Browse Directory", 
+                     command=self.browser_select_directory,
+                     width=150).pack(side="right", padx=10)
+        
+        # Refresh button
+        ctk.CTkButton(header_frame, text="🔄 Refresh", 
+                     command=self.browser_refresh,
+                     width=100).pack(side="right", padx=5)
+        
+        # Path display
+        path_frame = ctk.CTkFrame(self.tab_browser)
+        path_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(path_frame, text="Path:").pack(side="left", padx=5)
+        self.browser_path_var = ctk.StringVar(value="No directory selected")
+        self.browser_path_label = ctk.CTkLabel(path_frame, textvariable=self.browser_path_var,
+                                               font=("Arial", 10), anchor="w")
+        self.browser_path_label.pack(side="left", fill="x", expand=True, padx=5)
+        
+        # Main content area - split into two panes
+        content_frame = ctk.CTkFrame(self.tab_browser)
+        content_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Left pane - Directory tree (placeholder)
+        left_pane = ctk.CTkFrame(content_frame, width=250)
+        left_pane.pack(side="left", fill="both", expand=False, padx=(0, 5))
+        
+        ctk.CTkLabel(left_pane, text="📂 Folders", 
+                    font=("Arial Bold", 12)).pack(pady=5)
+        
+        self.browser_folder_list = ctk.CTkTextbox(left_pane, width=250, height=500)
+        self.browser_folder_list.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Right pane - File list with info
+        right_pane = ctk.CTkFrame(content_frame)
+        right_pane.pack(side="left", fill="both", expand=True)
+        
+        ctk.CTkLabel(right_pane, text="📄 Files", 
+                    font=("Arial Bold", 12)).pack(pady=5)
+        
+        # File list (scrollable)
+        self.browser_file_list = ctk.CTkScrollableFrame(right_pane, height=450)
+        self.browser_file_list.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Info panel at bottom
+        info_panel = ctk.CTkFrame(right_pane)
+        info_panel.pack(fill="x", padx=5, pady=5)
+        
+        ctk.CTkLabel(info_panel, text="ℹ️ File Info:", 
+                    font=("Arial Bold", 11)).pack(anchor="w", padx=5, pady=2)
+        self.browser_file_info = ctk.CTkLabel(info_panel, 
+                                              text="No file selected",
+                                              font=("Arial", 10),
+                                              anchor="w",
+                                              justify="left")
+        self.browser_file_info.pack(anchor="w", padx=5, pady=2)
+        
+        # Status
+        self.browser_status = ctk.CTkLabel(self.tab_browser, 
+                                           text="Select a directory to browse",
+                                           font=("Arial", 9))
+        self.browser_status.pack(pady=5)
+    
+    def browser_select_directory(self):
+        """Select directory for file browser"""
+        directory = filedialog.askdirectory(title="Select Directory to Browse")
+        if directory:
+            self.browser_path_var.set(directory)
+            self.browser_current_dir = Path(directory)
+            self.browser_refresh()
+    
+    def browser_refresh(self):
+        """Refresh file browser content"""
+        if not hasattr(self, 'browser_current_dir'):
+            return
+        
+        try:
+            # Clear current file list
+            for widget in self.browser_file_list.winfo_children():
+                widget.destroy()
+            
+            # Get all texture files
+            texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+            files = [f for f in self.browser_current_dir.iterdir() 
+                    if f.is_file() and f.suffix.lower() in texture_extensions]
+            
+            # Display files
+            if not files:
+                ctk.CTkLabel(self.browser_file_list, 
+                           text="No texture files found in this directory",
+                           font=("Arial", 11)).pack(pady=20)
+            else:
+                for file in sorted(files)[:100]:  # Limit to first 100 for performance
+                    self._create_file_entry(file)
+            
+            # Update folder list
+            self.browser_folder_list.delete("1.0", "end")
+            folders = [f for f in self.browser_current_dir.iterdir() if f.is_dir()]
+            for folder in sorted(folders):
+                self.browser_folder_list.insert("end", f"📁 {folder.name}\n")
+            
+            # Update status
+            self.browser_status.configure(text=f"Found {len(files)} texture file(s)")
+            
+        except Exception as e:
+            self.browser_status.configure(text=f"Error: {e}")
+    
+    def _create_file_entry(self, file_path):
+        """Create a file entry widget"""
+        entry_frame = ctk.CTkFrame(self.browser_file_list)
+        entry_frame.pack(fill="x", padx=5, pady=2)
+        
+        # File icon and name
+        file_info = f"📄 {file_path.name}"
+        file_size = file_path.stat().st_size
+        size_str = f"{file_size / 1024:.1f} KB" if file_size < 1024*1024 else f"{file_size / (1024*1024):.1f} MB"
+        
+        ctk.CTkLabel(entry_frame, text=file_info, 
+                    font=("Arial", 10), anchor="w").pack(side="left", fill="x", expand=True)
+        ctk.CTkLabel(entry_frame, text=size_str, 
+                    font=("Arial", 9), text_color="gray").pack(side="right", padx=5)
     
     def apply_theme(self, theme_name):
         """Apply selected theme"""
