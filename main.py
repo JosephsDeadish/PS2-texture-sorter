@@ -843,7 +843,7 @@ class PS2TextureSorter(ctk.CTk):
             recursive = self.convert_recursive_var.get()
             
             # Scan for files
-            self.after(0, self.convert_progress_bar.set, 0.1)
+            self.after(0, lambda: self.convert_progress_bar.set(0.1))
             self.after(0, lambda: self.convert_progress_label.configure(text="Scanning files..."))
             
             if recursive:
@@ -887,7 +887,7 @@ class PS2TextureSorter(ctk.CTk):
                     
                     # Progress
                     progress = 0.1 + (0.9 * (i + 1) / total)
-                    self.after(0, self.convert_progress_bar.set, progress)
+                    self.after(0, lambda p=progress: self.convert_progress_bar.set(p))
                     self.after(0, lambda i=i, total=total: self.convert_progress_label.configure(text=f"Converting {i+1}/{total}..."))
                     
                     # Log every 10th file
@@ -900,7 +900,7 @@ class PS2TextureSorter(ctk.CTk):
                         self.convert_log(f"❌ Failed: {file_path.name} - {str(e)[:50]}")
             
             # Complete
-            self.after(0, self.convert_progress_bar.set, 1.0)
+            self.after(0, lambda: self.convert_progress_bar.set(1.0))
             self.after(0, lambda: self.convert_progress_label.configure(text="Conversion complete!"))
             self.convert_log("=" * 60)
             self.convert_log("✓ BATCH CONVERSION COMPLETED!")
