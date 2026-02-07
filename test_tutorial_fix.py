@@ -83,7 +83,8 @@ try:
     checks = {
         "overlay topmost lowering": "attributes('-topmost', False)" in skip_tutorial_code,
         "try-finally block": "try:" in skip_tutorial_code and "finally:" in skip_tutorial_code,
-        "overlay topmost restoration": "attributes('-topmost', True)" in skip_tutorial_code
+        "tutorial window lift": "tutorial_window.lift()" in skip_tutorial_code,
+        "focus management on cancel": "focus_force()" in skip_tutorial_code
     }
     
     all_passed = True
@@ -109,12 +110,14 @@ print()
 print("Summary of fixes:")
 print("  1. ✓ WM_DELETE_WINDOW protocol handler added to tutorial window")
 print("  2. ✓ Overlay click handler (_on_overlay_click) implemented")
-print("  3. ✓ _skip_tutorial now handles overlay topmost properly")
+print("  3. ✓ Z-order management ensures tutorial window is always above overlay")
+print("  4. ✓ _skip_tutorial properly manages window focus and lift")
 print()
 print("These fixes ensure:")
 print("  • Clicking X button closes tutorial and removes overlay")
 print("  • Clicking overlay brings tutorial to front or closes if missing")
-print("  • Skip dialog is visible and doesn't leave overlay stuck")
+print("  • Tutorial window is ALWAYS above overlay (no z-order conflicts)")
+print("  • Skip dialog is visible and properly closes tutorial")
 print()
 
 # Bonus: Show the actual changes

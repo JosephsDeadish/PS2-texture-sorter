@@ -230,6 +230,10 @@ class TutorialManager:
         """Handle clicks on the overlay - bring tutorial to front or close if missing"""
         if self.tutorial_window and self.tutorial_window.winfo_exists():
             # Tutorial window exists, bring it to front
+            # Ensure overlay stays below tutorial window
+            if self.overlay:
+                self.overlay.attributes('-topmost', False)
+            self.tutorial_window.attributes('-topmost', True)
             self.tutorial_window.lift()
             self.tutorial_window.focus_force()
         else:
@@ -251,7 +255,6 @@ class TutorialManager:
         
         self.tutorial_window = ctk.CTkToplevel(self.master)
         self.tutorial_window.title(step.title)
-        self.tutorial_window.attributes('-topmost', True)
         
         # Set protocol handler for window close button (X)
         # This ensures overlay is properly destroyed when user closes the window
@@ -265,6 +268,16 @@ class TutorialManager:
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
         self.tutorial_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        
+        # CRITICAL: Ensure tutorial window is above overlay in z-order
+        # Lower overlay topmost temporarily so tutorial window can be on top
+        if self.overlay:
+            self.overlay.attributes('-topmost', False)
+        
+        # Make tutorial window topmost and lift it above everything
+        self.tutorial_window.attributes('-topmost', True)
+        self.tutorial_window.lift()
+        self.tutorial_window.focus_force()
         
         # Content frame
         content = ctk.CTkFrame(self.tutorial_window)
@@ -354,6 +367,10 @@ class TutorialManager:
         if self.overlay:
             self.overlay.attributes('-topmost', False)
         
+        # Also ensure tutorial window is above overlay
+        if self.tutorial_window:
+            self.tutorial_window.lift()
+        
         try:
             result = messagebox.askyesno(
                 "Skip Tutorial", 
@@ -361,10 +378,15 @@ class TutorialManager:
             )
             if result:
                 self._complete_tutorial()
+            else:
+                # User chose not to skip, ensure tutorial window is on top
+                if self.tutorial_window:
+                    self.tutorial_window.lift()
+                    self.tutorial_window.focus_force()
         finally:
-            # Restore overlay topmost if tutorial is still active
-            if self.overlay and self.tutorial_active:
-                self.overlay.attributes('-topmost', True)
+            # Don't restore overlay topmost - keep it below tutorial window
+            # The overlay should always be below the tutorial window
+            pass
     
     def _complete_tutorial(self):
         """Complete and close the tutorial"""
