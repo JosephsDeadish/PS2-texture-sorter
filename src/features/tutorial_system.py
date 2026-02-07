@@ -249,6 +249,8 @@ class TutorialManager:
         step = self.steps[step_index]
         self.current_step = step_index
         
+        logger.debug(f"Showing tutorial step {step_index + 1}/{len(self.steps)}: {step.title}")
+        
         # Create tutorial dialog
         if self.tutorial_window:
             self.tutorial_window.destroy()
@@ -273,11 +275,13 @@ class TutorialManager:
         # Lower overlay topmost temporarily so tutorial window can be on top
         if self.overlay:
             self.overlay.attributes('-topmost', False)
+            logger.debug("Lowered overlay topmost to ensure tutorial window is clickable")
         
         # Make tutorial window topmost and lift it above everything
         self.tutorial_window.attributes('-topmost', True)
         self.tutorial_window.lift()
         self.tutorial_window.focus_force()
+        logger.debug("Tutorial window raised above overlay and focused")
         
         # Content frame
         content = ctk.CTkFrame(self.tutorial_window)
@@ -390,6 +394,8 @@ class TutorialManager:
     
     def _complete_tutorial(self):
         """Complete and close the tutorial"""
+        logger.info("Completing tutorial")
+        
         # Check if user wants to skip tutorial in future
         if hasattr(self, 'dont_show_var') and self.dont_show_var.get():
             self.config.set('tutorial', 'completed', True)
@@ -403,10 +409,12 @@ class TutorialManager:
         if self.tutorial_window:
             self.tutorial_window.destroy()
             self.tutorial_window = None
+            logger.debug("Tutorial window destroyed")
         
         if self.overlay:
             self.overlay.destroy()
             self.overlay = None
+            logger.debug("Overlay destroyed")
         
         self.tutorial_active = False
         
