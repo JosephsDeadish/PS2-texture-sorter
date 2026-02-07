@@ -11,7 +11,11 @@ import sys
 import os
 import time
 import threading
+import logging
 from pathlib import Path
+
+# Setup logging
+logger = logging.getLogger(__name__)
 
 # Add src directory to path
 src_dir = Path(__file__).parent
@@ -856,12 +860,71 @@ class PS2TextureSorter(ctk.CTk):
         self.notepad_text = ctk.CTkTextbox(self.tab_notepad, width=1000, height=600)
         self.notepad_text.pack(padx=20, pady=10, fill="both", expand=True)
         
+        # Load saved notes
+        self.load_notes()
+        
         # Buttons
         button_frame = ctk.CTkFrame(self.tab_notepad)
         button_frame.pack(pady=10)
         
-        ctk.CTkButton(button_frame, text="Save Notes", width=100).pack(side="left", padx=5)
-        ctk.CTkButton(button_frame, text="Clear", width=100).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="Save Notes", width=100, command=self.save_notes).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="Clear", width=100, command=self.clear_notes).pack(side="left", padx=5)
+    
+    def load_notes(self):
+        """Load notes from config directory"""
+        try:
+            import json
+            notes_file = Path.home() / ".ps2_texture_sorter" / "notes.json"
+            if notes_file.exists():
+                with open(notes_file, 'r', encoding='utf-8') as f:
+                    notes_data = json.load(f)
+                    content = notes_data.get('content', '')
+                    self.notepad_text.delete("1.0", "end")
+                    self.notepad_text.insert("1.0", content)
+        except Exception as e:
+            logger.warning(f"Failed to load notes: {e}")
+    
+    def save_notes(self):
+        """Save notes to config directory"""
+        try:
+            import json
+            from datetime import datetime
+            
+            # Ensure config directory exists
+            config_dir = Path.home() / ".ps2_texture_sorter"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Get current content
+            content = self.notepad_text.get("1.0", "end-1c")
+            
+            # Save to JSON
+            notes_file = config_dir / "notes.json"
+            notes_data = {
+                'content': content,
+                'last_modified': datetime.now().isoformat(),
+                'created': datetime.now().isoformat() if not notes_file.exists() else 
+                          json.load(open(notes_file, 'r', encoding='utf-8')).get('created', datetime.now().isoformat())
+            }
+            
+            with open(notes_file, 'w', encoding='utf-8') as f:
+                json.dump(notes_data, f, indent=2)
+            
+            if GUI_AVAILABLE:
+                messagebox.showinfo("Notes Saved", "Your notes have been saved successfully!")
+        except Exception as e:
+            logger.error(f"Failed to save notes: {e}")
+            if GUI_AVAILABLE:
+                messagebox.showerror("Error", f"Failed to save notes: {e}")
+    
+    def clear_notes(self):
+        """Clear notepad content with confirmation"""
+        if GUI_AVAILABLE:
+            result = messagebox.askyesno("Clear Notes", "Are you sure you want to clear all notes? This cannot be undone.")
+            if result:
+                self.notepad_text.delete("1.0", "end")
+                self.save_notes()  # Save the empty state
+        else:
+            self.notepad_text.delete("1.0", "end")
     
     def create_about_tab(self):
         """Create about tab"""
@@ -926,6 +989,12 @@ Features:
             self.output_path_var.set(directory)
             self.log(f"Output directory selected: {directory}")
     
+    def browse_directory(self, target_var):
+        """Browse for a directory and set the target variable"""
+        directory = filedialog.askdirectory(title="Select Directory")
+        if directory:
+            target_var.set(directory)
+    
     def start_sorting(self):
         """Start texture sorting operation"""
         input_path = self.input_path_var.get()
@@ -964,7 +1033,7 @@ Features:
             # Get options
             detect_lods = self.detect_lods_var.get()
             group_lods = self.group_lods_var.get()
-            detect_duplicates = self.detect_dupes_var.get()
+            detect_duplicates = self.detect_duplicates_var.get()
             style_name = self.style_var.get()
             
             # Scan for texture files
