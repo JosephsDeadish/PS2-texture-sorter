@@ -348,7 +348,7 @@ class PS2TextureSorter(ctk.CTk):
         self.destroy()
     
     def _load_initial_theme(self):
-        """Load theme settings from config on startup"""
+        """Load theme and UI scaling settings from config on startup"""
         try:
             # Get theme from config
             theme = config.get('ui', 'theme', default='dark')
@@ -360,6 +360,17 @@ class PS2TextureSorter(ctk.CTk):
                 ctk.set_appearance_mode('dark')
             
             ctk.set_default_color_theme("blue")
+            
+            # Load and apply UI scaling
+            scale_value = config.get('ui', 'scale', default='100%')
+            try:
+                scale_percent = int(scale_value.rstrip('%'))
+                scale_factor = scale_percent / 100.0
+                ctk.set_widget_scaling(scale_factor)
+                ctk.set_window_scaling(scale_factor)
+            except Exception as scale_err:
+                print(f"Warning: Failed to apply UI scaling: {scale_err}")
+                
         except Exception as e:
             print(f"Warning: Failed to load theme: {e}")
             ctk.set_appearance_mode("dark")
@@ -958,6 +969,28 @@ class PS2TextureSorter(ctk.CTk):
         else:
             self.log(f"Custom theme '{theme_name}' - feature coming soon!")
     
+    def apply_ui_scaling(self, scale_value):
+        """Apply UI scaling"""
+        try:
+            # Extract percentage value (e.g., "100%" -> 1.0)
+            scale_percent = int(scale_value.rstrip('%'))
+            scale_factor = scale_percent / 100.0
+            
+            # Apply scaling
+            ctk.set_widget_scaling(scale_factor)
+            ctk.set_window_scaling(scale_factor)
+            
+            # Save to config
+            config.set('ui', 'scale', value=scale_value)
+            
+            self.log(f"✅ UI scale set to {scale_value}")
+            if GUI_AVAILABLE:
+                messagebox.showinfo("UI Scale", 
+                    f"UI scale set to {scale_value}.\n"
+                    "Some changes may require restarting the application.")
+        except Exception as e:
+            self.log(f"❌ Error applying UI scale: {e}")
+    
     def open_customization(self):
         """Open UI customization dialog"""
         if CUSTOMIZATION_AVAILABLE:
@@ -1050,6 +1083,22 @@ class PS2TextureSorter(ctk.CTk):
                                        values=["dark", "light", "cyberpunk", "neon", "classic"],
                                        command=self.apply_theme)
         theme_menu.pack(side="left", padx=10)
+        
+        # UI Scaling
+        scale_frame = ctk.CTkFrame(ui_frame)
+        scale_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(scale_frame, text="UI Scale:").pack(side="left", padx=10)
+        scale_var = ctk.StringVar(value=config.get('ui', 'scale', default='100%'))
+        scale_menu = ctk.CTkOptionMenu(
+            scale_frame, 
+            variable=scale_var,
+            values=["80%", "90%", "100%", "110%", "120%", "130%", "150%"],
+            command=lambda val: self.apply_ui_scaling(val)
+        )
+        scale_menu.pack(side="left", padx=10)
+        ctk.CTkLabel(scale_frame, text="(requires restart)", 
+                    font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
         # Tooltip verbosity
         tooltip_frame = ctk.CTkFrame(ui_frame)
@@ -1156,6 +1205,7 @@ class PS2TextureSorter(ctk.CTk):
                 
                 # UI
                 config.set('ui', 'theme', value=theme_var.get())
+                config.set('ui', 'scale', value=scale_var.get())
                 config.set('ui', 'tooltip_mode', value=tooltip_var.get())
                 config.set('ui', 'cursor_style', value=cursor_var.get())
                 
