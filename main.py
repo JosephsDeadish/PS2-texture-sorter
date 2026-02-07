@@ -1327,41 +1327,164 @@ class PS2TextureSorter(ctk.CTk):
                         font=("Arial", 12)).pack(pady=20)
     
     def create_notepad_tab(self):
-        """Create notepad tab"""
-        ctk.CTkLabel(self.tab_notepad, text="Personal Notes",
-                     font=("Arial Bold", 16)).pack(pady=10)
+        """Create notepad tab with multiple note tabs support"""
+        # Header with title
+        header_frame = ctk.CTkFrame(self.tab_notepad)
+        header_frame.pack(fill="x", pady=10, padx=10)
         
-        self.notepad_text = ctk.CTkTextbox(self.tab_notepad, width=1000, height=600)
-        self.notepad_text.pack(padx=20, pady=10, fill="both", expand=True)
+        ctk.CTkLabel(header_frame, text="📝 Personal Notes",
+                     font=("Arial Bold", 16)).pack(side="left", padx=10)
         
-        # Load saved notes
-        self.load_notes()
+        # Add new note button
+        ctk.CTkButton(header_frame, text="➕ New Note", width=100,
+                     command=self.add_new_note_tab).pack(side="right", padx=10)
+        
+        # Tabview for multiple notes
+        self.notes_tabview = ctk.CTkTabview(self.tab_notepad)
+        self.notes_tabview.pack(padx=10, pady=10, fill="both", expand=True)
+        
+        # Dictionary to store note textboxes
+        self.note_textboxes = {}
+        
+        # Load all notes or create default
+        self.load_all_notes()
         
         # Buttons
         button_frame = ctk.CTkFrame(self.tab_notepad)
         button_frame.pack(pady=10)
         
-        ctk.CTkButton(button_frame, text="Save Notes", width=100, command=self.save_notes).pack(side="left", padx=5)
-        ctk.CTkButton(button_frame, text="Clear", width=100, command=self.clear_notes).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="💾 Save All Notes", width=130, 
+                     command=self.save_all_notes).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="🗑️ Delete Current Note", width=150,
+                     command=self.delete_current_note).pack(side="left", padx=5)
+        ctk.CTkButton(button_frame, text="✏️ Rename Current Note", width=150,
+                     command=self.rename_current_note).pack(side="left", padx=5)
     
-    def load_notes(self):
-        """Load notes from config directory"""
+    def add_new_note_tab(self, name=None, content=""):
+        """Add a new note tab"""
+        if name is None:
+            # Ask for note name
+            import tkinter.simpledialog as simpledialog
+            name = simpledialog.askstring("New Note", "Enter note name:", 
+                                         initialvalue=f"Note {len(self.note_textboxes) + 1}")
+            if not name:
+                return  # User cancelled
+        
+        # Limit to 20 tabs
+        if len(self.note_textboxes) >= 20:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Limit Reached", "Maximum 20 note tabs allowed.")
+            return
+        
+        # Check if name already exists
+        if name in self.note_textboxes:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Duplicate Name", "A note with this name already exists.")
+            return
+        
+        # Create new tab
+        new_tab = self.notes_tabview.add(name)
+        
+        # Create textbox in the tab
+        textbox = ctk.CTkTextbox(new_tab, width=1000, height=550)
+        textbox.pack(padx=5, pady=5, fill="both", expand=True)
+        textbox.insert("1.0", content)
+        
+        # Store reference
+        self.note_textboxes[name] = textbox
+        
+        # Switch to new tab
+        self.notes_tabview.set(name)
+    
+    def delete_current_note(self):
+        """Delete the currently selected note tab"""
+        current_tab = self.notes_tabview.get()
+        
+        # Don't delete if it's the last tab
+        if len(self.note_textboxes) <= 1:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Cannot Delete", "You must have at least one note tab.")
+            return
+        
+        # Confirm deletion
+        if GUI_AVAILABLE:
+            result = messagebox.askyesno("Delete Note", 
+                                        f"Are you sure you want to delete '{current_tab}'? This cannot be undone.")
+            if not result:
+                return
+        
+        # Remove from dictionary
+        if current_tab in self.note_textboxes:
+            del self.note_textboxes[current_tab]
+        
+        # Delete the tab
+        self.notes_tabview.delete(current_tab)
+        
+        # Save after deletion
+        self.save_all_notes()
+    
+    def rename_current_note(self):
+        """Rename the currently selected note tab"""
+        current_tab = self.notes_tabview.get()
+        
+        # Ask for new name
+        import tkinter.simpledialog as simpledialog
+        new_name = simpledialog.askstring("Rename Note", "Enter new name:", 
+                                         initialvalue=current_tab)
+        if not new_name or new_name == current_tab:
+            return  # User cancelled or same name
+        
+        # Check if new name already exists
+        if new_name in self.note_textboxes:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("Duplicate Name", "A note with this name already exists.")
+            return
+        
+        # Get current content
+        content = self.note_textboxes[current_tab].get("1.0", "end-1c")
+        
+        # Delete old tab
+        del self.note_textboxes[current_tab]
+        self.notes_tabview.delete(current_tab)
+        
+        # Create new tab with new name
+        self.add_new_note_tab(name=new_name, content=content)
+        
+        # Save after rename
+        self.save_all_notes()
+    
+    def load_all_notes(self):
+        """Load all notes from config directory"""
         try:
             import json
             notes_file = Path.home() / ".ps2_texture_sorter" / "notes.json"
+            
             if notes_file.exists():
                 with open(notes_file, 'r', encoding='utf-8') as f:
                     notes_data = json.load(f)
-                    content = notes_data.get('content', '')
-                    self.notepad_text.delete("1.0", "end")
-                    self.notepad_text.insert("1.0", content)
-        except (json.JSONDecodeError, IOError, PermissionError) as e:
-            logger.warning(f"Failed to load notes (file may be corrupted or inaccessible): {e}")
+                    
+                    # Load multiple notes
+                    if 'notes' in notes_data and isinstance(notes_data['notes'], dict):
+                        for name, content in notes_data['notes'].items():
+                            self.add_new_note_tab(name=name, content=content)
+                    # Legacy: load old single note format
+                    elif 'content' in notes_data:
+                        self.add_new_note_tab(name="General Notes", content=notes_data['content'])
+                    else:
+                        # Empty file, create default
+                        self.add_new_note_tab(name="General Notes", content="")
+            else:
+                # No file, create default
+                self.add_new_note_tab(name="General Notes", content="")
+                
         except Exception as e:
             logger.warning(f"Failed to load notes: {e}")
+            # Create default on error
+            if len(self.note_textboxes) == 0:
+                self.add_new_note_tab(name="General Notes", content="")
     
-    def save_notes(self):
-        """Save notes to config directory"""
+    def save_all_notes(self):
+        """Save all notes to config directory"""
         try:
             import json
             from datetime import datetime
@@ -1370,47 +1493,51 @@ class PS2TextureSorter(ctk.CTk):
             config_dir = Path.home() / ".ps2_texture_sorter"
             config_dir.mkdir(parents=True, exist_ok=True)
             
-            # Get current content
-            content = self.notepad_text.get("1.0", "end-1c")
+            # Collect all notes
+            all_notes = {}
+            for name, textbox in self.note_textboxes.items():
+                content = textbox.get("1.0", "end-1c")
+                all_notes[name] = content
             
             # Save to JSON
             notes_file = config_dir / "notes.json"
             
-            # Get existing created timestamp if file exists
-            created_timestamp = datetime.now().isoformat()
-            if notes_file.exists():
-                try:
-                    with open(notes_file, 'r', encoding='utf-8') as f:
-                        existing_data = json.load(f)
-                        created_timestamp = existing_data.get('created', created_timestamp)
-                except Exception:
-                    pass  # Use new timestamp if can't read existing
-            
             notes_data = {
-                'content': content,
-                'last_modified': datetime.now().isoformat(),
-                'created': created_timestamp
+                'notes': all_notes,
+                'last_modified': datetime.now().isoformat()
             }
             
             with open(notes_file, 'w', encoding='utf-8') as f:
                 json.dump(notes_data, f, indent=2)
             
             if GUI_AVAILABLE:
-                messagebox.showinfo("Notes Saved", "Your notes have been saved successfully!")
+                messagebox.showinfo("Notes Saved", f"All {len(all_notes)} note(s) have been saved successfully!")
         except Exception as e:
             logger.error(f"Failed to save notes: {e}")
             if GUI_AVAILABLE:
                 messagebox.showerror("Error", f"Failed to save notes: {e}")
     
+    # Keep legacy methods for compatibility but update them
+    def load_notes(self):
+        """Legacy method - redirects to load_all_notes"""
+        self.load_all_notes()
+    
+    def save_notes(self):
+        """Legacy method - redirects to save_all_notes"""
+        self.save_all_notes()
+    
     def clear_notes(self):
-        """Clear notepad content with confirmation"""
-        if GUI_AVAILABLE:
-            result = messagebox.askyesno("Clear Notes", "Are you sure you want to clear all notes? This cannot be undone.")
-            if result:
-                self.notepad_text.delete("1.0", "end")
-                self.save_notes()  # Save the empty state
-        else:
-            self.notepad_text.delete("1.0", "end")
+        """Clear current note content with confirmation"""
+        current_tab = self.notes_tabview.get()
+        if current_tab in self.note_textboxes:
+            if GUI_AVAILABLE:
+                result = messagebox.askyesno("Clear Note", 
+                                            f"Are you sure you want to clear '{current_tab}'? This cannot be undone.")
+                if result:
+                    self.note_textboxes[current_tab].delete("1.0", "end")
+                    self.save_all_notes()
+            else:
+                self.note_textboxes[current_tab].delete("1.0", "end")
     
     def create_about_tab(self):
         """Create comprehensive about tab with hotkeys, features, and panda info"""
