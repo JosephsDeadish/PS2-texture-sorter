@@ -294,7 +294,7 @@ class PS2TextureSorter(ctk.CTk):
                                        values=["automatic", "manual", "suggested"])
         mode_menu.grid(row=0, column=1, padx=10, pady=5, sticky="w")
         
-        # Organization style
+        # Organization style (default: flat - simplest for new users)
         ctk.CTkLabel(opts_grid, text="Style:").grid(row=0, column=2, padx=10, pady=5, sticky="w")
         self.style_var = ctk.StringVar(value="flat")
         style_menu = ctk.CTkOptionMenu(opts_grid, variable=self.style_var,

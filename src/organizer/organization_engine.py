@@ -8,7 +8,7 @@ Main engine for organizing textures into hierarchical folder structures.
 import os
 import shutil
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Callable
+from typing import Dict, List, Tuple, Optional, Callable, Any
 from dataclasses import dataclass
 import re
 
@@ -52,7 +52,7 @@ class OrganizationEngine:
         self, 
         textures: List[TextureInfo],
         progress_callback: Optional[Callable[[int, int, str], None]] = None
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Organize textures according to the selected style.
         

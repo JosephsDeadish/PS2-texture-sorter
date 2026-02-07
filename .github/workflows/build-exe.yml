@@ -22,6 +22,10 @@ jobs:
     name: Build Windows EXE
     runs-on: windows-latest
     
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for workflow actions
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
