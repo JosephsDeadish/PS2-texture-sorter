@@ -66,14 +66,14 @@ except ImportError:
     print("Warning: Sound manager not available.")
 
 try:
-    from src.features.achievements import AchievementManager
+    from src.features.achievements import AchievementSystem
     ACHIEVEMENTS_AVAILABLE = True
 except ImportError:
     ACHIEVEMENTS_AVAILABLE = False
     print("Warning: Achievements system not available.")
 
 try:
-    from src.features.unlockables_system import UnlockablesManager
+    from src.features.unlockables_system import UnlockablesSystem
     UNLOCKABLES_AVAILABLE = True
 except ImportError:
     UNLOCKABLES_AVAILABLE = False
@@ -94,10 +94,11 @@ except ImportError:
     print("Warning: Search filter not available.")
 
 try:
-    from src.features.tutorial_system import setup_tutorial_system, TooltipMode
+    from src.features.tutorial_system import setup_tutorial_system, TooltipMode, WidgetTooltip
     TUTORIAL_AVAILABLE = True
 except ImportError:
     TUTORIAL_AVAILABLE = False
+    WidgetTooltip = None
     print("Warning: Tutorial system not available.")
 
 try:
@@ -248,6 +249,24 @@ class PS2TextureSorter(ctk.CTk):
         self.title(f"{APP_NAME} v{APP_VERSION}")
         self.geometry("1200x800")
         
+        # Set window icon
+        try:
+            icon_path = Path(__file__).parent / "assets" / "icon.png"
+            if icon_path.exists():
+                from PIL import Image, ImageTk
+                icon_image = Image.open(str(icon_path))
+                self._icon_photo = ImageTk.PhotoImage(icon_image)
+                self.iconphoto(True, self._icon_photo)
+            else:
+                ico_path = Path(__file__).parent / "assets" / "icon.ico"
+                if ico_path.exists():
+                    self.iconbitmap(str(ico_path))
+        except Exception as e:
+            logger.debug(f"Could not set window icon: {e}")
+        
+        # Set close handler to ensure clean shutdown
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        
         # Initialize core components
         self.classifier = TextureClassifier(config)
         self.lod_detector = LODDetector()
@@ -274,9 +293,10 @@ class PS2TextureSorter(ctk.CTk):
                 if SOUND_AVAILABLE:
                     self.sound_manager = SoundManager()
                 if ACHIEVEMENTS_AVAILABLE:
-                    self.achievement_manager = AchievementManager(config)
+                    achievements_save = str(Path.home() / ".ps2_texture_sorter" / "achievements.json")
+                    self.achievement_manager = AchievementSystem(save_file=achievements_save)
                 if UNLOCKABLES_AVAILABLE:
-                    self.unlockables_manager = UnlockablesManager(config)
+                    self.unlockables_manager = UnlockablesSystem()
                 if STATISTICS_AVAILABLE:
                     self.stats_tracker = StatisticsTracker(config)
                 if SEARCH_FILTER_AVAILABLE:
@@ -301,16 +321,38 @@ class PS2TextureSorter(ctk.CTk):
         # Status
         self.current_operation = None
     
+    def _on_close(self):
+        """Handle window close to ensure clean shutdown"""
+        try:
+            # Close tutorial if active
+            if self.tutorial_manager and self.tutorial_manager.tutorial_active:
+                self.tutorial_manager._complete_tutorial()
+            
+            # Close any pop-out windows
+            if hasattr(self, '_popout_windows'):
+                for win in list(self._popout_windows.values()):
+                    try:
+                        if win.winfo_exists():
+                            win.destroy()
+                    except Exception:
+                        pass
+            
+            # Save config
+            config.save()
+        except Exception as e:
+            logger.debug(f"Error during shutdown cleanup: {e}")
+        
+        self.destroy()
+    
     def _load_initial_theme(self):
         """Load theme settings from config on startup"""
         try:
             # Get theme from config
             theme = config.get('ui', 'theme', default='dark')
-            appearance_mode = config.get('ui', 'appearance_mode', default='dark')
             
             # Apply appearance mode
-            if appearance_mode in ['dark', 'light']:
-                ctk.set_appearance_mode(appearance_mode)
+            if theme in ['dark', 'light']:
+                ctk.set_appearance_mode(theme)
             else:
                 ctk.set_appearance_mode('dark')
             
@@ -360,6 +402,25 @@ class PS2TextureSorter(ctk.CTk):
             command=self.open_settings_window
         )
         settings_button.pack(side="right", padx=10, pady=5)
+        
+        # Tutorial button - always visible so user can restart tutorial
+        if TUTORIAL_AVAILABLE:
+            tutorial_button = ctk.CTkButton(
+                menu_frame,
+                text="📖 Tutorial",
+                width=100,
+                command=self._run_tutorial
+            )
+            tutorial_button.pack(side="right", padx=10, pady=5)
+    
+    def _run_tutorial(self):
+        """Start or restart the tutorial"""
+        if self.tutorial_manager:
+            self.tutorial_manager.reset_tutorial()
+            self.tutorial_manager.start_tutorial()
+        else:
+            if GUI_AVAILABLE:
+                messagebox.showinfo("Tutorial", "Tutorial system is not available.")
     
     def create_main_ui(self):
         """Create main tabbed interface"""
@@ -380,6 +441,9 @@ class PS2TextureSorter(ctk.CTk):
         self.tab_notepad = self.tabview.add("📝 Notepad")
         self.tab_about = self.tabview.add("ℹ️ About")
         
+        # Track popped-out tabs
+        self._popout_windows = {}
+        
         # Populate tabs
         self.create_sort_tab()
         self.create_convert_tab()
@@ -389,8 +453,109 @@ class PS2TextureSorter(ctk.CTk):
         self.create_notepad_tab()
         self.create_about_tab()
         
+        # Add pop-out buttons to dockable tabs
+        self._add_popout_buttons()
+        
         # Status bar
         self.create_status_bar()
+    
+    def _add_popout_buttons(self):
+        """Add pop-out/undock buttons to secondary tabs"""
+        dockable_tabs = {
+            "📝 Notepad": self.tab_notepad,
+            "🏆 Achievements": self.tab_achievements,
+            "🎁 Rewards": self.tab_rewards,
+            "📁 File Browser": self.tab_browser,
+            "ℹ️ About": self.tab_about,
+        }
+        for tab_name, tab_frame in dockable_tabs.items():
+            btn = ctk.CTkButton(
+                tab_frame, text="⬗ Pop Out", width=90, height=26,
+                font=("Arial", 11),
+                fg_color="gray40",
+                command=lambda n=tab_name: self._popout_tab(n)
+            )
+            btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+            if WidgetTooltip:
+                WidgetTooltip(btn, f"Open {tab_name} in a separate window")
+    
+    def _popout_tab(self, tab_name):
+        """Pop out a tab into its own window"""
+        if tab_name in self._popout_windows:
+            # Already popped out, bring to front
+            win = self._popout_windows[tab_name]
+            if win.winfo_exists():
+                win.lift()
+                win.focus_force()
+                return
+        
+        # Get the tab frame and its children
+        tab_frame = self.tabview.tab(tab_name)
+        children_info = []
+        for child in tab_frame.winfo_children():
+            children_info.append(child)
+        
+        # Create pop-out window
+        popout = ctk.CTkToplevel(self)
+        popout.title(tab_name)
+        popout.geometry("800x600")
+        self._popout_windows[tab_name] = popout
+        
+        # Reparent all children to the pop-out window
+        container = ctk.CTkFrame(popout)
+        container.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        for child in children_info:
+            child.pack_forget()
+            child.place_forget()
+            child.grid_forget()
+            try:
+                child.pack(in_=container, fill="both", expand=True, padx=5, pady=5)
+            except Exception:
+                pass
+        
+        # Add dock-back button
+        dock_btn = ctk.CTkButton(
+            popout, text="⬙ Dock Back", width=100, height=28,
+            command=lambda: self._dock_tab(tab_name, children_info, popout)
+        )
+        dock_btn.pack(side="bottom", pady=5)
+        
+        # Handle window close = dock back
+        popout.protocol("WM_DELETE_WINDOW",
+                        lambda: self._dock_tab(tab_name, children_info, popout))
+    
+    def _dock_tab(self, tab_name, children, popout_window):
+        """Dock a popped-out tab back into the main tabview"""
+        tab_frame = self.tabview.tab(tab_name)
+        
+        # Reparent children back
+        for child in children:
+            child.pack_forget()
+            child.place_forget()
+            child.grid_forget()
+            try:
+                child.pack(in_=tab_frame, fill="both", expand=True, padx=5, pady=5)
+            except Exception:
+                pass
+        
+        # Destroy pop-out window
+        if popout_window.winfo_exists():
+            popout_window.destroy()
+        
+        self._popout_windows.pop(tab_name, None)
+        
+        # Re-add pop-out button
+        btn = ctk.CTkButton(
+            tab_frame, text="⬗ Pop Out", width=90, height=26,
+            font=("Arial", 11),
+            fg_color="gray40",
+            command=lambda: self._popout_tab(tab_name)
+        )
+        btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+        
+        # Switch to the docked tab
+        self.tabview.set(tab_name)
     
     def create_sort_tab(self):
         """Create texture sorting tab"""
@@ -491,6 +656,13 @@ class PS2TextureSorter(ctk.CTk):
                                            font=("Arial Bold", 14))
         self.start_button.pack(side="left", padx=10)
         
+        self.organize_button = ctk.CTkButton(button_frame, text="📂 Organize Now",
+                                              command=self.start_sorting,
+                                              width=150, height=40,
+                                              font=("Arial Bold", 14),
+                                              fg_color="#2aa845")
+        self.organize_button.pack(side="left", padx=10)
+        
         self.pause_button = ctk.CTkButton(button_frame, text="⏸️ Pause", 
                                            command=self.pause_sorting,
                                            width=100, height=40, state="disabled")
@@ -500,6 +672,35 @@ class PS2TextureSorter(ctk.CTk):
                                           command=self.stop_sorting,
                                           width=100, height=40, state="disabled")
         self.stop_button.pack(side="left", padx=10)
+        
+        # Apply tooltips to sort tab widgets
+        self._apply_sort_tooltips(browse_btn, browse_out_btn)
+    
+    def _apply_sort_tooltips(self, browse_in_btn, browse_out_btn):
+        """Apply tooltips to sort tab widgets"""
+        if not WidgetTooltip:
+            return
+        tooltip_text = self._get_tooltip_text
+        WidgetTooltip(self.start_button, tooltip_text('sort_button'))
+        WidgetTooltip(self.organize_button, "Organize your textures into folders based on selected options")
+        WidgetTooltip(browse_in_btn, tooltip_text('input_browse'))
+        WidgetTooltip(browse_out_btn, tooltip_text('output_browse'))
+    
+    def _get_tooltip_text(self, widget_id):
+        """Get tooltip text from the tooltip manager"""
+        if self.tooltip_manager:
+            text = self.tooltip_manager.get_tooltip(widget_id)
+            if text:
+                return text
+        # Fallback tooltips
+        fallbacks = {
+            'sort_button': "Click to sort your textures into organized folders",
+            'input_browse': "Browse for the folder containing your texture files",
+            'output_browse': "Choose where to save the organized textures",
+            'detect_lods': "Automatically detect and group LOD levels",
+            'convert_button': "Convert textures to different formats",
+        }
+        return fallbacks.get(widget_id, "")
     
     def create_convert_tab(self):
         """Create file format conversion tab"""
@@ -838,9 +1039,9 @@ class PS2TextureSorter(ctk.CTk):
         tooltip_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(tooltip_frame, text="Tooltip Mode:").pack(side="left", padx=10)
-        tooltip_var = ctk.StringVar(value=config.get('ui', 'tooltip_verbosity', default='normal'))
+        tooltip_var = ctk.StringVar(value=config.get('ui', 'tooltip_mode', default='normal'))
         tooltip_menu = ctk.CTkOptionMenu(tooltip_frame, variable=tooltip_var,
-                                         values=["expert", "normal", "beginner", "panda_explains"])
+                                         values=["expert", "normal", "beginner", "panda"])
         tooltip_menu.pack(side="left", padx=10)
         
         # Cursor style
@@ -938,7 +1139,7 @@ class PS2TextureSorter(ctk.CTk):
                 
                 # UI
                 config.set('ui', 'theme', value=theme_var.get())
-                config.set('ui', 'tooltip_verbosity', value=tooltip_var.get())
+                config.set('ui', 'tooltip_mode', value=tooltip_var.get())
                 config.set('ui', 'cursor_style', value=cursor_var.get())
                 
                 # File Handling
@@ -1005,42 +1206,38 @@ class PS2TextureSorter(ctk.CTk):
                 achieve_frame.pack(fill="x", padx=10, pady=5)
                 
                 # Lock/unlock status
-                status = "🔓" if achievement.get('unlocked', False) else "🔒"
+                status = "🔓" if achievement.unlocked else "🔒"
                 
                 # Title and description
-                title_text = f"{status} {achievement.get('name', 'Unknown')}"
+                title_text = f"{status} {achievement.icon} {achievement.name}"
                 ctk.CTkLabel(achieve_frame, text=title_text,
                             font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
                 
-                desc_text = achievement.get('description', 'No description')
+                desc_text = achievement.description
                 ctk.CTkLabel(achieve_frame, text=desc_text,
                             font=("Arial", 11), text_color="gray").pack(anchor="w", padx=20, pady=2)
                 
-                # Progress bar (if applicable)
-                if 'progress' in achievement and 'required' in achievement:
-                    progress = achievement['progress']
-                    required = achievement['required']
-                    
-                    progress_frame = ctk.CTkFrame(achieve_frame)
-                    progress_frame.pack(fill="x", padx=20, pady=5)
-                    
-                    progress_bar = ctk.CTkProgressBar(progress_frame, width=400)
-                    progress_bar.pack(side="left", padx=5)
-                    
-                    # Calculate progress: handle both numeric and boolean achievements
-                    if required > 0:
-                        progress_value = min(progress / required, 1.0)
-                    elif progress > 0:
-                        progress_value = 1.0  # Non-numeric achievement (simply unlocked)
-                    else:
-                        progress_value = 0.0  # Not started
-                    
-                    progress_bar.set(progress_value)
-                    
-                    progress_label = ctk.CTkLabel(progress_frame, 
-                                                  text=f"{progress}/{required}",
-                                                  font=("Arial", 10))
-                    progress_label.pack(side="left", padx=5)
+                # Progress bar
+                progress = achievement.progress
+                required = achievement.progress_max
+                
+                progress_frame = ctk.CTkFrame(achieve_frame)
+                progress_frame.pack(fill="x", padx=20, pady=5)
+                
+                progress_bar = ctk.CTkProgressBar(progress_frame, width=400)
+                progress_bar.pack(side="left", padx=5)
+                
+                if required > 0:
+                    progress_value = min(progress / required, 1.0)
+                else:
+                    progress_value = 1.0 if achievement.unlocked else 0.0
+                
+                progress_bar.set(progress_value)
+                
+                progress_label = ctk.CTkLabel(progress_frame, 
+                                              text=f"{progress:g}/{required:g}",
+                                              font=("Arial", 10))
+                progress_label.pack(side="left", padx=5)
                 
         except Exception as e:
             ctk.CTkLabel(achieve_scroll,
@@ -1065,29 +1262,24 @@ class PS2TextureSorter(ctk.CTk):
         rewards_scroll = ctk.CTkScrollableFrame(self.tab_rewards, width=1000, height=600)
         rewards_scroll.pack(padx=20, pady=10, fill="both", expand=True)
         
-        # Get unlockables by category
+        # Display unlockables by category using actual UnlockablesSystem attributes
         try:
-            categories = ['cursors', 'panda_outfits', 'themes', 'animations']
-            category_labels = {
-                'cursors': '🖱️ Custom Cursors',
-                'panda_outfits': '🐼 Panda Outfits',
-                'themes': '🎨 Themes',
-                'animations': '✨ Animations'
-            }
+            categories = [
+                ('🖱️ Custom Cursors', self.unlockables_manager.cursors),
+                ('🐼 Panda Outfits', self.unlockables_manager.outfits),
+                ('🎨 Themes', self.unlockables_manager.themes),
+                ('✨ Animations', self.unlockables_manager.animations),
+            ]
             
-            for category in categories:
+            for cat_label, items_dict in categories:
                 # Category header
                 cat_frame = ctk.CTkFrame(rewards_scroll)
                 cat_frame.pack(fill="x", padx=10, pady=10)
                 
-                ctk.CTkLabel(cat_frame, 
-                            text=category_labels.get(category, category.title()),
+                ctk.CTkLabel(cat_frame, text=cat_label,
                             font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
                 
-                # Get items in category
-                items = self.unlockables_manager.get_unlockables_by_category(category)
-                
-                if not items:
+                if not items_dict:
                     ctk.CTkLabel(cat_frame, 
                                 text="No items in this category",
                                 font=("Arial", 11), 
@@ -1095,25 +1287,22 @@ class PS2TextureSorter(ctk.CTk):
                     continue
                 
                 # Display each item
-                for item in items:
+                for item in items_dict.values():
                     item_frame = ctk.CTkFrame(cat_frame)
                     item_frame.pack(fill="x", padx=10, pady=3)
                     
                     # Lock/unlock status
-                    is_unlocked = item.get('unlocked', False)
-                    status = "✓" if is_unlocked else "🔒"
+                    status = "✓" if item.unlocked else "🔒"
                     
                     # Item name
-                    item_text = f"{status} {item.get('name', 'Unknown')}"
+                    item_text = f"{status} {item.name}"
                     ctk.CTkLabel(item_frame, text=item_text,
                                 font=("Arial", 12)).pack(side="left", padx=10, pady=5)
                     
-                    # Unlock condition (if locked)
-                    if not is_unlocked and 'unlock_condition' in item:
-                        condition_text = f"({item['unlock_condition']})"
-                        ctk.CTkLabel(item_frame, text=condition_text,
-                                    font=("Arial", 10),
-                                    text_color="gray").pack(side="left", padx=5)
+                    # Description
+                    ctk.CTkLabel(item_frame, text=item.description,
+                                font=("Arial", 10),
+                                text_color="gray").pack(side="left", padx=5)
                 
         except Exception as e:
             ctk.CTkLabel(rewards_scroll,
@@ -1296,8 +1485,9 @@ Features:
         self.log(f"Style: {self.style_var.get()}")
         self.log("=" * 60)
         
-        # Disable start button
+        # Disable start buttons
         self.start_button.configure(state="disabled")
+        self.organize_button.configure(state="disabled")
         self.pause_button.configure(state="normal")
         self.stop_button.configure(state="normal")
         
@@ -1440,6 +1630,7 @@ Features:
         finally:
             # Re-enable buttons
             self.start_button.configure(state="normal")
+            self.organize_button.configure(state="normal")
             self.pause_button.configure(state="disabled")
             self.stop_button.configure(state="disabled")
     
