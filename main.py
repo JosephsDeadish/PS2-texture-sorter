@@ -416,9 +416,7 @@ class PS2TextureSorter(ctk.CTk):
     def _run_tutorial(self):
         """Start or restart the tutorial"""
         if self.tutorial_manager:
-            # Reset tutorial completion flags so it can be shown again
-            self.tutorial_manager.config.set('tutorial', 'completed', value=False)
-            self.tutorial_manager.config.set('tutorial', 'seen', value=False)
+            self.tutorial_manager.reset_tutorial()
             self.tutorial_manager.start_tutorial()
         else:
             if GUI_AVAILABLE:
@@ -1237,7 +1235,7 @@ class PS2TextureSorter(ctk.CTk):
                 progress_bar.set(progress_value)
                 
                 progress_label = ctk.CTkLabel(progress_frame, 
-                                              text=f"{int(progress)}/{int(required)}",
+                                              text=f"{progress:g}/{required:g}",
                                               font=("Arial", 10))
                 progress_label.pack(side="left", padx=5)
                 

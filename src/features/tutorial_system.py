@@ -418,9 +418,9 @@ class TutorialManager:
             self.on_complete_callback()
     
     def reset_tutorial(self):
-        """Reset tutorial completion flag"""
-        self.config.set('tutorial', 'completed', False)
-        self.config.save()
+        """Reset tutorial completion flags so it can be shown again"""
+        self.config.set('tutorial', 'completed', value=False)
+        self.config.set('tutorial', 'seen', value=False)
 
 
 class TooltipVerbosityManager:
