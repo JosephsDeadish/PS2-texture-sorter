@@ -320,9 +320,9 @@ class PreviewViewer:
         if self.zoom_level == 1.0:
             self.display_image = self.original_image
         else:
-            # Use appropriate resampling based on zoom direction
-            resample = Image.Resampling.LANCZOS if self.zoom_level < 1.0 else Image.Resampling.BICUBIC
-            self.display_image = self.original_image.resize((width, height), resample)
+            # Use LANCZOS for both scaling directions for best quality
+            # Game textures benefit from LANCZOS which preserves sharp edges
+            self.display_image = self.original_image.resize((width, height), Image.Resampling.LANCZOS)
         
         # Convert to PhotoImage
         photo = ImageTk.PhotoImage(self.display_image)

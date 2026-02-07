@@ -1027,11 +1027,11 @@ class PS2TextureSorter(ctk.CTk):
                     progress_bar = ctk.CTkProgressBar(progress_frame, width=400)
                     progress_bar.pack(side="left", padx=5)
                     
-                    # Calculate progress: if required is 0 and progress > 0, consider it complete
+                    # Calculate progress: handle both numeric and boolean achievements
                     if required > 0:
                         progress_value = min(progress / required, 1.0)
                     elif progress > 0:
-                        progress_value = 1.0  # Completed achievement with invalid data
+                        progress_value = 1.0  # Non-numeric achievement (simply unlocked)
                     else:
                         progress_value = 0.0  # Not started
                     
@@ -1149,6 +1149,8 @@ class PS2TextureSorter(ctk.CTk):
                     content = notes_data.get('content', '')
                     self.notepad_text.delete("1.0", "end")
                     self.notepad_text.insert("1.0", content)
+        except (json.JSONDecodeError, IOError, PermissionError) as e:
+            logger.warning(f"Failed to load notes (file may be corrupted or inaccessible): {e}")
         except Exception as e:
             logger.warning(f"Failed to load notes: {e}")
     

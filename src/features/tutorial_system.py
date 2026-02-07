@@ -59,7 +59,10 @@ class TutorialManager:
         
     def is_first_run(self) -> bool:
         """Check if this is the first run of the application"""
-        return not self.config.get('tutorial', 'completed', default=False)
+        # Check both 'completed' and 'seen' flags for consistency
+        completed = self.config.get('tutorial', 'completed', default=False)
+        seen = self.config.get('tutorial', 'seen', default=False)
+        return not (completed or seen)
     
     def should_show_tutorial(self) -> bool:
         """Determine if tutorial should be shown"""
