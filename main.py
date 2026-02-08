@@ -311,7 +311,14 @@ class PS2TextureSorter(ctk.CTk):
                 
                 # Setup tutorial system
                 if TUTORIAL_AVAILABLE:
-                    self.tutorial_manager, self.tooltip_manager, self.context_help = setup_tutorial_system(self, config)
+                    try:
+                        self.tutorial_manager, self.tooltip_manager, self.context_help = setup_tutorial_system(self, config)
+                        logger.info("Tutorial system initialized successfully")
+                    except Exception as tutorial_error:
+                        logger.error(f"Failed to initialize tutorial system: {tutorial_error}", exc_info=True)
+                        self.tutorial_manager = None
+                        self.tooltip_manager = None
+                        self.context_help = None
             except Exception as e:
                 logger.warning(f"Failed to initialize some features: {e}")
         
@@ -1166,7 +1173,7 @@ class PS2TextureSorter(ctk.CTk):
         """Open UI customization dialog"""
         if CUSTOMIZATION_AVAILABLE:
             try:
-                open_customization_dialog(parent=self)
+                open_customization_dialog(parent=self, on_settings_change=self._on_customization_change)
                 self.log("✅ Opened UI Customization panel")
             except Exception as e:
                 self.log(f"❌ Error opening customization: {e}")
@@ -1178,6 +1185,23 @@ class PS2TextureSorter(ctk.CTk):
                 messagebox.showwarning("Not Available", 
                                      "UI customization panel is not available.\n"
                                      "Please check your installation.")
+    
+    def _on_customization_change(self, setting_type, value):
+        """Handle customization setting changes from the customization panel"""
+        try:
+            if setting_type == 'theme':
+                # Theme changes are already applied by the ThemeManager via ctk.set_appearance_mode
+                # Just log the change
+                self.log(f"✅ Theme applied: {value.get('name', 'Unknown')}")
+            elif setting_type == 'color':
+                # Color changes are for accent color - log for now
+                self.log(f"✅ Accent color changed: {value}")
+            elif setting_type == 'cursor':
+                # Cursor changes are saved to config - log for now
+                self.log(f"✅ Cursor settings applied: {value.get('type', 'Unknown')}")
+        except Exception as e:
+            self.log(f"❌ Error applying customization: {e}")
+            logger.error(f"Customization change error: {e}", exc_info=True)
     
     def open_settings_window(self):
         """Open settings in a separate window"""
