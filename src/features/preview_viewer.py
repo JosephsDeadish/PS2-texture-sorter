@@ -26,6 +26,9 @@ class PreviewViewer:
     Moveable preview window with zoom, pan, and navigation controls
     """
     
+    # Maximum number of photo references to keep to prevent memory bloat
+    MAX_PHOTO_REFERENCES = 5
+    
     def __init__(self, master_window):
         self.master = master_window
         self.preview_window = None
@@ -391,8 +394,8 @@ class PreviewViewer:
             
             # Keep in reference list to prevent premature GC
             self._photo_references.append(self._current_photo)
-            # Limit list size to prevent memory bloat (keep last 5 images)
-            if len(self._photo_references) > 5:
+            # Limit list size to prevent memory bloat
+            if len(self._photo_references) > self.MAX_PHOTO_REFERENCES:
                 self._photo_references.pop(0)
             
             # Update canvas

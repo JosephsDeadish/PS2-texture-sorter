@@ -354,7 +354,7 @@ class PS2TextureSorter(ctk.CTk):
                         # and it's not a first-run or expected scenario
                         if success_count == 0:
                             # Don't show warning on first run - it's expected
-                            is_first_run = config.get('tutorial', 'completed', default=False) == False
+                            is_first_run = not config.get('tutorial', 'completed', default=False)
                             if not is_first_run:
                                 # Show warning only for unexpected complete failures
                                 self.after(1000, lambda: messagebox.showwarning(
