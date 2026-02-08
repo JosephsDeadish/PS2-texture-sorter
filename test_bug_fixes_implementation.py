@@ -51,8 +51,8 @@ def test_panda_get_tooltip():
     print("\n=== Testing PandaMode.get_tooltip() ===")
     from src.features.panda_mode import PandaMode
     
-    # Create PandaMode instance
-    panda = PandaMode(enabled=True, vulgar_mode=False)
+    # Create PandaMode instance (correct initialization)
+    panda = PandaMode(vulgar_mode=False)
     
     # Test getting a tooltip in normal mode
     tooltip = panda.get_tooltip('sort_button', mode='normal')
