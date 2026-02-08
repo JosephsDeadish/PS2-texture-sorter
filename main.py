@@ -116,6 +116,13 @@ except ImportError:
     PREVIEW_AVAILABLE = False
     print("Warning: Preview viewer not available.")
 
+try:
+    from src.ui.goodbye_splash import show_goodbye_splash
+    GOODBYE_SPLASH_AVAILABLE = True
+except ImportError:
+    GOODBYE_SPLASH_AVAILABLE = False
+    print("Warning: Goodbye splash not available.")
+
 
 class SplashScreen:
     """Splash screen with panda logo and loading animation"""
@@ -247,6 +254,9 @@ class SplashScreen:
 class PS2TextureSorter(ctk.CTk):
     """Main application window"""
     
+    # Configuration constants
+    GOODBYE_SPLASH_DISPLAY_MS = 800  # Time to display goodbye splash before exit
+    
     def __init__(self):
         super().__init__()
         
@@ -343,7 +353,14 @@ class PS2TextureSorter(ctk.CTk):
     
     def _on_close(self):
         """Handle window close to ensure clean shutdown"""
+        splash = None
         try:
+            # Show goodbye splash if available
+            if GOODBYE_SPLASH_AVAILABLE:
+                from src.ui.goodbye_splash import INITIAL_PROGRESS
+                splash = show_goodbye_splash(self)
+                splash.update_status("Saving configuration...", INITIAL_PROGRESS)
+            
             # Close tutorial if active
             if self.tutorial_manager and self.tutorial_manager.tutorial_active:
                 self.tutorial_manager._complete_tutorial()
@@ -357,12 +374,33 @@ class PS2TextureSorter(ctk.CTk):
                     except Exception:
                         pass
             
+            if splash:
+                splash.update_status("Cleaning up...", 0.6)
+            
             # Save config
             config.save()
+            
+            if splash:
+                splash.update_status("Goodbye! 🐼", 1.0)
+                # Brief pause to show the goodbye message
+                self.after(self.GOODBYE_SPLASH_DISPLAY_MS, self._force_exit)
+            else:
+                self._force_exit()
+                
         except Exception as e:
             logger.debug(f"Error during shutdown cleanup: {e}")
-        
-        self.destroy()
+            if splash:
+                splash.close()
+            self._force_exit()
+    
+    def _force_exit(self):
+        """Force application exit to terminate all threads"""
+        try:
+            self.destroy()
+        except Exception:
+            pass
+        # Force exit to ensure all daemon threads are terminated
+        sys.exit(0)
     
     def _load_initial_theme(self):
         """Load theme and UI scaling settings from config on startup"""
@@ -615,8 +653,12 @@ class PS2TextureSorter(ctk.CTk):
     
     def create_sort_tab(self):
         """Create texture sorting tab"""
+        # Use scrollable frame to ensure all content is accessible
+        scrollable_frame = ctk.CTkScrollableFrame(self.tab_sort)
+        scrollable_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
         # Input section
-        input_frame = ctk.CTkFrame(self.tab_sort)
+        input_frame = ctk.CTkFrame(scrollable_frame)
         input_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(input_frame, text="Input Directory:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
@@ -632,7 +674,7 @@ class PS2TextureSorter(ctk.CTk):
         browse_btn.pack(side="right", padx=5)
         
         # Output section
-        output_frame = ctk.CTkFrame(self.tab_sort)
+        output_frame = ctk.CTkFrame(scrollable_frame)
         output_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(output_frame, text="Output Directory:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
@@ -648,7 +690,7 @@ class PS2TextureSorter(ctk.CTk):
         browse_out_btn.pack(side="right", padx=5)
         
         # Options
-        options_frame = ctk.CTkFrame(self.tab_sort)
+        options_frame = ctk.CTkFrame(scrollable_frame)
         options_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(options_frame, text="Sorting Options:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
@@ -686,7 +728,7 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkCheckBox(check_frame, text="Detect Duplicates", variable=self.detect_duplicates_var).pack(side="left", padx=10)
         
         # Progress section
-        progress_frame = ctk.CTkFrame(self.tab_sort)
+        progress_frame = ctk.CTkFrame(scrollable_frame)
         progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         ctk.CTkLabel(progress_frame, text="Progress:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
@@ -703,7 +745,7 @@ class PS2TextureSorter(ctk.CTk):
         self.log_text.pack(padx=10, pady=10, fill="both", expand=True)
         
         # Action buttons
-        button_frame = ctk.CTkFrame(self.tab_sort)
+        button_frame = ctk.CTkFrame(scrollable_frame)
         button_frame.pack(fill="x", padx=10, pady=10)
         
         self.start_button = ctk.CTkButton(button_frame, text="🐼 Start Sorting", 
@@ -711,13 +753,6 @@ class PS2TextureSorter(ctk.CTk):
                                            width=150, height=40,
                                            font=("Arial Bold", 14))
         self.start_button.pack(side="left", padx=10)
-        
-        self.organize_button = ctk.CTkButton(button_frame, text="🐼 Organize Now",
-                                              command=self.start_sorting,
-                                              width=150, height=40,
-                                              font=("Arial Bold", 14),
-                                              fg_color="#2aa845")
-        self.organize_button.pack(side="left", padx=10)
         
         self.pause_button = ctk.CTkButton(button_frame, text="⏸️ Pause", 
                                            command=self.pause_sorting,
@@ -739,7 +774,6 @@ class PS2TextureSorter(ctk.CTk):
         tooltip_text = self._get_tooltip_text
         # Store tooltip references to prevent garbage collection
         self._tooltips.append(WidgetTooltip(self.start_button, tooltip_text('sort_button')))
-        self._tooltips.append(WidgetTooltip(self.organize_button, "Organize your textures into folders based on selected options"))
         self._tooltips.append(WidgetTooltip(browse_in_btn, tooltip_text('input_browse')))
         self._tooltips.append(WidgetTooltip(browse_out_btn, tooltip_text('output_browse')))
     
