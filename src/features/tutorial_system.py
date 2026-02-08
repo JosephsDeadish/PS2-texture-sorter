@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 import json
 from pathlib import Path
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +23,20 @@ try:
 except ImportError:
     GUI_AVAILABLE = False
 
+# Try to import panda mode tooltips
+try:
+    from src.features.panda_mode import PandaMode
+    PANDA_MODE_AVAILABLE = True
+except ImportError:
+    PANDA_MODE_AVAILABLE = False
+    logger.warning("PandaMode not available - vulgar tooltips will be limited")
+
 
 class TooltipMode(Enum):
     """Tooltip verbosity modes"""
-    EXPERT = "expert"
     NORMAL = "normal"
-    BEGINNER = "beginner"
-    PANDA = "panda"
+    DUMBED_DOWN = "dumbed-down"
+    VULGAR_PANDA = "vulgar_panda"
 
 
 @dataclass
@@ -449,10 +457,9 @@ class TooltipVerbosityManager:
         
         # Tooltip collections for each mode
         self.tooltips = {
-            TooltipMode.EXPERT: self._get_expert_tooltips(),
             TooltipMode.NORMAL: self._get_normal_tooltips(),
-            TooltipMode.BEGINNER: self._get_beginner_tooltips(),
-            TooltipMode.PANDA: self._get_panda_tooltips()
+            TooltipMode.DUMBED_DOWN: self._get_dumbed_down_tooltips(),
+            TooltipMode.VULGAR_PANDA: self._get_vulgar_panda_tooltips()
         }
     
     def _load_mode(self) -> TooltipMode:
@@ -472,27 +479,17 @@ class TooltipVerbosityManager:
     def get_tooltip(self, widget_id: str) -> str:
         """Get tooltip text for a widget based on current mode"""
         tooltips = self.tooltips.get(self.current_mode, {})
-        return tooltips.get(widget_id, "")
+        tooltip = tooltips.get(widget_id, "")
+        
+        # If tooltip is a list (from PandaMode), pick a random one
+        if isinstance(tooltip, list) and tooltip:
+            return random.choice(tooltip)
+        
+        return tooltip
     
-    def _get_expert_tooltips(self) -> Dict[str, str]:
-        """Short, technical tooltips for experts"""
-        return {
-            'sort_button': "Sort by classifier confidence",
-            'convert_button': "Batch format conversion",
-            'input_browse': "Select source directory",
-            'output_browse': "Select destination directory",
-            'detect_lods': "Enable LOD level detection",
-            'group_lods': "Group by detail level",
-            'detect_duplicates': "Find duplicate files by hash",
-            'style_dropdown': "Organization strategy",
-            'settings_button': "Configuration panel",
-            'theme_button': "Toggle appearance mode",
-            'help_button': "Context-sensitive help"
-        }
-    
-    def _get_normal_tooltips(self) -> Dict[str, str]:
-        """Standard helpful tooltips"""
-        return {
+    def _get_normal_tooltips(self) -> Dict[str, Any]:
+        """Standard helpful tooltips from PandaMode"""
+        base_tooltips = {
             'sort_button': "Click to sort your textures into organized folders",
             'convert_button': "Convert textures to different formats",
             'input_browse': "Browse for the folder containing your texture files",
@@ -505,8 +502,19 @@ class TooltipVerbosityManager:
             'theme_button': "Switch between dark and light themes",
             'help_button': "Get help and documentation"
         }
+        
+        # Pull from PandaMode TOOLTIPS if available
+        if PANDA_MODE_AVAILABLE:
+            try:
+                for widget_id, tooltip_dict in PandaMode.TOOLTIPS.items():
+                    if 'normal' in tooltip_dict:
+                        base_tooltips[widget_id] = tooltip_dict['normal']
+            except Exception as e:
+                logger.warning(f"Error loading normal tooltips from PandaMode: {e}")
+        
+        return base_tooltips
     
-    def _get_beginner_tooltips(self) -> Dict[str, str]:
+    def _get_dumbed_down_tooltips(self) -> Dict[str, str]:
         """Detailed explanations for beginners"""
         return {
             'sort_button': (
@@ -559,10 +567,9 @@ class TooltipVerbosityManager:
             )
         }
     
-    def _get_panda_tooltips(self) -> Dict[str, str]:
-        """Fun/sarcastic tooltips (requires panda mode)"""
-        # These will be populated from panda_mode.py when available
-        return {
+    def _get_vulgar_panda_tooltips(self) -> Dict[str, Any]:
+        """Fun/sarcastic tooltips from PandaMode (vulgar mode)"""
+        base_tooltips = {
             'sort_button': "Click this to sort your damn textures. It's not rocket science, Karen.",
             'convert_button': "Turn your textures into whatever the hell format you need.",
             'input_browse': "Find your texture folder. Come on, you can do this.",
@@ -575,6 +582,17 @@ class TooltipVerbosityManager:
             'theme_button': "Dark mode = hacker vibes. Light mode = boomer energy.",
             'help_button': "Lost? Confused? Click here, we'll hold your hand."
         }
+        
+        # Pull from PandaMode TOOLTIPS if available
+        if PANDA_MODE_AVAILABLE:
+            try:
+                for widget_id, tooltip_dict in PandaMode.TOOLTIPS.items():
+                    if 'vulgar' in tooltip_dict:
+                        base_tooltips[widget_id] = tooltip_dict['vulgar']
+            except Exception as e:
+                logger.warning(f"Error loading vulgar tooltips from PandaMode: {e}")
+        
+        return base_tooltips
 
 
 class WidgetTooltip:

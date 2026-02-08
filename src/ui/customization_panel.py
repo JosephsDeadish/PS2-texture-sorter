@@ -6,12 +6,15 @@ Comprehensive theming, color picker, and cursor customization
 import json
 import math
 import colorsys
+import logging
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 
 from src.config import config, THEMES_DIR
+
+logger = logging.getLogger(__name__)
 
 
 # Built-in theme presets
@@ -144,6 +147,15 @@ class ColorWheelWidget(ctk.CTkFrame):
         """Create color picker widgets"""
         title = ctk.CTkLabel(self, text="🎨 Color Picker", font=("Arial Bold", 14))
         title.pack(pady=10)
+        
+        # Add explanatory label
+        info_label = ctk.CTkLabel(
+            self, 
+            text="This color sets the accent/highlight color for the UI theme",
+            font=("Arial", 11),
+            text_color="gray"
+        )
+        info_label.pack(pady=(0, 10))
         
         hex_frame = ctk.CTkFrame(self)
         hex_frame.pack(fill="x", padx=10, pady=5)
@@ -578,8 +590,48 @@ class ThemeManager(ctk.CTkFrame):
             return
         
         theme = THEME_PRESETS[self.preview_theme]
+        
+        # Apply appearance mode
         ctk.set_appearance_mode(theme["appearance_mode"])
         
+        # Apply color scheme by setting default colors
+        colors = theme["colors"]
+        try:
+            # Try to update theme colors if CustomTkinter supports it
+            if hasattr(ctk, 'set_default_color_theme'):
+                # Create a temporary theme file
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    theme_data = {
+                        "CTk": {
+                            "fg_color": [colors.get("background", "#1a1a1a"), colors.get("background", "#1a1a1a")]
+                        },
+                        "CTkButton": {
+                            "fg_color": [colors.get("button", "#1f538d"), colors.get("button", "#1f538d")],
+                            "hover_color": [colors.get("button_hover", "#2d6ba8"), colors.get("button_hover", "#2d6ba8")],
+                            "text_color": [colors.get("text", "#ffffff"), colors.get("text", "#ffffff")]
+                        },
+                        "CTkFrame": {
+                            "fg_color": [colors.get("secondary", "#14375e"), colors.get("secondary", "#14375e")],
+                            "border_color": [colors.get("border", "#333333"), colors.get("border", "#333333")]
+                        }
+                    }
+                    json.dump(theme_data, f)
+                    temp_theme_path = f.name
+                
+                try:
+                    ctk.set_default_color_theme(temp_theme_path)
+                except:
+                    pass  # If this fails, at least appearance mode is set
+                finally:
+                    try:
+                        Path(temp_theme_path).unlink()
+                    except:
+                        pass
+        except Exception as e:
+            logger.warning(f"Could not fully apply color theme: {e}")
+        
+        # Save to config
         config.set('ui', 'theme', value=self.preview_theme)
         config.set('ui', 'appearance_mode', value=theme["appearance_mode"])
         config.set('ui', 'theme_colors', value=theme["colors"])
@@ -589,7 +641,9 @@ class ThemeManager(ctk.CTkFrame):
         if self.on_theme_apply:
             self.on_theme_apply(theme)
         
-        messagebox.showinfo("Success", f"Theme '{theme['name']}' applied successfully!")
+        messagebox.showinfo("Success", 
+                          f"Theme '{theme['name']}' applied!\n\n"
+                          "Note: Some color changes may require restarting the application.")
     
     def _save_custom_theme(self):
         if not self.preview_theme:
@@ -725,6 +779,145 @@ class ThemeManager(ctk.CTkFrame):
         return None
 
 
+class SettingsPanel(ctk.CTkFrame):
+    """Settings panel for tooltip mode and sound controls"""
+    
+    def __init__(self, master, on_settings_change=None):
+        super().__init__(master)
+        self.on_settings_change = on_settings_change
+        
+        self._create_widgets()
+    
+    def _create_widgets(self):
+        # Tooltip Mode Section
+        tooltip_frame = ctk.CTkFrame(self)
+        tooltip_frame.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(
+            tooltip_frame, 
+            text="💬 Tooltip Mode", 
+            font=("Arial Bold", 13)
+        ).pack(pady=(10, 5))
+        
+        ctk.CTkLabel(
+            tooltip_frame,
+            text="Choose how detailed and snarky you want tooltips to be",
+            font=("Arial", 10),
+            text_color="gray"
+        ).pack(pady=(0, 10))
+        
+        self.tooltip_mode_var = ctk.StringVar(value="normal")
+        
+        tooltip_options = [
+            ("Normal", "normal", "Standard helpful tooltips"),
+            ("Dumbed Down", "dumbed-down", "Detailed explanations for beginners"),
+            ("Vulgar Panda", "vulgar_panda", "Fun, sarcastic tooltips (opt-in)")
+        ]
+        
+        for label, value, description in tooltip_options:
+            radio_frame = ctk.CTkFrame(tooltip_frame)
+            radio_frame.pack(fill="x", padx=20, pady=2)
+            
+            radio = ctk.CTkRadioButton(
+                radio_frame,
+                text=label,
+                variable=self.tooltip_mode_var,
+                value=value,
+                command=self._on_tooltip_mode_change
+            )
+            radio.pack(side="left", padx=5)
+            
+            ctk.CTkLabel(
+                radio_frame,
+                text=f"- {description}",
+                font=("Arial", 9),
+                text_color="gray"
+            ).pack(side="left", padx=5)
+        
+        # Sound Settings Section
+        sound_frame = ctk.CTkFrame(self)
+        sound_frame.pack(fill="x", padx=10, pady=10)
+        
+        ctk.CTkLabel(
+            sound_frame,
+            text="🔊 Sound Settings",
+            font=("Arial Bold", 13)
+        ).pack(pady=(10, 5))
+        
+        # Sound Enable/Disable
+        self.sound_enabled_var = ctk.BooleanVar(value=True)
+        sound_toggle = ctk.CTkCheckBox(
+            sound_frame,
+            text="Enable Sound Effects",
+            variable=self.sound_enabled_var,
+            command=self._on_sound_toggle
+        )
+        sound_toggle.pack(pady=5, padx=20, anchor="w")
+        
+        # Volume Slider
+        volume_container = ctk.CTkFrame(sound_frame)
+        volume_container.pack(fill="x", padx=20, pady=10)
+        
+        volume_label_frame = ctk.CTkFrame(volume_container)
+        volume_label_frame.pack(fill="x")
+        
+        ctk.CTkLabel(
+            volume_label_frame,
+            text="Volume:",
+            font=("Arial", 11)
+        ).pack(side="left", padx=5)
+        
+        self.volume_value_label = ctk.CTkLabel(
+            volume_label_frame,
+            text="100%",
+            font=("Arial", 11)
+        )
+        self.volume_value_label.pack(side="right", padx=5)
+        
+        self.volume_slider = ctk.CTkSlider(
+            volume_container,
+            from_=0,
+            to=100,
+            number_of_steps=100,
+            command=self._on_volume_change
+        )
+        self.volume_slider.set(100)
+        self.volume_slider.pack(fill="x", pady=5)
+    
+    def _on_tooltip_mode_change(self):
+        mode = self.tooltip_mode_var.get()
+        if self.on_settings_change:
+            self.on_settings_change('tooltip_mode', mode)
+    
+    def _on_sound_toggle(self):
+        enabled = self.sound_enabled_var.get()
+        if self.on_settings_change:
+            self.on_settings_change('sound_enabled', enabled)
+    
+    def _on_volume_change(self, value):
+        volume = int(value)
+        self.volume_value_label.configure(text=f"{volume}%")
+        if self.on_settings_change:
+            self.on_settings_change('volume', volume / 100.0)
+    
+    def get_settings(self) -> Dict[str, Any]:
+        return {
+            'tooltip_mode': self.tooltip_mode_var.get(),
+            'sound_enabled': self.sound_enabled_var.get(),
+            'volume': self.volume_slider.get() / 100.0
+        }
+    
+    def set_settings(self, settings: Dict[str, Any]):
+        if 'tooltip_mode' in settings:
+            self.tooltip_mode_var.set(settings['tooltip_mode'])
+        if 'sound_enabled' in settings:
+            self.sound_enabled_var.set(settings['sound_enabled'])
+        if 'volume' in settings:
+            volume = int(settings['volume'] * 100)
+            self.volume_slider.set(volume)
+            self.volume_value_label.configure(text=f"{volume}%")
+
+
 class CustomizationPanel(ctk.CTkFrame):
     """Main customization panel with all features"""
     
@@ -744,6 +937,7 @@ class CustomizationPanel(ctk.CTkFrame):
         tab_theme = self.tabview.add("🎨 Themes")
         tab_colors = self.tabview.add("🎨 Colors")
         tab_cursor = self.tabview.add("🖱️ Cursor")
+        tab_settings = self.tabview.add("⚙️ Settings")
         
         self.theme_manager = ThemeManager(tab_theme, on_theme_apply=self._on_theme_change)
         self.theme_manager.pack(fill="both", expand=True, padx=10, pady=10)
@@ -753,6 +947,9 @@ class CustomizationPanel(ctk.CTkFrame):
         
         self.cursor_customizer = CursorCustomizer(tab_cursor, on_cursor_change=self._on_cursor_change)
         self.cursor_customizer.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.settings_panel = SettingsPanel(tab_settings, on_settings_change=self._on_setting_change)
+        self.settings_panel.pack(fill="both", expand=True, padx=10, pady=10)
     
     def _on_theme_change(self, theme_data):
         if self.on_settings_change:
@@ -766,11 +963,16 @@ class CustomizationPanel(ctk.CTkFrame):
         if self.on_settings_change:
             self.on_settings_change('cursor', cursor_config)
     
+    def _on_setting_change(self, setting_type, value):
+        if self.on_settings_change:
+            self.on_settings_change(setting_type, value)
+    
     def get_all_settings(self) -> Dict[str, Any]:
         return {
             'theme': self.theme_manager.get_current_theme(),
             'cursor': self.cursor_customizer.get_cursor_config(),
-            'color': self.color_picker.get_color()
+            'color': self.color_picker.get_color(),
+            'settings': self.settings_panel.get_settings()
         }
 
 
