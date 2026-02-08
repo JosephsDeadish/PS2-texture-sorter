@@ -7,6 +7,13 @@ sorting PS2 texture dumps with advanced AI classification and massive-scale
 support (200,000+ textures).
 """
 
+# Set Windows taskbar icon BEFORE any GUI imports
+import ctypes
+try:
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('JosephsDeadish.PS2TextureSorter.1.0.0')
+except (AttributeError, OSError):
+    pass  # Not Windows or no windll
+
 import sys
 import os
 import time
@@ -255,16 +262,16 @@ class PS2TextureSorter(ctk.CTk):
             icon_path = Path(__file__).parent / "assets" / "icon.png"
             ico_path = Path(__file__).parent / "assets" / "icon.ico"
             
-            # Set iconphoto first (works on all platforms)
+            # Set iconbitmap first for Windows (best taskbar integration)
+            if ico_path.exists() and sys.platform == 'win32':
+                self.iconbitmap(str(ico_path))
+            
+            # Set iconphoto for better cross-platform support and taskbar
             if icon_path.exists():
                 from PIL import Image, ImageTk
                 icon_image = Image.open(str(icon_path))
                 self._icon_photo = ImageTk.PhotoImage(icon_image)
                 self.iconphoto(True, self._icon_photo)
-            
-            # Set iconbitmap for Windows (better taskbar integration)
-            if ico_path.exists() and sys.platform == 'win32':
-                self.iconbitmap(str(ico_path))
         except Exception as e:
             logger.debug(f"Could not set window icon: {e}")
         
