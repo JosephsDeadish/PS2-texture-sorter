@@ -2267,7 +2267,7 @@ def main():
     if sys.platform == 'win32':
         try:
             import ctypes
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('PS2TextureSorter.v1.0.0')
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('JosephsDeadish.PS2TextureSorter.App.1.0.0')
         except Exception as e:
             logger.debug(f"Could not set AppUserModelID: {e}")
     
