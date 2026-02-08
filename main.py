@@ -583,55 +583,115 @@ class PS2TextureSorter(ctk.CTk):
                 win.focus_force()
                 return
         
-        # Get the tab frame and its children
-        tab_frame = self.tabview.tab(tab_name)
-        children_info = []
-        for child in tab_frame.winfo_children():
-            children_info.append(child)
-        
         # Create pop-out window
         popout = ctk.CTkToplevel(self)
         popout.title(tab_name)
         popout.geometry("800x600")
         self._popout_windows[tab_name] = popout
         
-        # Reparent all children to the pop-out window
-        container = ctk.CTkFrame(popout)
-        container.pack(fill="both", expand=True, padx=5, pady=5)
-        
-        for child in children_info:
-            child.pack_forget()
-            child.place_forget()
-            child.grid_forget()
-            try:
-                child.pack(in_=container, fill="both", expand=True, padx=5, pady=5)
-            except Exception:
-                pass
+        # Special handling for notepad tab (avoid reparenting complex widget)
+        if tab_name == "📝 Notepad":
+            self._create_popout_notepad(popout, tab_name)
+        else:
+            # Get the tab frame and its children
+            tab_frame = self.tabview.tab(tab_name)
+            children_info = []
+            for child in tab_frame.winfo_children():
+                children_info.append(child)
+            
+            # Reparent all children to the pop-out window
+            container = ctk.CTkFrame(popout)
+            container.pack(fill="both", expand=True, padx=5, pady=5)
+            
+            for child in children_info:
+                child.pack_forget()
+                child.place_forget()
+                child.grid_forget()
+                try:
+                    child.pack(in_=container, fill="both", expand=True, padx=5, pady=5)
+                except Exception:
+                    pass
         
         # Add dock-back button
         dock_btn = ctk.CTkButton(
             popout, text="⬙ Dock Back", width=100, height=28,
-            command=lambda: self._dock_tab(tab_name, children_info, popout)
+            command=lambda: self._dock_tab(tab_name, None, popout)
         )
         dock_btn.pack(side="bottom", pady=5)
         
         # Handle window close = dock back
         popout.protocol("WM_DELETE_WINDOW",
-                        lambda: self._dock_tab(tab_name, children_info, popout))
+                        lambda: self._dock_tab(tab_name, None, popout))
+    
+    def _create_popout_notepad(self, popout_window, tab_name):
+        """Create notepad functionality in popout window"""
+        container = ctk.CTkFrame(popout_window)
+        container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Header with title
+        header_frame = ctk.CTkFrame(container)
+        header_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkLabel(header_frame, text="📝 Personal Notes (Undocked)",
+                     font=("Arial Bold", 16)).pack(side="left", padx=10)
+        
+        # Info message
+        info_label = ctk.CTkLabel(
+            container,
+            text="Note: This is a read-only view of your notes. To edit, please dock the notepad back.",
+            font=("Arial", 10),
+            text_color="orange"
+        )
+        info_label.pack(pady=5)
+        
+        # Display notes content in a single textbox (read-only)
+        notes_display = ctk.CTkTextbox(container, width=750, height=500)
+        notes_display.pack(padx=10, pady=10, fill="both", expand=True)
+        
+        # Collect all notes and display them
+        if hasattr(self, 'note_textboxes'):
+            all_notes_text = ""
+            for note_name, textbox in self.note_textboxes.items():
+                content = textbox.get("1.0", "end-1c")
+                all_notes_text += f"{'='*60}\n"
+                all_notes_text += f"{note_name}\n"
+                all_notes_text += f"{'='*60}\n"
+                all_notes_text += f"{content}\n\n"
+            
+            notes_display.insert("1.0", all_notes_text)
+            notes_display.configure(state="disabled")  # Make read-only
     
     def _dock_tab(self, tab_name, children, popout_window):
         """Dock a popped-out tab back into the main tabview"""
+        # Special handling for notepad (just close the window)
+        if tab_name == "📝 Notepad":
+            if popout_window.winfo_exists():
+                popout_window.destroy()
+            self._popout_windows.pop(tab_name, None)
+            # Re-add pop-out button
+            tab_frame = self.tabview.tab(tab_name)
+            btn = ctk.CTkButton(
+                tab_frame, text="⬗ Pop Out", width=90, height=26,
+                font=("Arial", 11),
+                fg_color="gray40",
+                command=lambda: self._popout_tab(tab_name)
+            )
+            btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+            return
+        
+        # For other tabs, reparent children back
         tab_frame = self.tabview.tab(tab_name)
         
-        # Reparent children back
-        for child in children:
-            child.pack_forget()
-            child.place_forget()
-            child.grid_forget()
-            try:
-                child.pack(in_=tab_frame, fill="both", expand=True, padx=5, pady=5)
-            except Exception:
-                pass
+        if children:
+            # Reparent children back
+            for child in children:
+                child.pack_forget()
+                child.place_forget()
+                child.grid_forget()
+                try:
+                    child.pack(in_=tab_frame, fill="both", expand=True, padx=5, pady=5)
+                except Exception:
+                    pass
         
         # Destroy pop-out window
         if popout_window.winfo_exists():
@@ -1080,6 +1140,17 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(file_header, text="📄 Files", 
                     font=("Arial Bold", 12)).pack(side="left", pady=5)
         
+        # Add search entry
+        self.browser_search_var = ctk.StringVar()
+        self.browser_search_var.trace_add("write", lambda *args: self.browser_refresh())
+        search_entry = ctk.CTkEntry(
+            file_header,
+            placeholder_text="Search files...",
+            textvariable=self.browser_search_var,
+            width=150
+        )
+        search_entry.pack(side="left", padx=10)
+        
         # Add show all files checkbox
         self.browser_show_all = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(file_header, text="Show all files", 
@@ -1130,6 +1201,9 @@ class PS2TextureSorter(ctk.CTk):
             # Check if show all files is enabled
             show_all = self.browser_show_all.get() if hasattr(self, 'browser_show_all') else False
             
+            # Get search query
+            search_query = self.browser_search_var.get().lower() if hasattr(self, 'browser_search_var') else ""
+            
             # Get files based on filter
             if show_all:
                 files = [f for f in self.browser_current_dir.iterdir() if f.is_file()]
@@ -1138,11 +1212,16 @@ class PS2TextureSorter(ctk.CTk):
                 files = [f for f in self.browser_current_dir.iterdir() 
                         if f.is_file() and f.suffix.lower() in texture_extensions]
             
+            # Apply search filter
+            if search_query:
+                files = [f for f in files if search_query in f.name.lower()]
+            
             # Display files (removed 100 limit)
             if not files:
                 file_type = "files" if show_all else "texture files"
+                search_msg = f" matching '{search_query}'" if search_query else ""
                 ctk.CTkLabel(self.browser_file_list, 
-                           text=f"No {file_type} found in this directory",
+                           text=f"No {file_type}{search_msg} found in this directory",
                            font=("Arial", 11)).pack(pady=20)
             else:
                 for file in sorted(files):  # Show all files, no limit
@@ -1205,6 +1284,34 @@ class PS2TextureSorter(ctk.CTk):
                     font=("Arial", 10), anchor="w").pack(side="left", fill="x", expand=True)
         ctk.CTkLabel(entry_frame, text=size_str, 
                     font=("Arial", 9), text_color="gray").pack(side="right", padx=5)
+        
+        # Add preview button for texture files
+        texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+        if file_path.suffix.lower() in texture_extensions:
+            preview_btn = ctk.CTkButton(
+                entry_frame,
+                text="👁️",
+                width=30,
+                height=20,
+                font=("Arial", 10),
+                command=lambda: self._preview_file(file_path)
+            )
+            preview_btn.pack(side="right", padx=2)
+    
+    def _preview_file(self, file_path):
+        """Open file in preview viewer"""
+        if hasattr(self, 'preview_viewer') and self.preview_viewer:
+            try:
+                # Get all texture files in current directory for navigation
+                texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+                files = [f for f in self.browser_current_dir.iterdir() 
+                        if f.is_file() and f.suffix.lower() in texture_extensions]
+                file_list = [str(f) for f in sorted(files)]
+                
+                self.preview_viewer.open_preview(str(file_path), file_list)
+                self.log(f"📷 Opened preview for: {file_path.name}")
+            except Exception as e:
+                self.log(f"❌ Error opening preview: {e}")
     
     def apply_theme(self, theme_name):
         """Apply selected theme"""
@@ -1365,14 +1472,14 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(scale_frame, text="(applies immediately)", 
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
-        # Tooltip verbosity
+        # Tooltip verbosity (updated to match new modes)
         tooltip_frame = ctk.CTkFrame(ui_frame)
         tooltip_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(tooltip_frame, text="Tooltip Mode:").pack(side="left", padx=10)
         tooltip_var = ctk.StringVar(value=config.get('ui', 'tooltip_mode', default='normal'))
         tooltip_menu = ctk.CTkOptionMenu(tooltip_frame, variable=tooltip_var,
-                                         values=["expert", "normal", "beginner", "panda"])
+                                         values=["normal", "dumbed-down", "vulgar_panda"])
         tooltip_menu.pack(side="left", padx=10)
         
         # Cursor style
@@ -1385,15 +1492,25 @@ class PS2TextureSorter(ctk.CTk):
                                         values=["default", "skull", "panda", "sword"])
         cursor_menu.pack(side="left", padx=10)
         
-        # Panda Mode toggle
-        panda_var = ctk.BooleanVar(value=config.get('ui', 'panda_mode_enabled', default=True))
-        ctk.CTkCheckBox(ui_frame, text="🐼 Enable Panda Mode", 
-                       variable=panda_var).pack(anchor="w", padx=20, pady=5)
+        # Panda Mode selector (consolidated from two toggles)
+        panda_frame = ctk.CTkFrame(ui_frame)
+        panda_frame.pack(fill="x", padx=10, pady=5)
         
-        # Vulgar Mode toggle (for panda)
-        vulgar_var = ctk.BooleanVar(value=config.get('ui', 'vulgar_mode', default=False))
-        ctk.CTkCheckBox(ui_frame, text="💀 Vulgar Panda Mode (uncensored responses)", 
-                       variable=vulgar_var).pack(anchor="w", padx=20, pady=3)
+        ctk.CTkLabel(panda_frame, text="Panda Mode:").pack(side="left", padx=10)
+        # Determine current panda mode setting
+        panda_enabled = config.get('ui', 'panda_mode_enabled', default=True)
+        vulgar_enabled = config.get('ui', 'vulgar_mode', default=False)
+        if not panda_enabled:
+            panda_mode_value = "off"
+        elif vulgar_enabled:
+            panda_mode_value = "vulgar_panda"
+        else:
+            panda_mode_value = "normal_panda"
+        
+        panda_var = ctk.StringVar(value=panda_mode_value)
+        panda_menu = ctk.CTkOptionMenu(panda_frame, variable=panda_var,
+                                       values=["off", "normal_panda", "vulgar_panda"])
+        panda_menu.pack(side="left", padx=10)
         
         # Advanced Customization button
         ctk.CTkButton(ui_frame, text="🎨 Advanced Color & Font Customization",
@@ -1478,8 +1595,18 @@ class PS2TextureSorter(ctk.CTk):
                 config.set('ui', 'scale', value=scale_var.get())
                 config.set('ui', 'tooltip_mode', value=tooltip_var.get())
                 config.set('ui', 'cursor', value=cursor_var.get())  # Fixed: was cursor_style
-                config.set('ui', 'panda_mode_enabled', value=panda_var.get())
-                config.set('ui', 'vulgar_mode', value=vulgar_var.get())
+                
+                # Handle panda mode selector (consolidated from two toggles)
+                panda_mode = panda_var.get()
+                if panda_mode == "off":
+                    config.set('ui', 'panda_mode_enabled', value=False)
+                    config.set('ui', 'vulgar_mode', value=False)
+                elif panda_mode == "vulgar_panda":
+                    config.set('ui', 'panda_mode_enabled', value=True)
+                    config.set('ui', 'vulgar_mode', value=True)
+                else:  # normal_panda or any other value defaults to normal_panda
+                    config.set('ui', 'panda_mode_enabled', value=True)
+                    config.set('ui', 'vulgar_mode', value=False)
                 
                 # File Handling
                 config.set('file_handling', 'create_backup', value=backup_var.get())

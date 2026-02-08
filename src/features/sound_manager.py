@@ -288,6 +288,24 @@ class SoundManager:
         self.notifications_volume = max(0.0, min(1.0, volume))
         logger.debug(f"Notifications volume set to: {self.notifications_volume:.2f}")
     
+    def get_volume(self) -> float:
+        """
+        Get master volume.
+        
+        Returns:
+            Current master volume (0.0 to 1.0)
+        """
+        return self.master_volume
+    
+    def set_volume(self, volume: float) -> None:
+        """
+        Set master volume (convenience method).
+        
+        Args:
+            volume: Volume level (0.0 to 1.0)
+        """
+        self.set_master_volume(volume)
+    
     def mute(self) -> None:
         """Mute all sounds."""
         self.muted = True
