@@ -44,6 +44,9 @@ class PreviewViewer:
         self.canvas = None
         self.image_on_canvas = None
         
+        # Store PhotoImage reference to prevent garbage collection
+        self._current_photo = None
+        
         # Panning state
         self.is_panning = False
         self.pan_start_x = 0
@@ -314,7 +317,22 @@ class PreviewViewer:
     def _load_image(self, file_path: Path):
         """Load an image file"""
         try:
-            self.original_image = Image.open(file_path)
+            # Handle DDS files with special support
+            if file_path.suffix.lower() == '.dds':
+                try:
+                    # PIL has DDS support, but may need extra handling
+                    self.original_image = Image.open(file_path)
+                    # Convert to RGB if needed for display
+                    if self.original_image.mode not in ('RGB', 'RGBA'):
+                        self.original_image = self.original_image.convert('RGBA')
+                except Exception as dds_error:
+                    logger.warning(f"DDS direct load failed, trying conversion: {dds_error}")
+                    # Fallback: try to convert
+                    img = Image.open(file_path)
+                    self.original_image = img.convert('RGBA')
+            else:
+                self.original_image = Image.open(file_path)
+            
             self.zoom_level = 1.0
             self.pan_x = 0
             self.pan_y = 0
@@ -346,8 +364,8 @@ class PreviewViewer:
             # Game textures benefit from LANCZOS which preserves sharp edges
             self.display_image = self.original_image.resize((width, height), Image.Resampling.LANCZOS)
         
-        # Convert to PhotoImage
-        photo = ImageTk.PhotoImage(self.display_image)
+        # Convert to PhotoImage and store as instance variable to prevent GC
+        self._current_photo = ImageTk.PhotoImage(self.display_image)
         
         # Update canvas
         self.canvas.delete("all")
@@ -359,10 +377,10 @@ class PreviewViewer:
         x = (canvas_width - width) // 2 + self.pan_x
         y = (canvas_height - height) // 2 + self.pan_y
         
-        self.image_on_canvas = self.canvas.create_image(x, y, anchor="nw", image=photo)
+        self.image_on_canvas = self.canvas.create_image(x, y, anchor="nw", image=self._current_photo)
         
-        # Keep a reference to prevent garbage collection
-        self.canvas.image = photo
+        # Also keep reference on canvas for extra safety
+        self.canvas.image = self._current_photo
         
         # Update zoom label
         self.zoom_label.configure(text=f"{int(self.zoom_level * 100)}%")

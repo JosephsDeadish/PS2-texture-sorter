@@ -308,6 +308,9 @@ class PS2TextureSorter(ctk.CTk):
         self.context_help = None
         self.preview_viewer = None
         
+        # Thumbnail cache for file browser (prevent PhotoImage GC)
+        self._thumbnail_cache = {}
+        
         # Initialize features if GUI available
         if GUI_AVAILABLE:
             try:
@@ -334,9 +337,24 @@ class PS2TextureSorter(ctk.CTk):
                         logger.info("Tutorial system initialized successfully")
                     except Exception as tutorial_error:
                         logger.error(f"Failed to initialize tutorial system: {tutorial_error}", exc_info=True)
+                        # Set fallback None values
                         self.tutorial_manager = None
                         self.tooltip_manager = None
                         self.context_help = None
+                        # Show user-friendly message only if it's a critical error
+                        if "UI not properly loaded" in str(tutorial_error):
+                            logger.warning("Tutorial will retry after UI is fully loaded")
+                        else:
+                            # Critical error - warn user
+                            self.after(1000, lambda: messagebox.showwarning(
+                                "Tutorial System Warning",
+                                "The tutorial system failed to initialize.\n\n"
+                                "Tooltips and help may not work correctly.\n"
+                                "This won't affect core functionality."))
+                else:
+                    self.tutorial_manager = None
+                    self.tooltip_manager = None
+                    self.context_help = None
             except Exception as e:
                 logger.warning(f"Failed to initialize some features: {e}")
         
@@ -445,6 +463,7 @@ class PS2TextureSorter(ctk.CTk):
         title_label.pack(side="left", padx=20, pady=5)
         
         # Help button
+        help_button = None
         if self.context_help:
             help_button = ctk.CTkButton(
                 menu_frame,
@@ -473,6 +492,7 @@ class PS2TextureSorter(ctk.CTk):
         settings_button.pack(side="right", padx=10, pady=5)
         
         # Tutorial button - always visible so user can restart tutorial
+        tutorial_button = None
         if TUTORIAL_AVAILABLE:
             tutorial_button = ctk.CTkButton(
                 menu_frame,
@@ -481,6 +501,9 @@ class PS2TextureSorter(ctk.CTk):
                 command=self._run_tutorial
             )
             tutorial_button.pack(side="right", padx=10, pady=5)
+        
+        # Apply tooltips to menu bar widgets
+        self._apply_menu_tooltips(tutorial_button, settings_button, theme_button, help_button)
     
     def _run_tutorial(self):
         """Start or restart the tutorial"""
@@ -717,6 +740,26 @@ class PS2TextureSorter(ctk.CTk):
         scrollable_frame = ctk.CTkScrollableFrame(self.tab_sort)
         scrollable_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
+        # ===== ACTION BUTTONS AT TOP =====
+        button_frame = ctk.CTkFrame(scrollable_frame)
+        button_frame.pack(fill="x", padx=10, pady=10)
+        
+        self.start_button = ctk.CTkButton(button_frame, text="🐼 Start Sorting", 
+                                           command=self.start_sorting, 
+                                           width=150, height=40,
+                                           font=("Arial Bold", 14))
+        self.start_button.pack(side="left", padx=10)
+        
+        self.pause_button = ctk.CTkButton(button_frame, text="⏸️ Pause", 
+                                           command=self.pause_sorting,
+                                           width=100, height=40, state="disabled")
+        self.pause_button.pack(side="left", padx=10)
+        
+        self.stop_button = ctk.CTkButton(button_frame, text="⏹️ Stop",
+                                          command=self.stop_sorting,
+                                          width=100, height=40, state="disabled")
+        self.stop_button.pack(side="left", padx=10)
+        
         # Input section
         input_frame = ctk.CTkFrame(scrollable_frame)
         input_frame.pack(fill="x", padx=10, pady=10)
@@ -779,13 +822,16 @@ class PS2TextureSorter(ctk.CTk):
         check_frame.grid(row=1, column=0, columnspan=4, padx=10, pady=10, sticky="w")
         
         self.detect_lods_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(check_frame, text="Detect LODs", variable=self.detect_lods_var).pack(side="left", padx=10)
+        detect_lods_cb = ctk.CTkCheckBox(check_frame, text="Detect LODs", variable=self.detect_lods_var)
+        detect_lods_cb.pack(side="left", padx=10)
         
         self.group_lods_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(check_frame, text="Group LODs", variable=self.group_lods_var).pack(side="left", padx=10)
+        group_lods_cb = ctk.CTkCheckBox(check_frame, text="Group LODs", variable=self.group_lods_var)
+        group_lods_cb.pack(side="left", padx=10)
         
         self.detect_duplicates_var = ctk.BooleanVar(value=False)
-        ctk.CTkCheckBox(check_frame, text="Detect Duplicates", variable=self.detect_duplicates_var).pack(side="left", padx=10)
+        detect_dupes_cb = ctk.CTkCheckBox(check_frame, text="Detect Duplicates", variable=self.detect_duplicates_var)
+        detect_dupes_cb.pack(side="left", padx=10)
         
         # Progress section
         progress_frame = ctk.CTkFrame(scrollable_frame)
@@ -804,38 +850,27 @@ class PS2TextureSorter(ctk.CTk):
         self.log_text = ctk.CTkTextbox(progress_frame, height=200, width=1000)
         self.log_text.pack(padx=10, pady=10, fill="both", expand=True)
         
-        # Action buttons
-        button_frame = ctk.CTkFrame(scrollable_frame)
-        button_frame.pack(fill="x", padx=10, pady=10)
-        
-        self.start_button = ctk.CTkButton(button_frame, text="🐼 Start Sorting", 
-                                           command=self.start_sorting, 
-                                           width=150, height=40,
-                                           font=("Arial Bold", 14))
-        self.start_button.pack(side="left", padx=10)
-        
-        self.pause_button = ctk.CTkButton(button_frame, text="⏸️ Pause", 
-                                           command=self.pause_sorting,
-                                           width=100, height=40, state="disabled")
-        self.pause_button.pack(side="left", padx=10)
-        
-        self.stop_button = ctk.CTkButton(button_frame, text="⏹️ Stop",
-                                          command=self.stop_sorting,
-                                          width=100, height=40, state="disabled")
-        self.stop_button.pack(side="left", padx=10)
-        
         # Apply tooltips to sort tab widgets
-        self._apply_sort_tooltips(browse_btn, browse_out_btn)
+        self._apply_sort_tooltips(browse_btn, browse_out_btn, mode_menu, style_menu, 
+                                  detect_lods_cb, group_lods_cb, detect_dupes_cb)
     
-    def _apply_sort_tooltips(self, browse_in_btn, browse_out_btn):
+    def _apply_sort_tooltips(self, browse_in_btn, browse_out_btn, mode_menu, style_menu,
+                            detect_lods_cb, group_lods_cb, detect_dupes_cb):
         """Apply tooltips to sort tab widgets"""
         if not WidgetTooltip:
             return
         tooltip_text = self._get_tooltip_text
         # Store tooltip references to prevent garbage collection
         self._tooltips.append(WidgetTooltip(self.start_button, tooltip_text('sort_button')))
+        self._tooltips.append(WidgetTooltip(self.pause_button, "Pause the current sorting operation"))
+        self._tooltips.append(WidgetTooltip(self.stop_button, "Stop the sorting operation completely"))
         self._tooltips.append(WidgetTooltip(browse_in_btn, tooltip_text('input_browse')))
         self._tooltips.append(WidgetTooltip(browse_out_btn, tooltip_text('output_browse')))
+        self._tooltips.append(WidgetTooltip(mode_menu, "Choose sorting mode: automatic, manual, or suggested"))
+        self._tooltips.append(WidgetTooltip(style_menu, "Select organization style for sorted textures"))
+        self._tooltips.append(WidgetTooltip(detect_lods_cb, "Automatically detect Level of Detail (LOD) textures"))
+        self._tooltips.append(WidgetTooltip(group_lods_cb, "Group LOD textures together in folders"))
+        self._tooltips.append(WidgetTooltip(detect_dupes_cb, "Find and mark duplicate texture files"))
     
     def _get_tooltip_text(self, widget_id):
         """Get tooltip text from the tooltip manager"""
@@ -853,32 +888,88 @@ class PS2TextureSorter(ctk.CTk):
         }
         return fallbacks.get(widget_id, "")
     
+    def _apply_convert_tooltips(self, input_btn, output_btn, from_menu, to_menu,
+                                recursive_cb, keep_cb):
+        """Apply tooltips to convert tab widgets"""
+        if not WidgetTooltip:
+            return
+        # Store tooltip references to prevent garbage collection
+        self._tooltips.append(WidgetTooltip(self.convert_start_button, "Start batch conversion of texture files"))
+        self._tooltips.append(WidgetTooltip(input_btn, "Select directory containing files to convert"))
+        self._tooltips.append(WidgetTooltip(output_btn, "Choose where to save converted files"))
+        self._tooltips.append(WidgetTooltip(from_menu, "Select source file format to convert from"))
+        self._tooltips.append(WidgetTooltip(to_menu, "Select target file format to convert to"))
+        self._tooltips.append(WidgetTooltip(recursive_cb, "Also convert files in subdirectories"))
+        self._tooltips.append(WidgetTooltip(keep_cb, "Keep original files after conversion"))
+    
+    def _apply_browser_tooltips(self, browse_btn, refresh_btn, search_entry, show_all_cb):
+        """Apply tooltips to file browser tab widgets"""
+        if not WidgetTooltip:
+            return
+        # Store tooltip references to prevent garbage collection
+        self._tooltips.append(WidgetTooltip(browse_btn, "Select a directory to browse texture files"))
+        self._tooltips.append(WidgetTooltip(refresh_btn, "Refresh the file list"))
+        self._tooltips.append(WidgetTooltip(search_entry, "Search for specific files by name"))
+        self._tooltips.append(WidgetTooltip(show_all_cb, "Show all file types, not just textures"))
+    
+    def _apply_menu_tooltips(self, tutorial_btn, settings_btn, theme_btn, help_btn):
+        """Apply tooltips to menu bar widgets"""
+        if not WidgetTooltip:
+            return
+        # Store tooltip references to prevent garbage collection
+        if tutorial_btn:
+            self._tooltips.append(WidgetTooltip(tutorial_btn, "Start or restart the interactive tutorial"))
+        if settings_btn:
+            self._tooltips.append(WidgetTooltip(settings_btn, "Open application settings and preferences"))
+        if theme_btn:
+            self._tooltips.append(WidgetTooltip(theme_btn, "Toggle between light and dark theme"))
+        if help_btn:
+            self._tooltips.append(WidgetTooltip(help_btn, "Open context-sensitive help (F1)"))
+    
     def create_convert_tab(self):
         """Create file format conversion tab"""
+        # Title at the top
         ctk.CTkLabel(self.tab_convert, text="🔄 File Format Conversion 🔄", 
-                     font=("Arial Bold", 18)).pack(pady=15)
+                     font=("Arial Bold", 18)).pack(pady=10)
         
         ctk.CTkLabel(self.tab_convert, text="Batch convert between DDS, PNG, and other formats",
                      font=("Arial", 12)).pack(pady=5)
         
-        # Main content frame
-        content_frame = ctk.CTkFrame(self.tab_convert)
-        content_frame.pack(padx=30, pady=20, fill="both", expand=True)
+        # === START CONVERSION BUTTON AT TOP (BEFORE SCROLLABLE CONTENT) ===
+        top_button_frame = ctk.CTkFrame(self.tab_convert)
+        top_button_frame.pack(fill="x", padx=30, pady=(0, 10))
+        
+        self.convert_start_button = ctk.CTkButton(
+            top_button_frame, 
+            text="🐼 START CONVERSION 🐼", 
+            command=self.start_conversion,
+            width=250, 
+            height=60,
+            font=("Arial Bold", 18),
+            fg_color="#2B7A0B",  # Prominent green color
+            hover_color="#368B14"
+        )
+        self.convert_start_button.pack(pady=5)
+        
+        # Wrap content in scrollable frame
+        scrollable_content = ctk.CTkScrollableFrame(self.tab_convert)
+        scrollable_content.pack(fill="both", expand=True, padx=30, pady=(0, 20))
         
         # === INPUT SECTION ===
-        input_frame = ctk.CTkFrame(content_frame)
+        input_frame = ctk.CTkFrame(scrollable_content)
         input_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(input_frame, text="Input:", font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.convert_input_var = ctk.StringVar()
         ctk.CTkEntry(input_frame, textvariable=self.convert_input_var, width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
-        ctk.CTkButton(input_frame, text="Browse", width=100, 
-                     command=lambda: self.browse_directory(self.convert_input_var)).grid(row=0, column=2, padx=10, pady=5)
+        convert_input_btn = ctk.CTkButton(input_frame, text="Browse", width=100, 
+                     command=lambda: self.browse_directory(self.convert_input_var))
+        convert_input_btn.grid(row=0, column=2, padx=10, pady=5)
         
         input_frame.columnconfigure(1, weight=1)
         
         # === CONVERSION OPTIONS ===
-        options_frame = ctk.CTkFrame(content_frame)
+        options_frame = ctk.CTkFrame(scrollable_content)
         options_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(options_frame, text="Conversion Options:", 
@@ -906,27 +997,30 @@ class PS2TextureSorter(ctk.CTk):
         check_frame.pack(fill="x", padx=10, pady=5)
         
         self.convert_recursive_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(check_frame, text="Include subdirectories", 
-                       variable=self.convert_recursive_var).pack(side="left", padx=10)
+        convert_recursive_cb = ctk.CTkCheckBox(check_frame, text="Include subdirectories", 
+                       variable=self.convert_recursive_var)
+        convert_recursive_cb.pack(side="left", padx=10)
         
         self.convert_keep_original_var = ctk.BooleanVar(value=True)
-        ctk.CTkCheckBox(check_frame, text="Keep original files", 
-                       variable=self.convert_keep_original_var).pack(side="left", padx=10)
+        convert_keep_cb = ctk.CTkCheckBox(check_frame, text="Keep original files", 
+                       variable=self.convert_keep_original_var)
+        convert_keep_cb.pack(side="left", padx=10)
         
         # === OUTPUT SECTION ===
-        output_frame = ctk.CTkFrame(content_frame)
+        output_frame = ctk.CTkFrame(scrollable_content)
         output_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(output_frame, text="Output:", font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.convert_output_var = ctk.StringVar()
         ctk.CTkEntry(output_frame, textvariable=self.convert_output_var, width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
-        ctk.CTkButton(output_frame, text="Browse", width=100,
-                     command=lambda: self.browse_directory(self.convert_output_var)).grid(row=0, column=2, padx=10, pady=5)
+        convert_output_btn = ctk.CTkButton(output_frame, text="Browse", width=100,
+                     command=lambda: self.browse_directory(self.convert_output_var))
+        convert_output_btn.grid(row=0, column=2, padx=10, pady=5)
         
         output_frame.columnconfigure(1, weight=1)
         
         # === PROGRESS SECTION ===
-        progress_frame = ctk.CTkFrame(content_frame)
+        progress_frame = ctk.CTkFrame(scrollable_content)
         progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Progress bar
@@ -941,22 +1035,9 @@ class PS2TextureSorter(ctk.CTk):
         self.convert_log_text = ctk.CTkTextbox(progress_frame, height=150)
         self.convert_log_text.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # === CONTROL BUTTONS ===
-        button_frame = ctk.CTkFrame(content_frame)
-        button_frame.pack(fill="x", padx=10, pady=10)
-        
-        # BIGGER, MORE VISIBLE Start Conversion button with panda emoji
-        self.convert_start_button = ctk.CTkButton(
-            button_frame, 
-            text="🐼 START CONVERSION 🐼", 
-            command=self.start_conversion,
-            width=250, 
-            height=60,
-            font=("Arial Bold", 18),
-            fg_color="#2B7A0B",  # Prominent green color
-            hover_color="#368B14"
-        )
-        self.convert_start_button.pack(side="left", padx=20, pady=10)
+        # Apply tooltips to convert tab widgets
+        self._apply_convert_tooltips(convert_input_btn, convert_output_btn, from_menu, to_menu,
+                                     convert_recursive_cb, convert_keep_cb)
     
     def start_conversion(self):
         """Start batch conversion"""
@@ -1096,14 +1177,16 @@ class PS2TextureSorter(ctk.CTk):
                      font=("Arial Bold", 16)).pack(side="left", padx=10)
         
         # Browse button
-        ctk.CTkButton(header_frame, text="📂 Browse Directory", 
+        browser_browse_btn = ctk.CTkButton(header_frame, text="📂 Browse Directory", 
                      command=self.browser_select_directory,
-                     width=150).pack(side="right", padx=10)
+                     width=150)
+        browser_browse_btn.pack(side="right", padx=10)
         
         # Refresh button
-        ctk.CTkButton(header_frame, text="🔄 Refresh", 
+        browser_refresh_btn = ctk.CTkButton(header_frame, text="🔄 Refresh", 
                      command=self.browser_refresh,
-                     width=100).pack(side="right", padx=5)
+                     width=100)
+        browser_refresh_btn.pack(side="right", padx=5)
         
         # Path display
         path_frame = ctk.CTkFrame(self.tab_browser)
@@ -1153,9 +1236,10 @@ class PS2TextureSorter(ctk.CTk):
         
         # Add show all files checkbox
         self.browser_show_all = ctk.BooleanVar(value=False)
-        ctk.CTkCheckBox(file_header, text="Show all files", 
+        browser_show_all_cb = ctk.CTkCheckBox(file_header, text="Show all files", 
                        variable=self.browser_show_all,
-                       command=self.browser_refresh).pack(side="left", padx=10)
+                       command=self.browser_refresh)
+        browser_show_all_cb.pack(side="left", padx=10)
         
         # File list (scrollable)
         self.browser_file_list = ctk.CTkScrollableFrame(right_pane, height=450)
@@ -1179,6 +1263,10 @@ class PS2TextureSorter(ctk.CTk):
                                            text="Select a directory to browse",
                                            font=("Arial", 9))
         self.browser_status.pack(pady=5)
+        
+        # Apply tooltips to browser tab widgets
+        self._apply_browser_tooltips(browser_browse_btn, browser_refresh_btn, 
+                                     search_entry, browser_show_all_cb)
     
     def browser_select_directory(self):
         """Select directory for file browser"""
@@ -1271,9 +1359,20 @@ class PS2TextureSorter(ctk.CTk):
             self.log(f"Error navigating folders: {e}")
     
     def _create_file_entry(self, file_path):
-        """Create a file entry widget"""
+        """Create a file entry widget with thumbnail"""
         entry_frame = ctk.CTkFrame(self.browser_file_list)
         entry_frame.pack(fill="x", padx=5, pady=2)
+        
+        # Add thumbnail for texture files
+        texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+        if file_path.suffix.lower() in texture_extensions:
+            try:
+                # Generate or retrieve cached thumbnail
+                thumbnail_label = self._create_thumbnail(file_path, entry_frame)
+                if thumbnail_label:
+                    thumbnail_label.pack(side="left", padx=5)
+            except Exception as e:
+                logger.debug(f"Failed to create thumbnail for {file_path.name}: {e}")
         
         # File icon and name
         file_info = f"📄 {file_path.name}"
@@ -1286,7 +1385,6 @@ class PS2TextureSorter(ctk.CTk):
                     font=("Arial", 9), text_color="gray").pack(side="right", padx=5)
         
         # Add preview button for texture files
-        texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
         if file_path.suffix.lower() in texture_extensions:
             preview_btn = ctk.CTkButton(
                 entry_frame,
@@ -1297,6 +1395,44 @@ class PS2TextureSorter(ctk.CTk):
                 command=lambda: self._preview_file(file_path)
             )
             preview_btn.pack(side="right", padx=2)
+    
+    def _create_thumbnail(self, file_path, parent_frame):
+        """Create a thumbnail for an image file"""
+        try:
+            from PIL import Image, ImageTk
+            
+            # Check cache first
+            cache_key = str(file_path)
+            if cache_key in self._thumbnail_cache:
+                # Return cached label with cached PhotoImage
+                cached_photo = self._thumbnail_cache[cache_key]
+                label = ctk.CTkLabel(parent_frame, image=cached_photo, text="")
+                label.image = cached_photo  # Keep reference
+                return label
+            
+            # Load and resize image
+            img = Image.open(file_path)
+            
+            # Convert DDS if needed
+            if file_path.suffix.lower() == '.dds':
+                if img.mode not in ('RGB', 'RGBA'):
+                    img = img.convert('RGBA')
+            
+            # Create thumbnail (32x32)
+            img.thumbnail((32, 32), Image.Resampling.LANCZOS)
+            
+            # Convert to PhotoImage and cache it
+            photo = ImageTk.PhotoImage(img)
+            self._thumbnail_cache[cache_key] = photo
+            
+            # Create label with thumbnail
+            label = ctk.CTkLabel(parent_frame, image=photo, text="")
+            label.image = photo  # Keep reference on label too
+            return label
+            
+        except Exception as e:
+            logger.debug(f"Thumbnail creation failed for {file_path.name}: {e}")
+            return None
     
     def _preview_file(self, file_path):
         """Open file in preview viewer"""
@@ -1364,18 +1500,98 @@ class PS2TextureSorter(ctk.CTk):
         """Handle customization setting changes from the customization panel"""
         try:
             if setting_type == 'theme':
-                # Theme changes are already applied by the ThemeManager via ctk.set_appearance_mode
-                # Just log the change
-                self.log(f"✅ Theme applied: {value.get('name', 'Unknown')}")
+                # Apply theme changes
+                theme = value
+                appearance_mode = theme.get('appearance_mode', 'dark')
+                ctk.set_appearance_mode(appearance_mode)
+                
+                # Update all widgets with new colors if available
+                colors = theme.get('colors', {})
+                if colors:
+                    # Try to update button colors
+                    try:
+                        for widget in self.winfo_children():
+                            self._apply_theme_to_widget(widget, colors)
+                    except Exception as widget_err:
+                        logger.debug(f"Could not update all widget colors: {widget_err}")
+                
+                self.log(f"✅ Theme applied: {theme.get('name', 'Unknown')}")
+                
             elif setting_type == 'color':
-                # Color changes are for accent color - log for now
-                self.log(f"✅ Accent color changed: {value}")
+                # Apply accent color changes to buttons and accents
+                accent_color = value
+                try:
+                    # Update button colors throughout the app
+                    for widget in self.winfo_children():
+                        self._apply_color_to_widget(widget, accent_color)
+                except Exception as color_err:
+                    logger.debug(f"Could not update all widget colors: {color_err}")
+                    
+                self.log(f"✅ Accent color changed: {accent_color}")
+                
             elif setting_type == 'cursor':
-                # Cursor changes are saved to config - log for now
-                self.log(f"✅ Cursor settings applied: {value.get('type', 'Unknown')}")
+                # Apply cursor changes to window and child widgets
+                cursor_type = value.get('type', 'arrow')
+                try:
+                    # Set cursor on main window
+                    self.configure(cursor=cursor_type)
+                    # Propagate to child widgets
+                    for widget in self.winfo_children():
+                        self._apply_cursor_to_widget(widget, cursor_type)
+                except Exception as cursor_err:
+                    logger.debug(f"Could not update all cursors: {cursor_err}")
+                    
+                self.log(f"✅ Cursor settings applied: {cursor_type}")
+                
         except Exception as e:
             self.log(f"❌ Error applying customization: {e}")
             logger.error(f"Customization change error: {e}", exc_info=True)
+    
+    def _apply_theme_to_widget(self, widget, colors):
+        """Recursively apply theme colors to a widget and its children"""
+        try:
+            # Apply colors to CTkButton widgets
+            if isinstance(widget, ctk.CTkButton):
+                if 'button' in colors:
+                    widget.configure(fg_color=colors['button'])
+                if 'button_hover' in colors:
+                    widget.configure(hover_color=colors['button_hover'])
+            
+            # Apply colors to CTkFrame widgets
+            elif isinstance(widget, ctk.CTkFrame):
+                if 'secondary' in colors:
+                    widget.configure(fg_color=colors['secondary'])
+            
+            # Recursively apply to children
+            for child in widget.winfo_children():
+                self._apply_theme_to_widget(child, colors)
+                
+        except Exception:
+            pass  # Ignore widgets that don't support these configurations
+    
+    def _apply_color_to_widget(self, widget, color):
+        """Recursively apply accent color to a widget and its children"""
+        try:
+            # Apply to buttons
+            if isinstance(widget, ctk.CTkButton):
+                widget.configure(fg_color=color)
+            
+            # Recursively apply to children
+            for child in widget.winfo_children():
+                self._apply_color_to_widget(child, color)
+                
+        except Exception:
+            pass  # Ignore widgets that don't support color changes
+    
+    def _apply_cursor_to_widget(self, widget, cursor_type):
+        """Recursively apply cursor to a widget and its children"""
+        try:
+            widget.configure(cursor=cursor_type)
+            # Recursively apply to children
+            for child in widget.winfo_children():
+                self._apply_cursor_to_widget(child, cursor_type)
+        except Exception:
+            pass  # Ignore widgets that don't support cursor changes
     
     def open_settings_window(self):
         """Open settings in a separate window"""
