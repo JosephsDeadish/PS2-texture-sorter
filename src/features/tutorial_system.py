@@ -482,7 +482,10 @@ class TooltipVerbosityManager:
         tooltip = tooltips.get(widget_id, "")
         
         # If tooltip is a list (from PandaMode), pick a random one
-        if isinstance(tooltip, list) and tooltip:
+        # Note: We assume lists are non-empty as they come from PandaMode.TOOLTIPS
+        if isinstance(tooltip, list):
+            if not tooltip:  # Safety check for empty lists
+                return ""
             return random.choice(tooltip)
         
         return tooltip

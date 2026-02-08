@@ -1604,7 +1604,7 @@ class PS2TextureSorter(ctk.CTk):
                 elif panda_mode == "vulgar_panda":
                     config.set('ui', 'panda_mode_enabled', value=True)
                     config.set('ui', 'vulgar_mode', value=True)
-                else:  # normal_panda
+                else:  # normal_panda or any other value defaults to normal_panda
                     config.set('ui', 'panda_mode_enabled', value=True)
                     config.set('ui', 'vulgar_mode', value=False)
                 

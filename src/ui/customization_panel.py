@@ -621,8 +621,10 @@ class ThemeManager(ctk.CTkFrame):
                 
                 try:
                     ctk.set_default_color_theme(temp_theme_path)
-                except Exception:
-                    pass  # If this fails, at least appearance mode is set
+                    logger.debug(f"Applied color theme from {temp_theme_path}")
+                except Exception as theme_err:
+                    # Expected to fail on some CTk versions - not critical
+                    logger.debug(f"Color theme not fully applied: {theme_err}")
                 finally:
                     try:
                         Path(temp_theme_path).unlink()
