@@ -917,7 +917,10 @@ def setup_tutorial_system(master_window, config):
     """
     Setup and initialize the tutorial system with resilient error handling.
     Each component is initialized independently, so if one fails, others can still work.
-    Returns a tuple of (manager, tooltip_manager, context_help) where None indicates failure.
+    
+    Returns:
+        tuple[Optional[TutorialManager], Optional[TooltipVerbosityManager], Optional[ContextHelp]]:
+            A tuple of (manager, tooltip_manager, context_help) where None indicates failure.
     """
     manager = None
     tooltip_manager = None

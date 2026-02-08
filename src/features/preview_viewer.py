@@ -326,13 +326,13 @@ class PreviewViewer:
             if self.original_image is not None:
                 try:
                     self.original_image.close()
-                except:
+                except Exception:
                     pass
                 self.original_image = None
             if self.display_image is not None:
                 try:
                     self.display_image.close()
-                except:
+                except Exception:
                     pass
                 self.display_image = None
             
@@ -386,8 +386,8 @@ class PreviewViewer:
             
             # Convert to PhotoImage with correct master window to prevent GC issues
             # Use preview_window as master if it exists, otherwise fall back to master
-            master_for_photo = self.preview_window if self.preview_window and self.preview_window.winfo_exists() else self.master
-            self._current_photo = ImageTk.PhotoImage(self.display_image, master=master_for_photo)
+            photo_master = self.preview_window if self.preview_window and self.preview_window.winfo_exists() else self.master
+            self._current_photo = ImageTk.PhotoImage(self.display_image, master=photo_master)
             
             # Keep in reference list to prevent premature GC
             self._photo_references.append(self._current_photo)
