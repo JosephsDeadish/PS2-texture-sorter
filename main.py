@@ -337,9 +337,24 @@ class PS2TextureSorter(ctk.CTk):
                         logger.info("Tutorial system initialized successfully")
                     except Exception as tutorial_error:
                         logger.error(f"Failed to initialize tutorial system: {tutorial_error}", exc_info=True)
+                        # Set fallback None values
                         self.tutorial_manager = None
                         self.tooltip_manager = None
                         self.context_help = None
+                        # Show user-friendly message only if it's a critical error
+                        if "UI not properly loaded" in str(tutorial_error):
+                            logger.warning("Tutorial will retry after UI is fully loaded")
+                        else:
+                            # Critical error - warn user
+                            self.after(1000, lambda: messagebox.showwarning(
+                                "Tutorial System Warning",
+                                "The tutorial system failed to initialize.\n\n"
+                                "Tooltips and help may not work correctly.\n"
+                                "This won't affect core functionality."))
+                else:
+                    self.tutorial_manager = None
+                    self.tooltip_manager = None
+                    self.context_help = None
             except Exception as e:
                 logger.warning(f"Failed to initialize some features: {e}")
         
@@ -725,6 +740,26 @@ class PS2TextureSorter(ctk.CTk):
         scrollable_frame = ctk.CTkScrollableFrame(self.tab_sort)
         scrollable_frame.pack(fill="both", expand=True, padx=5, pady=5)
         
+        # ===== ACTION BUTTONS AT TOP =====
+        button_frame = ctk.CTkFrame(scrollable_frame)
+        button_frame.pack(fill="x", padx=10, pady=10)
+        
+        self.start_button = ctk.CTkButton(button_frame, text="🐼 Start Sorting", 
+                                           command=self.start_sorting, 
+                                           width=150, height=40,
+                                           font=("Arial Bold", 14))
+        self.start_button.pack(side="left", padx=10)
+        
+        self.pause_button = ctk.CTkButton(button_frame, text="⏸️ Pause", 
+                                           command=self.pause_sorting,
+                                           width=100, height=40, state="disabled")
+        self.pause_button.pack(side="left", padx=10)
+        
+        self.stop_button = ctk.CTkButton(button_frame, text="⏹️ Stop",
+                                          command=self.stop_sorting,
+                                          width=100, height=40, state="disabled")
+        self.stop_button.pack(side="left", padx=10)
+        
         # Input section
         input_frame = ctk.CTkFrame(scrollable_frame)
         input_frame.pack(fill="x", padx=10, pady=10)
@@ -815,26 +850,6 @@ class PS2TextureSorter(ctk.CTk):
         self.log_text = ctk.CTkTextbox(progress_frame, height=200, width=1000)
         self.log_text.pack(padx=10, pady=10, fill="both", expand=True)
         
-        # Action buttons
-        button_frame = ctk.CTkFrame(scrollable_frame)
-        button_frame.pack(fill="x", padx=10, pady=10)
-        
-        self.start_button = ctk.CTkButton(button_frame, text="🐼 Start Sorting", 
-                                           command=self.start_sorting, 
-                                           width=150, height=40,
-                                           font=("Arial Bold", 14))
-        self.start_button.pack(side="left", padx=10)
-        
-        self.pause_button = ctk.CTkButton(button_frame, text="⏸️ Pause", 
-                                           command=self.pause_sorting,
-                                           width=100, height=40, state="disabled")
-        self.pause_button.pack(side="left", padx=10)
-        
-        self.stop_button = ctk.CTkButton(button_frame, text="⏹️ Stop",
-                                          command=self.stop_sorting,
-                                          width=100, height=40, state="disabled")
-        self.stop_button.pack(side="left", padx=10)
-        
         # Apply tooltips to sort tab widgets
         self._apply_sort_tooltips(browse_btn, browse_out_btn, mode_menu, style_menu, 
                                   detect_lods_cb, group_lods_cb, detect_dupes_cb)
@@ -913,18 +928,35 @@ class PS2TextureSorter(ctk.CTk):
     
     def create_convert_tab(self):
         """Create file format conversion tab"""
+        # Title at the top
         ctk.CTkLabel(self.tab_convert, text="🔄 File Format Conversion 🔄", 
-                     font=("Arial Bold", 18)).pack(pady=15)
+                     font=("Arial Bold", 18)).pack(pady=10)
         
         ctk.CTkLabel(self.tab_convert, text="Batch convert between DDS, PNG, and other formats",
                      font=("Arial", 12)).pack(pady=5)
         
-        # Main content frame
-        content_frame = ctk.CTkFrame(self.tab_convert)
-        content_frame.pack(padx=30, pady=20, fill="both", expand=True)
+        # === START CONVERSION BUTTON AT TOP (BEFORE SCROLLABLE CONTENT) ===
+        top_button_frame = ctk.CTkFrame(self.tab_convert)
+        top_button_frame.pack(fill="x", padx=30, pady=(0, 10))
+        
+        self.convert_start_button = ctk.CTkButton(
+            top_button_frame, 
+            text="🐼 START CONVERSION 🐼", 
+            command=self.start_conversion,
+            width=250, 
+            height=60,
+            font=("Arial Bold", 18),
+            fg_color="#2B7A0B",  # Prominent green color
+            hover_color="#368B14"
+        )
+        self.convert_start_button.pack(pady=5)
+        
+        # Wrap content in scrollable frame
+        scrollable_content = ctk.CTkScrollableFrame(self.tab_convert)
+        scrollable_content.pack(fill="both", expand=True, padx=30, pady=(0, 20))
         
         # === INPUT SECTION ===
-        input_frame = ctk.CTkFrame(content_frame)
+        input_frame = ctk.CTkFrame(scrollable_content)
         input_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(input_frame, text="Input:", font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
@@ -937,7 +969,7 @@ class PS2TextureSorter(ctk.CTk):
         input_frame.columnconfigure(1, weight=1)
         
         # === CONVERSION OPTIONS ===
-        options_frame = ctk.CTkFrame(content_frame)
+        options_frame = ctk.CTkFrame(scrollable_content)
         options_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(options_frame, text="Conversion Options:", 
@@ -975,7 +1007,7 @@ class PS2TextureSorter(ctk.CTk):
         convert_keep_cb.pack(side="left", padx=10)
         
         # === OUTPUT SECTION ===
-        output_frame = ctk.CTkFrame(content_frame)
+        output_frame = ctk.CTkFrame(scrollable_content)
         output_frame.pack(fill="x", padx=10, pady=10)
         
         ctk.CTkLabel(output_frame, text="Output:", font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
@@ -988,7 +1020,7 @@ class PS2TextureSorter(ctk.CTk):
         output_frame.columnconfigure(1, weight=1)
         
         # === PROGRESS SECTION ===
-        progress_frame = ctk.CTkFrame(content_frame)
+        progress_frame = ctk.CTkFrame(scrollable_content)
         progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Progress bar
@@ -1003,30 +1035,9 @@ class PS2TextureSorter(ctk.CTk):
         self.convert_log_text = ctk.CTkTextbox(progress_frame, height=150)
         self.convert_log_text.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # === CONTROL BUTTONS ===
-        button_frame = ctk.CTkFrame(content_frame)
-        button_frame.pack(fill="x", padx=10, pady=10)
-        
-        # BIGGER, MORE VISIBLE Start Conversion button with panda emoji
-        self.convert_start_button = ctk.CTkButton(
-            button_frame, 
-            text="🐼 START CONVERSION 🐼", 
-            command=self.start_conversion,
-            width=250, 
-            height=60,
-            font=("Arial Bold", 18),
-            fg_color="#2B7A0B",  # Prominent green color
-            hover_color="#368B14"
-        )
-        self.convert_start_button.pack(side="left", padx=20, pady=10)
-        
         # Apply tooltips to convert tab widgets
         self._apply_convert_tooltips(convert_input_btn, convert_output_btn, from_menu, to_menu,
                                      convert_recursive_cb, convert_keep_cb)
-            fg_color="#2B7A0B",  # Prominent green color
-            hover_color="#368B14"
-        )
-        self.convert_start_button.pack(side="left", padx=20, pady=10)
     
     def start_conversion(self):
         """Start batch conversion"""
@@ -1489,18 +1500,98 @@ class PS2TextureSorter(ctk.CTk):
         """Handle customization setting changes from the customization panel"""
         try:
             if setting_type == 'theme':
-                # Theme changes are already applied by the ThemeManager via ctk.set_appearance_mode
-                # Just log the change
-                self.log(f"✅ Theme applied: {value.get('name', 'Unknown')}")
+                # Apply theme changes
+                theme = value
+                appearance_mode = theme.get('appearance_mode', 'dark')
+                ctk.set_appearance_mode(appearance_mode)
+                
+                # Update all widgets with new colors if available
+                colors = theme.get('colors', {})
+                if colors:
+                    # Try to update button colors
+                    try:
+                        for widget in self.winfo_children():
+                            self._apply_theme_to_widget(widget, colors)
+                    except Exception as widget_err:
+                        logger.debug(f"Could not update all widget colors: {widget_err}")
+                
+                self.log(f"✅ Theme applied: {theme.get('name', 'Unknown')}")
+                
             elif setting_type == 'color':
-                # Color changes are for accent color - log for now
-                self.log(f"✅ Accent color changed: {value}")
+                # Apply accent color changes to buttons and accents
+                accent_color = value
+                try:
+                    # Update button colors throughout the app
+                    for widget in self.winfo_children():
+                        self._apply_color_to_widget(widget, accent_color)
+                except Exception as color_err:
+                    logger.debug(f"Could not update all widget colors: {color_err}")
+                    
+                self.log(f"✅ Accent color changed: {accent_color}")
+                
             elif setting_type == 'cursor':
-                # Cursor changes are saved to config - log for now
-                self.log(f"✅ Cursor settings applied: {value.get('type', 'Unknown')}")
+                # Apply cursor changes to window and child widgets
+                cursor_type = value.get('type', 'arrow')
+                try:
+                    # Set cursor on main window
+                    self.configure(cursor=cursor_type)
+                    # Propagate to child widgets
+                    for widget in self.winfo_children():
+                        self._apply_cursor_to_widget(widget, cursor_type)
+                except Exception as cursor_err:
+                    logger.debug(f"Could not update all cursors: {cursor_err}")
+                    
+                self.log(f"✅ Cursor settings applied: {cursor_type}")
+                
         except Exception as e:
             self.log(f"❌ Error applying customization: {e}")
             logger.error(f"Customization change error: {e}", exc_info=True)
+    
+    def _apply_theme_to_widget(self, widget, colors):
+        """Recursively apply theme colors to a widget and its children"""
+        try:
+            # Apply colors to CTkButton widgets
+            if isinstance(widget, ctk.CTkButton):
+                if 'button' in colors:
+                    widget.configure(fg_color=colors['button'])
+                if 'button_hover' in colors:
+                    widget.configure(hover_color=colors['button_hover'])
+            
+            # Apply colors to CTkFrame widgets
+            elif isinstance(widget, ctk.CTkFrame):
+                if 'secondary' in colors:
+                    widget.configure(fg_color=colors['secondary'])
+            
+            # Recursively apply to children
+            for child in widget.winfo_children():
+                self._apply_theme_to_widget(child, colors)
+                
+        except Exception:
+            pass  # Ignore widgets that don't support these configurations
+    
+    def _apply_color_to_widget(self, widget, color):
+        """Recursively apply accent color to a widget and its children"""
+        try:
+            # Apply to buttons
+            if isinstance(widget, ctk.CTkButton):
+                widget.configure(fg_color=color)
+            
+            # Recursively apply to children
+            for child in widget.winfo_children():
+                self._apply_color_to_widget(child, color)
+                
+        except Exception:
+            pass  # Ignore widgets that don't support color changes
+    
+    def _apply_cursor_to_widget(self, widget, cursor_type):
+        """Recursively apply cursor to a widget and its children"""
+        try:
+            widget.configure(cursor=cursor_type)
+            # Recursively apply to children
+            for child in widget.winfo_children():
+                self._apply_cursor_to_widget(child, cursor_type)
+        except Exception:
+            pass  # Ignore widgets that don't support cursor changes
     
     def open_settings_window(self):
         """Open settings in a separate window"""
