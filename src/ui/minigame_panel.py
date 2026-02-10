@@ -520,7 +520,7 @@ class MiniGamePanel(ctk.CTkFrame if ctk else tk.Frame):
         score_label.pack(pady=5)
         
         # Rewards
-        rewards_text = f"XP Earned: {result.xp_earned}\nCurrency Earned: {result.currency_earned}"
+        rewards_text = f"XP Earned: {result.xp_earned}\nMoney Earned: ${result.currency_earned}"
         if result.perfect_score:
             rewards_text += "\n🌟 PERFECT SCORE! 🌟"
         
@@ -558,7 +558,7 @@ class MiniGamePanel(ctk.CTkFrame if ctk else tk.Frame):
         
         stats = self.manager.get_statistics()
         
-        stats_text = f"Total Games: {stats['total_games']} | Total XP: {stats['total_xp_earned']} | Perfect Scores: {stats['perfect_scores']}"
+        stats_text = f"Total Games: {stats['total_games']} | Total XP: {stats['total_xp_earned']} | Money Earned: ${stats.get('total_currency_earned', 0)} | Perfect Scores: {stats['perfect_scores']}"
         
         stats_label = ctk.CTkLabel(
             self.stats_frame,

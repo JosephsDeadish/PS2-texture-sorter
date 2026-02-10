@@ -1792,6 +1792,43 @@ class PS2TextureSorter(ctk.CTk):
                     
                 self.log(f"✅ Cursor settings applied: {cursor_type}")
                 
+            elif setting_type == 'tooltip_mode':
+                # Apply tooltip mode change
+                if self.tooltip_manager:
+                    try:
+                        from src.features.tutorial_system import TooltipMode
+                        mode = TooltipMode(value)
+                        self.tooltip_manager.set_mode(mode)
+                        self.log(f"✅ Tooltip mode changed to: {value}")
+                    except (ValueError, Exception) as tooltip_err:
+                        logger.debug(f"Could not change tooltip mode: {tooltip_err}")
+                        self.log(f"⚠️ Could not change tooltip mode: {tooltip_err}")
+                else:
+                    # Save to config directly if tooltip manager not available
+                    try:
+                        config.set('ui', 'tooltip_mode', value)
+                        config.save()
+                        self.log(f"✅ Tooltip mode saved: {value}")
+                    except Exception as cfg_err:
+                        logger.debug(f"Could not save tooltip mode: {cfg_err}")
+                
+            elif setting_type == 'sound_enabled':
+                # Apply sound toggle
+                try:
+                    config.set('ui', 'sound_enabled', value)
+                    config.save()
+                    self.log(f"✅ Sound {'enabled' if value else 'disabled'}")
+                except Exception as sound_err:
+                    logger.debug(f"Could not save sound setting: {sound_err}")
+                
+            elif setting_type == 'volume':
+                # Apply volume change
+                try:
+                    config.set('ui', 'volume', value)
+                    config.save()
+                except Exception as vol_err:
+                    logger.debug(f"Could not save volume setting: {vol_err}")
+                
         except Exception as e:
             self.log(f"❌ Error applying customization: {e}")
             logger.error(f"Customization change error: {e}", exc_info=True)

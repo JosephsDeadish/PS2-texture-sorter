@@ -113,10 +113,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             x = parent.winfo_x() + (event.x - self.drag_start_x)
             y = parent.winfo_y() + (event.y - self.drag_start_y)
             
-            # Constrain to window bounds
+            # Constrain to window bounds (ensure panda stays visible)
             root = self.winfo_toplevel()
-            max_x = root.winfo_width() - parent.winfo_width()
-            max_y = root.winfo_height() - parent.winfo_height()
+            parent_w = max(1, parent.winfo_width())
+            parent_h = max(1, parent.winfo_height())
+            max_x = max(0, root.winfo_width() - parent_w)
+            max_y = max(0, root.winfo_height() - parent_h)
             
             x = max(0, min(x, max_x))
             y = max(0, min(y, max_y))
@@ -272,12 +274,20 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def start_animation(self, animation_name: str):
         """Start looping animation."""
+        # Cancel any existing animation timer to avoid race conditions
+        if self.animation_timer:
+            self.after_cancel(self.animation_timer)
+            self.animation_timer = None
         self.current_animation = animation_name
         self.animation_frame = 0
         self._animate_loop()
     
     def play_animation_once(self, animation_name: str):
         """Play animation once then return to idle."""
+        # Cancel any existing animation timer to avoid race conditions
+        if self.animation_timer:
+            self.after_cancel(self.animation_timer)
+            self.animation_timer = None
         self.current_animation = animation_name
         self.animation_frame = 0
         self._animate_once()
@@ -293,6 +303,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             self.animation_timer = self.after(500, self._animate_loop)
         except Exception as e:
             logger.error(f"Error in animation loop: {e}")
+            # Ensure animation loop continues even after errors
+            try:
+                self.animation_timer = self.after(1000, self._animate_loop)
+            except Exception:
+                pass
     
     def _animate_once(self):
         """Animate once then return to idle."""
@@ -302,9 +317,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self.panda_label.configure(text=frame)
             
             # Return to idle after 1 second
-            self.after(1000, lambda: self.start_animation('idle'))
+            self.animation_timer = self.after(1000, lambda: self.start_animation('idle'))
         except Exception as e:
             logger.error(f"Error in single animation: {e}")
+            # Ensure we return to idle even after errors
+            try:
+                self.animation_timer = self.after(1000, lambda: self.start_animation('idle'))
+            except Exception:
+                pass
     
     def set_mood(self, mood):
         """Update panda mood and animation."""

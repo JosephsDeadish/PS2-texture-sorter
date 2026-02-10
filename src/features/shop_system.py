@@ -388,13 +388,13 @@ class ShopSystem:
         # Load saved data
         self.load()
     
-    def get_items_by_category(self, category: ShopCategory, user_level: int = 1) -> List[ShopItem]:
+    def get_items_by_category(self, category: ShopCategory, user_level: int = 999) -> List[ShopItem]:
         """
         Get items in a category that user can see.
         
         Args:
             category: Shop category
-            user_level: User's current level
+            user_level: User's current level (defaults to showing all items)
             
         Returns:
             List of items in category
