@@ -19,6 +19,9 @@ logger = logging.getLogger(__name__)
 class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     """Interactive animated panda widget - always present and draggable."""
     
+    # Minimum drag distance (pixels) to distinguish drag from click
+    CLICK_THRESHOLD = 5
+    
     def __init__(self, parent, panda_character=None, panda_level_system=None, **kwargs):
         """
         Initialize panda widget with drag functionality.
@@ -36,11 +39,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self.current_animation = 'idle'
         self.animation_frame = 0
         self.animation_timer = None
+        self._destroyed = False
         
         # Dragging state
         self.drag_start_x = 0
         self.drag_start_y = 0
         self.is_dragging = False
+        self._drag_moved = False  # Track if actual movement occurred
         
         # Configure frame
         if ctk:
@@ -98,33 +103,65 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self.drag_start_x = event.x
         self.drag_start_y = event.y
         self.is_dragging = True
-        if self.panda:
-            self.info_label.configure(text="🐼 Wheee!")
+        self._drag_moved = False
     
     def _on_drag_motion(self, event):
         """Handle drag motion - move the panda container."""
         if not self.is_dragging:
             return
         
+        # Check if we've moved enough to count as a real drag
+        distance = ((event.x - self.drag_start_x) ** 2 + (event.y - self.drag_start_y) ** 2) ** 0.5
+        if distance < self.CLICK_THRESHOLD:
+            return
+        
+        if not self._drag_moved:
+            # First real movement — switch to dragging animation
+            self._drag_moved = True
+            self._set_animation_no_cancel('dragging')
+            if self.panda:
+                self.info_label.configure(text="🐼 Wheee!")
+        
         # Get the parent container (panda_container)
         parent = self.master
         if parent and hasattr(parent, 'place'):
-            # Calculate new position
+            root = self.winfo_toplevel()
+            root_w = max(1, root.winfo_width())
+            root_h = max(1, root.winfo_height())
+            parent_w = max(1, parent.winfo_width())
+            parent_h = max(1, parent.winfo_height())
+            
+            # Calculate new absolute position
             x = parent.winfo_x() + (event.x - self.drag_start_x)
             y = parent.winfo_y() + (event.y - self.drag_start_y)
             
-            # Constrain to window bounds (ensure panda stays visible)
-            root = self.winfo_toplevel()
-            parent_w = max(1, parent.winfo_width())
-            parent_h = max(1, parent.winfo_height())
-            max_x = max(0, root.winfo_width() - parent_w)
-            max_y = max(0, root.winfo_height() - parent_h)
+            # Constrain to window bounds
+            max_x = max(0, root_w - parent_w)
+            max_y = max(0, root_h - parent_h)
+            
+            hit_wall = False
+            if x <= 0 or x >= max_x:
+                hit_wall = True
+            if y <= 0 or y >= max_y:
+                hit_wall = True
             
             x = max(0, min(x, max_x))
             y = max(0, min(y, max_y))
             
-            # Update position
-            parent.place(x=x, y=y)
+            # Convert back to relative coordinates for consistent positioning
+            rel_x = (x + parent_w) / max(1, root_w)
+            rel_y = (y + parent_h) / max(1, root_h)
+            # Clamp relative coords
+            rel_x = max(0.0, min(1.0, rel_x))
+            rel_y = max(0.0, min(1.0, rel_y))
+            
+            # Always use relx/rely with anchor="se" to stay consistent
+            parent.place(relx=rel_x, rely=rel_y, anchor="se")
+            
+            if hit_wall:
+                self._set_animation_no_cancel('wall_hit')
+                if self.panda:
+                    self.info_label.configure(text="🐼 Ouch!")
     
     def _on_drag_end(self, event):
         """Handle end of drag operation."""
@@ -133,20 +170,25 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         self.is_dragging = False
         
-        # Check if it was just a click (minimal movement)
-        distance = ((event.x - self.drag_start_x) ** 2 + (event.y - self.drag_start_y) ** 2) ** 0.5
-        if distance < 5:  # Less than 5 pixels = click, not drag
+        if not self._drag_moved:
+            # It was just a click (minimal movement)
             self._on_click(event)
         else:
             # Save new position in config
             parent = self.master
             if parent:
                 root = self.winfo_toplevel()
-                # Calculate relative position (0.0 to 1.0)
-                rel_x = parent.winfo_x() / max(1, root.winfo_width())
-                rel_y = parent.winfo_y() / max(1, root.winfo_height())
+                root_w = max(1, root.winfo_width())
+                root_h = max(1, root.winfo_height())
+                parent_w = max(1, parent.winfo_width())
+                parent_h = max(1, parent.winfo_height())
                 
-                # Save to config (if config is available)
+                # Calculate relative position consistently with anchor="se"
+                rel_x = (parent.winfo_x() + parent_w) / root_w
+                rel_y = (parent.winfo_y() + parent_h) / root_h
+                rel_x = max(0.05, min(1.0, rel_x))
+                rel_y = max(0.05, min(1.0, rel_y))
+                
                 try:
                     from src.config import config
                     config.set('panda', 'position_x', value=rel_x)
@@ -160,12 +202,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self.info_label.configure(text="🐼 Home sweet home!")
                 # Award XP for moving the panda
                 if self.panda_level_system:
-                    # Use half the click reward for moving, or default to 5 XP
                     try:
                         xp = self.panda_level_system.get_xp_reward('click') // 2
                     except (KeyError, AttributeError, TypeError):
-                        xp = 5  # Default XP for moving panda
+                        xp = 5
                     self.panda_level_system.add_xp(xp, 'Moved panda')
+            
+            # Play tossed animation briefly then return to idle
+            self.play_animation_once('tossed')
     
     def _on_click(self, event=None):
         """Handle left click on panda."""
@@ -274,26 +318,53 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def start_animation(self, animation_name: str):
         """Start looping animation."""
+        if self._destroyed:
+            return
         # Cancel any existing animation timer to avoid race conditions
-        if self.animation_timer:
-            self.after_cancel(self.animation_timer)
-            self.animation_timer = None
+        self._cancel_animation_timer()
         self.current_animation = animation_name
         self.animation_frame = 0
         self._animate_loop()
     
+    def _set_animation_no_cancel(self, animation_name: str):
+        """Set current animation frame without cancelling the timer.
+        
+        Used during drag to update the displayed frame immediately
+        without disrupting the animation loop timing.
+        """
+        if self._destroyed:
+            return
+        self.current_animation = animation_name
+        try:
+            if self.panda:
+                frame = self.panda.get_animation_frame(animation_name)
+                self.panda_label.configure(text=frame)
+        except Exception as e:
+            logger.debug(f"Error setting animation frame: {e}")
+    
     def play_animation_once(self, animation_name: str):
         """Play animation once then return to idle."""
+        if self._destroyed:
+            return
         # Cancel any existing animation timer to avoid race conditions
-        if self.animation_timer:
-            self.after_cancel(self.animation_timer)
-            self.animation_timer = None
+        self._cancel_animation_timer()
         self.current_animation = animation_name
         self.animation_frame = 0
         self._animate_once()
     
+    def _cancel_animation_timer(self):
+        """Safely cancel any pending animation timer."""
+        if self.animation_timer:
+            try:
+                self.after_cancel(self.animation_timer)
+            except Exception:
+                pass
+            self.animation_timer = None
+    
     def _animate_loop(self):
         """Animate loop for continuous animation."""
+        if self._destroyed:
+            return
         try:
             if self.panda:
                 frame = self.panda.get_animation_frame(self.current_animation)
@@ -304,13 +375,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         except Exception as e:
             logger.error(f"Error in animation loop: {e}")
             # Ensure animation loop continues even after errors
-            try:
-                self.animation_timer = self.after(500, self._animate_loop)
-            except Exception:
-                pass
+            if not self._destroyed:
+                try:
+                    self.animation_timer = self.after(500, self._animate_loop)
+                except Exception:
+                    pass
     
     def _animate_once(self):
         """Animate once then return to idle."""
+        if self._destroyed:
+            return
         try:
             if self.panda:
                 frame = self.panda.get_animation_frame(self.current_animation)
@@ -320,16 +394,21 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             self.animation_timer = self.after(1000, lambda: self.start_animation('idle'))
         except Exception as e:
             logger.error(f"Error in single animation: {e}")
-            # Ensure we return to idle even after errors
-            try:
-                self.animation_timer = self.after(1000, lambda: self.start_animation('idle'))
-            except Exception:
-                pass
+            if not self._destroyed:
+                try:
+                    self.animation_timer = self.after(1000, lambda: self.start_animation('idle'))
+                except Exception:
+                    pass
     
     def set_mood(self, mood):
         """Update panda mood and animation."""
+        if self._destroyed:
+            return
         if self.panda:
             self.panda.set_mood(mood)
+            # Don't interrupt drag animations
+            if self.is_dragging:
+                return
             # Change animation based on mood
             mood_animations = {
                 'happy': 'idle',
@@ -344,11 +423,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def update_info(self, text: str):
         """Update info text below panda."""
-        self.info_label.configure(text=text)
+        if not self._destroyed:
+            self.info_label.configure(text=text)
     
     def destroy(self):
         """Clean up widget."""
-        if self.animation_timer:
-            self.after_cancel(self.animation_timer)
+        self._destroyed = True
+        self._cancel_animation_timer()
         super().destroy()
 

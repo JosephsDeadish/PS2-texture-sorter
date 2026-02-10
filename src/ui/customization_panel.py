@@ -311,13 +311,24 @@ class CursorCustomizer(ctk.CTkFrame):
         super().__init__(master)
         self.on_cursor_change = on_cursor_change
         
-        self.cursor_types = ["default", "skull", "panda", "sword", "arrow", "custom"]
+        self.cursor_types = [
+            "default", "Arrow Pointer", "Pointing Hand", "Crosshair",
+            "Text Select", "Hourglass", "Pirate Skull", "Heart",
+            "Target Cross", "Star", "Circle", "Plus Sign",
+            "Pencil", "Dot", "X Cursor", "Diamond", "Fleur",
+            "Spraycan", "Left Arrow", "Right Arrow"
+        ]
         self.cursor_sizes = {"small": (16, 16), "medium": (32, 32), "large": (48, 48)}
         
+        self.trail_styles = [
+            "rainbow", "fire", "ice", "nature", "galaxy", "gold"
+        ]
+        
         self.current_cursor = config.get('ui', 'cursor', default='default')
-        self.current_size = "medium"
+        self.current_size = config.get('ui', 'cursor_size', default='medium')
         self.current_tint = "#ffffff"
-        self.trail_enabled = False
+        self.trail_enabled = config.get('ui', 'cursor_trail', default=False)
+        self.trail_style = config.get('ui', 'cursor_trail_color', default='rainbow')
         
         self._create_widgets()
     
@@ -360,6 +371,7 @@ class CursorCustomizer(ctk.CTkFrame):
         ctk.CTkButton(tint_frame, text="Pick", width=60,
                      command=self._pick_tint_color).pack(side="left", padx=5)
         
+        # Trail enable/disable
         trail_frame = ctk.CTkFrame(self)
         trail_frame.pack(fill="x", padx=10, pady=5)
         
@@ -367,6 +379,18 @@ class CursorCustomizer(ctk.CTkFrame):
         ctk.CTkCheckBox(trail_frame, text="Enable Trail Effect", 
                        variable=self.trail_var,
                        command=self._on_trail_change).pack(side="left", padx=5)
+        
+        # Trail color selection
+        trail_color_frame = ctk.CTkFrame(self)
+        trail_color_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(trail_color_frame, text="Trail Style:").pack(side="left", padx=5)
+        self.trail_style_var = ctk.StringVar(value=self.trail_style)
+        self.trail_style_menu = ctk.CTkOptionMenu(
+            trail_color_frame, variable=self.trail_style_var,
+            values=self.trail_styles,
+            command=self._on_trail_style_change)
+        self.trail_style_menu.pack(side="left", padx=5, fill="x", expand=True)
         
         preview_frame = ctk.CTkFrame(self)
         preview_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -392,6 +416,10 @@ class CursorCustomizer(ctk.CTkFrame):
         self.trail_enabled = self.trail_var.get()
         self._update_preview()
     
+    def _on_trail_style_change(self, trail_style):
+        self.trail_style = trail_style
+        self._update_preview()
+    
     def _pick_tint_color(self):
         picker_window = ctk.CTkToplevel(self)
         picker_window.title("Pick Tint Color")
@@ -412,7 +440,7 @@ class CursorCustomizer(ctk.CTkFrame):
     
     def _update_preview(self):
         size_str = f"{self.cursor_sizes[self.current_size][0]}x{self.cursor_sizes[self.current_size][1]}"
-        trail_str = "ON" if self.trail_enabled else "OFF"
+        trail_str = f"ON ({self.trail_style})" if self.trail_enabled else "OFF"
         
         preview_text = f"Type: {self.current_cursor}\nSize: {size_str}\nTint: {self.current_tint}\nTrail: {trail_str}"
         self.preview_area.configure(text=preview_text)
@@ -422,13 +450,15 @@ class CursorCustomizer(ctk.CTkFrame):
         config.set('ui', 'cursor_size', value=self.current_size)
         config.set('ui', 'cursor_tint', value=self.current_tint)
         config.set('ui', 'cursor_trail', value=self.trail_enabled)
+        config.set('ui', 'cursor_trail_color', value=self.trail_style)
         
         if self.on_cursor_change:
             self.on_cursor_change({
                 'type': self.current_cursor,
                 'size': self.current_size,
                 'tint': self.current_tint,
-                'trail': self.trail_enabled
+                'trail': self.trail_enabled,
+                'trail_color': self.trail_style
             })
         
         messagebox.showinfo("Success", "Cursor settings applied!")
@@ -438,7 +468,8 @@ class CursorCustomizer(ctk.CTkFrame):
             'type': self.current_cursor,
             'size': self.current_size,
             'tint': self.current_tint,
-            'trail': self.trail_enabled
+            'trail': self.trail_enabled,
+            'trail_color': self.trail_style
         }
     
     def update_available_cursors(self, cursor_names: List[str]):
