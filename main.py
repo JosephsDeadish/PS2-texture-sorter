@@ -828,11 +828,23 @@ class PS2TextureSorter(ctk.CTk):
         
         # Organization style (default: flat - simplest for new users)
         ctk.CTkLabel(opts_grid, text="Style:").grid(row=0, column=2, padx=10, pady=5, sticky="w")
-        self.style_var = ctk.StringVar(value="flat")
+        # Map display names to internal style keys
+        self._style_display_to_key = {
+            "Simple Flat (Category Only)": "flat",
+            "Minimalist (Category → Files)": "minimalist",
+            "By Character Traits (Gender/Skin/Body)": "sims",
+            "By Type & Variant (Category/Type/File)": "neopets",
+            "By Game Area (Level/Area/Type)": "game_area",
+            "By Asset Pipeline (Type/Resolution/Format)": "asset_pipeline",
+            "By Module (Characters/Vehicles/UI/etc.)": "modular",
+            "Maximum Detail (Deep Hierarchy)": "maximum_detail",
+            "Custom (User-Defined)": "custom",
+        }
+        self._style_key_to_display = {v: k for k, v in self._style_display_to_key.items()}
+        style_display_names = list(self._style_display_to_key.keys())
+        self.style_var = ctk.StringVar(value="Simple Flat (Category Only)")
         style_menu = ctk.CTkOptionMenu(opts_grid, variable=self.style_var,
-                                        values=["sims", "neopets", "flat", "game_area", 
-                                               "asset_pipeline", "modular", "minimalist", 
-                                               "maximum_detail", "custom"])
+                                        values=style_display_names)
         style_menu.grid(row=0, column=3, padx=10, pady=5, sticky="w")
         
         # Checkboxes
@@ -885,7 +897,17 @@ class PS2TextureSorter(ctk.CTk):
         self._tooltips.append(WidgetTooltip(browse_in_btn, tooltip_text('input_browse')))
         self._tooltips.append(WidgetTooltip(browse_out_btn, tooltip_text('output_browse')))
         self._tooltips.append(WidgetTooltip(mode_menu, "Choose sorting mode: automatic, manual, or suggested"))
-        self._tooltips.append(WidgetTooltip(style_menu, "Select organization style for sorted textures"))
+        self._tooltips.append(WidgetTooltip(style_menu, 
+            "Select how textures are organized:\n"
+            "• Simple Flat – All files in category folders\n"
+            "• Minimalist – Category → Files, minimal nesting\n"
+            "• By Character Traits – Gender/Skin/Body Part\n"
+            "• By Type & Variant – Category/Type/Individual\n"
+            "• By Game Area – Level/Area/Type/Asset\n"
+            "• By Asset Pipeline – Type/Resolution/Format\n"
+            "• By Module – Characters/Vehicles/UI/etc.\n"
+            "• Maximum Detail – Deep nested hierarchy\n"
+            "• Custom – User-defined rules"))
         self._tooltips.append(WidgetTooltip(detect_lods_cb, "Automatically detect Level of Detail (LOD) textures"))
         self._tooltips.append(WidgetTooltip(group_lods_cb, "Group LOD textures together in folders"))
         self._tooltips.append(WidgetTooltip(detect_dupes_cb, "Find and mark duplicate texture files"))
@@ -1310,28 +1332,42 @@ class PS2TextureSorter(ctk.CTk):
             # Get search query
             search_query = self.browser_search_var.get().lower() if hasattr(self, 'browser_search_var') else ""
             
-            # Get files based on filter
-            if show_all:
-                files = [f for f in self.browser_current_dir.iterdir() if f.is_file()]
-            else:
-                texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
-                files = [f for f in self.browser_current_dir.iterdir() 
-                        if f.is_file() and f.suffix.lower() in texture_extensions]
+            # Collect files incrementally to avoid freezing on huge directories
+            texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+            files = []
+            try:
+                for f in self.browser_current_dir.iterdir():
+                    if not f.is_file():
+                        continue
+                    if not show_all and f.suffix.lower() not in texture_extensions:
+                        continue
+                    if search_query and search_query not in f.name.lower():
+                        continue
+                    files.append(f)
+            except PermissionError:
+                pass
             
-            # Apply search filter
-            if search_query:
-                files = [f for f in files if search_query in f.name.lower()]
+            # Limit displayed files to prevent UI freeze
+            MAX_DISPLAY = 200
+            files_sorted = sorted(files)
+            total_files = len(files_sorted)
+            display_files = files_sorted[:MAX_DISPLAY]
             
-            # Display files (removed 100 limit)
-            if not files:
+            # Display files
+            if not display_files:
                 file_type = "files" if show_all else "texture files"
                 search_msg = f" matching '{search_query}'" if search_query else ""
                 ctk.CTkLabel(self.browser_file_list, 
                            text=f"No {file_type}{search_msg} found in this directory",
                            font=("Arial", 11)).pack(pady=20)
             else:
-                for file in sorted(files):  # Show all files, no limit
+                for file in display_files:
                     self._create_file_entry(file)
+                
+                if total_files > MAX_DISPLAY:
+                    ctk.CTkLabel(self.browser_file_list, 
+                               text=f"... and {total_files - MAX_DISPLAY} more files (use search to filter)",
+                               font=("Arial", 10), text_color="gray").pack(pady=10)
             
             # Update folder list with navigation
             self.browser_folder_list.delete("1.0", "end")
@@ -1340,7 +1376,11 @@ class PS2TextureSorter(ctk.CTk):
             if self.browser_current_dir.parent != self.browser_current_dir:
                 self.browser_folder_list.insert("end", "⬆️ .. (Parent Directory)\n")
             
-            folders = [f for f in self.browser_current_dir.iterdir() if f.is_dir()]
+            folders = []
+            try:
+                folders = [f for f in self.browser_current_dir.iterdir() if f.is_dir()]
+            except PermissionError:
+                pass
             for folder in sorted(folders):
                 self.browser_folder_list.insert("end", f"📁 {folder.name}\n")
             
@@ -1348,7 +1388,8 @@ class PS2TextureSorter(ctk.CTk):
             self.browser_folder_list.bind("<Double-Button-1>", self._on_folder_click)
             
             # Update status
-            self.browser_status.configure(text=f"Found {len(files)} file(s) and {len(folders)} folder(s)")
+            status = f"Showing {len(display_files)} of {total_files} file(s) and {len(folders)} folder(s)"
+            self.browser_status.configure(text=status)
             
         except Exception as e:
             self.browser_status.configure(text=f"Error: {e}")
@@ -1417,15 +1458,13 @@ class PS2TextureSorter(ctk.CTk):
     def _create_thumbnail(self, file_path, parent_frame):
         """Create a thumbnail for an image file"""
         try:
-            from PIL import Image, ImageTk
+            from PIL import Image
             
             # Check cache first
             cache_key = str(file_path)
             if cache_key in self._thumbnail_cache:
-                # Return cached label with cached PhotoImage
                 cached_photo = self._thumbnail_cache[cache_key]
                 label = ctk.CTkLabel(parent_frame, image=cached_photo, text="")
-                label.image = cached_photo  # Keep reference
                 return label
             
             # Load and resize image
@@ -1439,13 +1478,12 @@ class PS2TextureSorter(ctk.CTk):
             # Create thumbnail (32x32)
             img.thumbnail((32, 32), Image.Resampling.LANCZOS)
             
-            # Convert to PhotoImage and cache it
-            photo = ImageTk.PhotoImage(img)
+            # Use CTkImage for proper display in customtkinter
+            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(32, 32))
             self._thumbnail_cache[cache_key] = photo
             
             # Create label with thumbnail
             label = ctk.CTkLabel(parent_frame, image=photo, text="")
-            label.image = photo  # Keep reference on label too
             return label
             
         except Exception as e:
@@ -1753,7 +1791,6 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkButton(ui_frame, text="🎨 Advanced Color & Font Customization",
                      command=self.open_customization,
                      width=280, height=35).pack(padx=20, pady=10)
-        cursor_menu.pack(side="left", padx=10)
         
         # === FILE HANDLING SETTINGS ===
         file_frame = ctk.CTkFrame(settings_scroll)
@@ -1970,7 +2007,11 @@ class PS2TextureSorter(ctk.CTk):
                 self.apply_ui_scaling(scale_var.get())
                 # Update tooltip mode if tooltip manager exists
                 if hasattr(self, 'tooltip_manager') and self.tooltip_manager:
-                    self.tooltip_manager.set_mode(tooltip_var.get())
+                    try:
+                        from src.features.tutorial_system import TooltipMode
+                        self.tooltip_manager.set_mode(TooltipMode(tooltip_var.get()))
+                    except (ValueError, ImportError):
+                        pass
                 
                 self.log("✅ Settings saved successfully!")
                 
@@ -2547,7 +2588,8 @@ Built with:
             input_path = self.input_path_var.get()
             output_path = self.output_path_var.get()
             mode = self.mode_var.get()
-            style = self.style_var.get()
+            style_display = self.style_var.get()
+            style = self._style_display_to_key.get(style_display, "flat")
             detect_lods = self.detect_lods_var.get()
             group_lods = self.group_lods_var.get()
             detect_duplicates = self.detect_duplicates_var.get()
