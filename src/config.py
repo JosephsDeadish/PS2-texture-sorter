@@ -43,6 +43,9 @@ class Config:
                 "theme": "dark",  # dark, light
                 "custom_colors": {},
                 "cursor": "default",  # default, skull, panda, sword
+                "cursor_size": "medium",  # small, medium, large
+                "cursor_trail": False,
+                "cursor_trail_color": "rainbow",  # rainbow, fire, ice, nature, galaxy, gold
                 "tooltip_enabled": True,
                 "tooltip_mode": "normal",  # expert, normal, beginner, panda
                 "tooltip_delay": 0.5,

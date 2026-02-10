@@ -40,6 +40,7 @@ class Achievement:
     progress: float = 0.0
     progress_max: float = 100.0
     category: str = "general"
+    reward: Optional[Dict] = None  # Direct reward on unlock, e.g. {'type': 'currency', 'amount': 100}
     
     def is_complete(self) -> bool:
         """Check if achievement is complete."""
@@ -66,7 +67,8 @@ class AchievementSystem:
             points=10,
             icon='🎯',
             category='beginner',
-            progress_max=1
+            progress_max=1,
+            reward={'type': 'currency', 'amount': 50, 'description': '50 Bamboo Bucks'}
         ),
         'rookie_sorter': Achievement(
             id='rookie_sorter',
@@ -76,7 +78,8 @@ class AchievementSystem:
             points=25,
             icon='📦',
             category='progress',
-            progress_max=100
+            progress_max=100,
+            reward={'type': 'currency', 'amount': 100, 'description': '100 Bamboo Bucks'}
         ),
         
         # Progress achievements
@@ -88,7 +91,8 @@ class AchievementSystem:
             points=50,
             icon='📊',
             category='progress',
-            progress_max=1000
+            progress_max=1000,
+            reward={'type': 'currency', 'amount': 250, 'description': '250 Bamboo Bucks'}
         ),
         'journeyman': Achievement(
             id='journeyman',
@@ -98,7 +102,8 @@ class AchievementSystem:
             points=100,
             icon='⚡',
             category='progress',
-            progress_max=10000
+            progress_max=10000,
+            reward={'type': 'currency', 'amount': 500, 'description': '500 Bamboo Bucks'}
         ),
         'master': Achievement(
             id='master',
@@ -108,7 +113,8 @@ class AchievementSystem:
             points=250,
             icon='👑',
             category='progress',
-            progress_max=50000
+            progress_max=50000,
+            reward={'type': 'exclusive_title', 'title': 'Master Sorter', 'description': 'Exclusive "Master Sorter" title'}
         ),
         'legend': Achievement(
             id='legend',
@@ -118,7 +124,8 @@ class AchievementSystem:
             points=500,
             icon='⭐',
             category='progress',
-            progress_max=200000
+            progress_max=200000,
+            reward={'type': 'exclusive_title', 'title': 'Legendary Sorter', 'description': 'Exclusive "Legendary Sorter" title'}
         ),
         
         # Speed achievements
@@ -130,7 +137,8 @@ class AchievementSystem:
             points=100,
             icon='⚡',
             category='speed',
-            progress_max=1
+            progress_max=1,
+            reward={'type': 'currency', 'amount': 300, 'description': '300 Bamboo Bucks'}
         ),
         'lightning_fast': Achievement(
             id='lightning_fast',
@@ -206,7 +214,8 @@ class AchievementSystem:
             points=150,
             icon='💯',
             category='quality',
-            progress_max=10
+            progress_max=10,
+            reward={'type': 'currency', 'amount': 500, 'description': '500 Bamboo Bucks'}
         ),
         
         # Special/Hidden achievements
@@ -219,7 +228,8 @@ class AchievementSystem:
             icon='🐼',
             category='special',
             hidden=True,
-            progress_max=1
+            progress_max=1,
+            reward={'type': 'exclusive_item', 'item': 'panda_badge', 'description': 'Exclusive Panda Lover badge'}
         ),
         'achievement_hunter': Achievement(
             id='achievement_hunter',
@@ -240,7 +250,8 @@ class AchievementSystem:
             icon='🌟',
             category='meta',
             hidden=True,
-            progress_max=100  # percentage
+            progress_max=100,  # percentage
+            reward={'type': 'exclusive_title', 'title': 'Completionist', 'description': 'Exclusive "Completionist" title + 5000 Bamboo Bucks'}
         ),
         
         # Easter eggs
@@ -253,7 +264,8 @@ class AchievementSystem:
             icon='🎮',
             category='easter_egg',
             hidden=True,
-            progress_max=1
+            progress_max=1,
+            reward={'type': 'currency', 'amount': 200, 'description': '200 Bamboo Bucks'}
         ),
         'night_owl': Achievement(
             id='night_owl',
@@ -308,7 +320,8 @@ class AchievementSystem:
                 icon=achievement.icon,
                 hidden=achievement.hidden,
                 category=achievement.category,
-                progress_max=achievement.progress_max
+                progress_max=achievement.progress_max,
+                reward=achievement.reward
             )
     
     def update_progress(
@@ -482,6 +495,21 @@ class AchievementSystem:
             Achievement or None
         """
         return self.achievements.get(achievement_id)
+    
+    def get_reward(self, achievement_id: str) -> Optional[Dict]:
+        """
+        Get the reward for an achievement.
+        
+        Args:
+            achievement_id: Achievement ID
+            
+        Returns:
+            Reward dict or None
+        """
+        achievement = self.achievements.get(achievement_id)
+        if achievement and achievement.reward:
+            return achievement.reward
+        return None
     
     def get_all_achievements(self, include_hidden: bool = False) -> List[Achievement]:
         """

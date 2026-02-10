@@ -419,11 +419,11 @@ class TutorialManager:
             try:
                 if hasattr(self, 'dont_show_var') and self.dont_show_var.get():
                     logger.debug("User opted to skip tutorial in future")
-                    self.config.set('tutorial', 'completed', True)
+                    self.config.set('tutorial', 'completed', value=True)
                 else:
                     # User may want to see tutorial again, just mark as seen
                     logger.debug("Tutorial marked as seen but not completed")
-                    self.config.set('tutorial', 'seen', True)
+                    self.config.set('tutorial', 'seen', value=True)
                 
                 # Save config changes
                 self.config.save()
@@ -511,7 +511,7 @@ class TooltipVerbosityManager:
     def set_mode(self, mode: TooltipMode):
         """Change tooltip verbosity mode"""
         self.current_mode = mode
-        self.config.set('ui', 'tooltip_mode', mode.value)
+        self.config.set('ui', 'tooltip_mode', value=mode.value)
         self.config.save()
     
     def get_tooltip(self, widget_id: str) -> str:

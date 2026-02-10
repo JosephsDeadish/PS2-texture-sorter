@@ -26,6 +26,7 @@ class ShopCategory(Enum):
     ACCESSORIES = "accessories"
     UPGRADES = "upgrades"
     SPECIAL = "special"
+    FOOD = "food"
 
 
 @dataclass
@@ -692,6 +693,74 @@ class ShopSystem:
             icon='💻',
             level_required=12,
             unlockable_id='theme_hacker'
+        ),
+        
+        # Food items - buy and drag to panda to feed
+        'food_bamboo': ShopItem(
+            id='food_bamboo',
+            name='Fresh Bamboo',
+            description='Drag to panda to feed! Their favorite snack',
+            category=ShopCategory.FOOD,
+            price=10,
+            icon='🎋',
+            level_required=1,
+            one_time_purchase=False,
+            unlockable_id='food_bamboo'
+        ),
+        'food_bamboo_shoots': ShopItem(
+            id='food_bamboo_shoots',
+            name='Bamboo Shoots',
+            description='Drag to panda to feed! Tender young shoots',
+            category=ShopCategory.FOOD,
+            price=20,
+            icon='🌱',
+            level_required=2,
+            one_time_purchase=False,
+            unlockable_id='food_bamboo_shoots'
+        ),
+        'food_bamboo_cake': ShopItem(
+            id='food_bamboo_cake',
+            name='Bamboo Cake',
+            description='Drag to panda to feed! A delicious treat',
+            category=ShopCategory.FOOD,
+            price=50,
+            icon='🍰',
+            level_required=5,
+            one_time_purchase=False,
+            unlockable_id='food_bamboo_cake'
+        ),
+        'food_golden_bamboo': ShopItem(
+            id='food_golden_bamboo',
+            name='Golden Bamboo',
+            description='Drag to panda to feed! Legendary delicacy',
+            category=ShopCategory.FOOD,
+            price=200,
+            icon='✨',
+            level_required=10,
+            one_time_purchase=False,
+            unlockable_id='food_golden_bamboo'
+        ),
+        'food_cookies': ShopItem(
+            id='food_cookies',
+            name='Panda Cookies',
+            description='Drag to panda to feed! Cute panda-shaped cookies',
+            category=ShopCategory.FOOD,
+            price=15,
+            icon='🍪',
+            level_required=1,
+            one_time_purchase=False,
+            unlockable_id='food_cookies'
+        ),
+        'food_ramen': ShopItem(
+            id='food_ramen',
+            name='Ramen Bowl',
+            description='Drag to panda to feed! Hot and savory',
+            category=ShopCategory.FOOD,
+            price=30,
+            icon='🍜',
+            level_required=3,
+            one_time_purchase=False,
+            unlockable_id='food_ramen'
         ),
     }
     
