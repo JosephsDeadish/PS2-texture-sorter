@@ -716,7 +716,7 @@ class PS2TextureSorter(ctk.CTk):
         self._tab_to_tabview = {name: tv for name, (_, tv) in all_dockable.items()}
         for tab_name, (tab_frame, _) in all_dockable.items():
             btn = ctk.CTkButton(
-                tab_frame, text="⬗", width=30, height=26,
+                tab_frame, text="↗", width=30, height=26,
                 font=("Arial", 11),
                 fg_color="gray40",
                 command=lambda n=tab_name: self._popout_tab(n)
@@ -762,17 +762,26 @@ class PS2TextureSorter(ctk.CTk):
             container.pack(fill="both", expand=True, padx=5, pady=5)
             
             for child in children_info:
-                child.pack_forget()
-                child.place_forget()
-                child.grid_forget()
                 try:
+                    # Clear ALL geometry managers
+                    child.pack_forget()
+                    child.place_forget()
+                    child.grid_forget()
+                    
+                    # Check widget still exists
+                    if not child.winfo_exists():
+                        logger.debug(f"Widget {child} no longer exists during popout, skipping")
+                        continue
+                    
+                    # Reparent with explicit error handling
                     child.pack(in_=container, fill="both", expand=True, padx=5, pady=5)
-                except Exception:
-                    pass
+                    logger.debug(f"Successfully reparented {child} to popout")
+                except Exception as e:
+                    logger.error(f"Failed to reparent {child} to popout: {e}")
         
         # Add dock-back button
         dock_btn = ctk.CTkButton(
-            popout, text="⬙ Dock Back", width=100, height=28,
+            popout, text="📌 Dock Back", width=100, height=28,
             command=lambda n=tab_name: self._dock_tab(n, self._popout_children.get(n), popout)
         )
         dock_btn.pack(side="bottom", pady=5)
@@ -873,19 +882,24 @@ class PS2TextureSorter(ctk.CTk):
         if tab_name == "📝 Notepad":
             if hasattr(self, '_popout_note_textboxes'):
                 self._popout_save_notes()
-            if popout_window.winfo_exists():
+            if popout_window and popout_window.winfo_exists():
                 popout_window.destroy()
             self._popout_windows.pop(tab_name, None)
-            # Re-add pop-out button
+            # Re-add pop-out button only if it doesn't exist
             parent_tv = self._tab_to_tabview.get(tab_name, self.tabview)
             tab_frame = parent_tv.tab(tab_name)
-            btn = ctk.CTkButton(
-                tab_frame, text="⬗ Pop Out", width=90, height=26,
-                font=("Arial", 11),
-                fg_color="gray40",
-                command=lambda: self._popout_tab(tab_name)
-            )
-            btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+            
+            # Check if button already exists before creating
+            existing_buttons = [w for w in tab_frame.winfo_children() 
+                              if isinstance(w, ctk.CTkButton)]
+            if not any("Pop Out" in (getattr(w, 'cget', lambda x: '')('text') or '') for w in existing_buttons):
+                btn = ctk.CTkButton(
+                    tab_frame, text="↗ Pop Out", width=90, height=26,
+                    font=("Arial", 11),
+                    fg_color="gray40",
+                    command=lambda: self._popout_tab(tab_name)
+                )
+                btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
             return
         
         # For other tabs, reparent children back
@@ -893,32 +907,41 @@ class PS2TextureSorter(ctk.CTk):
         tab_frame = parent_tv.tab(tab_name)
         
         if children:
-            # Reparent children back
+            # Reparent children back with proper error handling
             for child in children:
-                child.pack_forget()
-                child.place_forget()
-                child.grid_forget()
                 try:
+                    child.pack_forget()
+                    child.place_forget()
+                    child.grid_forget()
+                    
+                    if not child.winfo_exists():
+                        logger.debug(f"Widget {child} no longer exists during docking")
+                        continue
+                    
                     child.pack(in_=tab_frame, fill="both", expand=True, padx=5, pady=5)
-                except Exception:
-                    pass
+                    logger.debug(f"Successfully reparented {child} back to tab")
+                except Exception as e:
+                    logger.error(f"Failed to reparent {child} back to tab: {e}")
         
         # Destroy pop-out window
-        if popout_window.winfo_exists():
+        if popout_window and popout_window.winfo_exists():
             popout_window.destroy()
         
         self._popout_windows.pop(tab_name, None)
         if hasattr(self, '_popout_children'):
             self._popout_children.pop(tab_name, None)
         
-        # Re-add pop-out button
-        btn = ctk.CTkButton(
-            tab_frame, text="⬗ Pop Out", width=90, height=26,
-            font=("Arial", 11),
-            fg_color="gray40",
-            command=lambda: self._popout_tab(tab_name)
-        )
-        btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+        # Re-add pop-out button only if it doesn't exist
+        existing_buttons = [w for w in tab_frame.winfo_children() 
+                          if isinstance(w, ctk.CTkButton)]
+        if not any("Pop Out" in (getattr(w, 'cget', lambda x: '')('text') or '') for w in existing_buttons):
+            btn = ctk.CTkButton(
+                tab_frame, text="↗ Pop Out", width=90, height=26,
+                font=("Arial", 11),
+                fg_color="gray40",
+                command=lambda: self._popout_tab(tab_name)
+            )
+            btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
         
         # Switch to the docked tab
         parent_tv = self._tab_to_tabview.get(tab_name, self.tabview)
@@ -1718,6 +1741,8 @@ class PS2TextureSorter(ctk.CTk):
                     self._thumbnail_cache_order.remove(cache_key)
                 self._thumbnail_cache_order.append(cache_key)
                 label = ctk.CTkLabel(parent_frame, image=cached_photo, text="")
+                # Store reference to prevent garbage collection
+                label._photo_ref = cached_photo
                 return label
             
             # Load and resize image
@@ -1744,6 +1769,8 @@ class PS2TextureSorter(ctk.CTk):
             
             # Create label with thumbnail
             label = ctk.CTkLabel(parent_frame, image=photo, text="")
+            # CRITICAL: Keep reference to prevent garbage collection
+            label._photo_ref = photo
             return label
             
         except Exception as e:
@@ -2030,33 +2057,63 @@ class PS2TextureSorter(ctk.CTk):
                 self.unbind('<Motion>', self._trail_bind_id)
             except Exception:
                 pass
+            try:
+                if hasattr(self, '_trail_configure_bind'):
+                    self.unbind('<Configure>', self._trail_configure_bind)
+            except Exception:
+                pass
             self._trail_canvas.destroy()
             self._trail_canvas = None
             self._trail_bind_id = None
+            self._trail_configure_bind = None
             self._trail_dots = []
         
         if not enabled:
             return
         
         import tkinter as tk
-        # Create overlay canvas for trail — use a transparent background and
-        # disable all mouse events so it doesn't block the UI underneath.
-        self._trail_canvas = tk.Canvas(
-            self, highlightthickness=0,
-            width=self.winfo_width(), height=self.winfo_height()
-        )
-        self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        try:
-            self._trail_canvas.config(bg=self.cget('bg'))
-        except Exception:
+        
+        # Create overlay canvas for trail with proper dimensions
+        # Use after_idle to ensure window has been drawn and has proper dimensions
+        def create_canvas():
             try:
-                self._trail_canvas.config(bg='#1a1a1a')
-            except Exception:
-                pass
-        # Lower the canvas below all other widgets so it doesn't cover them
-        self._trail_canvas.lower()
-        # Disable all mouse events on the canvas so clicks pass through
-        self._trail_canvas.bindtags(('trail_canvas_passthrough',))
+                self._trail_canvas = tk.Canvas(
+                    self, highlightthickness=0,
+                    bg='', cursor='arrow'
+                )
+                self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+                
+                # Try to match background for transparency effect
+                try:
+                    self._trail_canvas.config(bg=self.cget('bg'), highlightthickness=0, relief='flat')
+                except Exception:
+                    try:
+                        self._trail_canvas.config(bg='#1a1a1a', highlightthickness=0, relief='flat')
+                    except Exception:
+                        pass
+                
+                # Lower the canvas below all other widgets
+                self._trail_canvas.lower()
+                
+                # Disable all mouse events on the canvas
+                self._trail_canvas.bindtags(())
+                
+                # Handle window resize to update canvas size
+                def on_configure(event):
+                    try:
+                        if hasattr(self, '_trail_canvas') and self._trail_canvas:
+                            # Update canvas to match window size
+                            self._trail_canvas.config(width=event.width, height=event.height)
+                    except Exception as e:
+                        logger.debug(f"Trail canvas resize error: {e}")
+                
+                self._trail_configure_bind = self.bind('<Configure>', on_configure, add='+')
+                
+            except Exception as e:
+                logger.error(f"Failed to create cursor trail canvas: {e}")
+                return
+        
+        self.after_idle(create_canvas)
         
         self._trail_dots = []
         self._trail_max = 15
@@ -2086,20 +2143,32 @@ class PS2TextureSorter(ctk.CTk):
                 if not canvas or not canvas.winfo_exists():
                     return
                 x, y = event.x_root - self.winfo_rootx(), event.y_root - self.winfo_rooty()
+                
+                # Clamp coordinates to canvas bounds to avoid drawing errors
+                canvas_width = canvas.winfo_width()
+                canvas_height = canvas.winfo_height()
+                if canvas_width <= 1 or canvas_height <= 1:
+                    return  # Canvas not yet properly sized
+                
+                if x < 0 or y < 0 or x > canvas_width or y > canvas_height:
+                    return
+                
                 color_idx = len(self._trail_dots) % len(trail_colors)
                 dot = canvas.create_oval(
                     x - 3, y - 3, x + 3, y + 3,
                     fill=trail_colors[color_idx], outline=''
                 )
                 self._trail_dots.append(dot)
+                
                 # Fade old dots
                 if len(self._trail_dots) > self._trail_max:
                     old_dot = self._trail_dots.pop(0)
                     canvas.delete(old_dot)
+                
                 # Auto-fade after delay
                 canvas.after(300, lambda d=dot: self._fade_trail_dot(d))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Cursor trail motion error: {e}")
         
         self._trail_bind_id = self.bind('<Motion>', on_motion, add='+')
     
