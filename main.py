@@ -22,6 +22,7 @@ import threading
 import logging
 from pathlib import Path
 from types import SimpleNamespace
+from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -59,7 +60,14 @@ except ImportError:
     CUSTOMIZATION_AVAILABLE = False
     print("Warning: UI customization panel not available.")
 
-# Import feature modules
+try:
+    from src.features.panda_character import PandaCharacter
+    PANDA_CHARACTER_AVAILABLE = True
+except ImportError:
+    PANDA_CHARACTER_AVAILABLE = False
+    print("Warning: Panda character not available.")
+
+# Keep PandaMode import for backward compatibility during transition
 try:
     from src.features.panda_mode import PandaMode
     PANDA_MODE_AVAILABLE = True
@@ -116,6 +124,34 @@ try:
 except ImportError:
     PREVIEW_AVAILABLE = False
     print("Warning: Preview viewer not available.")
+
+try:
+    from src.features.currency_system import CurrencySystem
+    CURRENCY_AVAILABLE = True
+except ImportError:
+    CURRENCY_AVAILABLE = False
+    print("Warning: Currency system not available.")
+
+try:
+    from src.features.level_system import UserLevelSystem, PandaLevelSystem
+    LEVEL_SYSTEM_AVAILABLE = True
+except ImportError:
+    LEVEL_SYSTEM_AVAILABLE = False
+    print("Warning: Level system not available.")
+
+try:
+    from src.features.shop_system import ShopSystem, ShopCategory
+    SHOP_AVAILABLE = True
+except ImportError:
+    SHOP_AVAILABLE = False
+    print("Warning: Shop system not available.")
+
+try:
+    from src.ui.panda_widget import PandaWidget
+    PANDA_WIDGET_AVAILABLE = True
+except ImportError:
+    PANDA_WIDGET_AVAILABLE = False
+    print("Warning: Panda widget not available.")
 
 try:
     from src.ui.goodbye_splash import show_goodbye_splash
@@ -257,6 +293,7 @@ class PS2TextureSorter(ctk.CTk):
     
     # Configuration constants
     GOODBYE_SPLASH_DISPLAY_MS = 800  # Time to display goodbye splash before exit
+    BATCH_BONUS_THRESHOLD = 100  # Number of files for batch bonus
     
     def __init__(self):
         super().__init__()
@@ -297,17 +334,23 @@ class PS2TextureSorter(ctk.CTk):
         self.database = None  # Will be initialized when needed
         
         # Initialize feature modules
-        self.panda_mode = None
+        self.panda = None  # Always-present panda character
+        self.panda_mode = None  # Deprecated - keeping for backward compatibility
         self.sound_manager = None
         self.achievement_manager = None
         self.unlockables_manager = None
         self.stats_tracker = None
         self.search_filter = None
         self.tutorial_manager = None
-        self.tooltip_manager = None
+        self.tooltip_manager = None  # Uses existing TooltipVerbosityManager - has vulgar mode
         self._tooltips = []  # Store tooltip references to prevent garbage collection
         self.context_help = None
         self.preview_viewer = None
+        self.currency_system = None
+        self.user_level_system = None
+        self.panda_level_system = None
+        self.shop_system = None
+        self.panda_widget = None
         
         # Thumbnail cache for file browser (prevent PhotoImage GC)
         self._thumbnail_cache = {}
@@ -315,8 +358,16 @@ class PS2TextureSorter(ctk.CTk):
         # Initialize features if GUI available
         if GUI_AVAILABLE:
             try:
-                if PANDA_MODE_AVAILABLE:
+                # Always create panda character - not a "mode"
+                if PANDA_CHARACTER_AVAILABLE:
+                    self.panda = PandaCharacter()
+                    logger.info("Panda character initialized (always present)")
+                
+                # Keep old panda_mode for backward compatibility (will be deprecated)
+                if PANDA_MODE_AVAILABLE and not PANDA_CHARACTER_AVAILABLE:
                     self.panda_mode = PandaMode()
+                    logger.warning("Using deprecated PandaMode - should migrate to PandaCharacter")
+                
                 if SOUND_AVAILABLE:
                     self.sound_manager = SoundManager()
                 if ACHIEVEMENTS_AVAILABLE:
@@ -330,6 +381,17 @@ class PS2TextureSorter(ctk.CTk):
                     self.search_filter = SearchFilter()
                 if PREVIEW_AVAILABLE:
                     self.preview_viewer = PreviewViewer(self)
+                if CURRENCY_AVAILABLE:
+                    self.currency_system = CurrencySystem()
+                    # Process daily login bonus
+                    login_bonus = self.currency_system.process_daily_login()
+                    if login_bonus > 0:
+                        logger.info(f"Daily login bonus: ${login_bonus}")
+                if LEVEL_SYSTEM_AVAILABLE:
+                    self.user_level_system = UserLevelSystem()
+                    self.panda_level_system = PandaLevelSystem()
+                if SHOP_AVAILABLE:
+                    self.shop_system = ShopSystem()
                 
                 # Setup tutorial system
                 if TUTORIAL_AVAILABLE:
@@ -563,6 +625,7 @@ class PS2TextureSorter(ctk.CTk):
         self.tab_convert = self.tabview.add("🔄 Convert Files")
         self.tab_browser = self.tabview.add("📁 File Browser")
         self.tab_achievements = self.tabview.add("🏆 Achievements")
+        self.tab_shop = self.tabview.add("🛒 Shop")
         self.tab_rewards = self.tabview.add("🎁 Rewards")
         self.tab_notepad = self.tabview.add("📝 Notepad")
         self.tab_about = self.tabview.add("ℹ️ About")
@@ -575,6 +638,7 @@ class PS2TextureSorter(ctk.CTk):
         self.create_convert_tab()
         self.create_browser_tab()
         self.create_achievements_tab()
+        self.create_shop_tab()
         self.create_rewards_tab()
         self.create_notepad_tab()
         self.create_about_tab()
@@ -590,6 +654,7 @@ class PS2TextureSorter(ctk.CTk):
         dockable_tabs = {
             "📝 Notepad": self.tab_notepad,
             "🏆 Achievements": self.tab_achievements,
+            "🛒 Shop": self.tab_shop,
             "🎁 Rewards": self.tab_rewards,
             "📁 File Browser": self.tab_browser,
             "ℹ️ About": self.tab_about,
@@ -2215,6 +2280,191 @@ class PS2TextureSorter(ctk.CTk):
         
         return ", ".join(rewards) if rewards else f"{achievement.points} pts"
     
+    
+    def create_shop_tab(self):
+        """Create shop tab for purchasing items with money"""
+        # Header
+        header_frame = ctk.CTkFrame(self.tab_shop)
+        header_frame.pack(fill="x", pady=10, padx=10)
+        
+        ctk.CTkLabel(header_frame, text="🛒 Shop 🛒",
+                     font=("Arial Bold", 18)).pack(side="left", padx=10)
+        
+        # Money display
+        if self.currency_system:
+            money_text = f"💰 Money: ${self.currency_system.get_balance()}"
+            self.shop_money_label = ctk.CTkLabel(header_frame, text=money_text,
+                         font=("Arial Bold", 14), text_color="#00cc00")
+            self.shop_money_label.pack(side="right", padx=20)
+        
+        # User level display
+        if self.user_level_system:
+            level_text = f"⭐ Level {self.user_level_system.level}"
+            ctk.CTkLabel(header_frame, text=level_text,
+                        font=("Arial Bold", 14), text_color="#ffaa00").pack(side="right", padx=10)
+        
+        if not self.shop_system or not self.currency_system:
+            info_frame = ctk.CTkFrame(self.tab_shop)
+            info_frame.pack(pady=50, padx=50, fill="both", expand=True)
+            ctk.CTkLabel(info_frame,
+                         text="Shop system not available\n\nPlease check your installation.",
+                         font=("Arial", 14)).pack(expand=True)
+            return
+        
+        # Shop categories
+        categories_frame = ctk.CTkFrame(self.tab_shop)
+        categories_frame.pack(fill="x", pady=10, padx=10)
+        
+        # Category buttons
+        self.selected_category = ShopCategory.PANDA_OUTFITS
+        category_buttons = {}
+        
+        for category in ShopCategory:
+            btn = ctk.CTkButton(
+                categories_frame,
+                text=category.value.replace('_', ' ').title(),
+                command=lambda c=category: self._select_shop_category(c)
+            )
+            btn.pack(side="left", padx=5, pady=5)
+            category_buttons[category] = btn
+        
+        # Shop items scroll frame
+        self.shop_scroll = ctk.CTkScrollableFrame(self.tab_shop, width=1000, height=500)
+        self.shop_scroll.pack(padx=20, pady=10, fill="both", expand=True)
+        
+        # Display items for default category
+        self._display_shop_category(self.selected_category)
+    
+    def _select_shop_category(self, category: ShopCategory):
+        """Select and display shop category"""
+        self.selected_category = category
+        self._display_shop_category(category)
+    
+    def _display_shop_category(self, category: ShopCategory):
+        """Display items in shop category"""
+        # Clear current items
+        for widget in self.shop_scroll.winfo_children():
+            widget.destroy()
+        
+        # Get user level
+        user_level = self.user_level_system.level if self.user_level_system else 1
+        
+        # Get items in category
+        items = self.shop_system.get_items_by_category(category, user_level)
+        
+        if not items:
+            ctk.CTkLabel(self.shop_scroll,
+                        text="No items available in this category",
+                        font=("Arial", 14)).pack(pady=50)
+            return
+        
+        # Display each item
+        for item in items:
+            item_frame = ctk.CTkFrame(self.shop_scroll)
+            item_frame.pack(fill="x", padx=10, pady=5)
+            
+            # Item icon and name
+            name_frame = ctk.CTkFrame(item_frame)
+            name_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+            
+            ctk.CTkLabel(name_frame, text=f"{item.icon} {item.name}",
+                        font=("Arial Bold", 14)).pack(anchor="w")
+            
+            ctk.CTkLabel(name_frame, text=item.description,
+                        font=("Arial", 11), text_color="gray").pack(anchor="w")
+            
+            # Price and requirements
+            info_frame = ctk.CTkFrame(item_frame)
+            info_frame.pack(side="right", padx=10, pady=10)
+            
+            # Price
+            price_text = f"💰 ${item.price}"
+            ctk.CTkLabel(info_frame, text=price_text,
+                        font=("Arial Bold", 12), text_color="#00cc00").pack(side="left", padx=10)
+            
+            # Level requirement
+            if item.level_required > 1:
+                level_text = f"⭐ Lvl {item.level_required}"
+                color = "gray" if user_level >= item.level_required else "red"
+                ctk.CTkLabel(info_frame, text=level_text,
+                            font=("Arial", 10), text_color=color).pack(side="left", padx=5)
+            
+            # Purchase button
+            is_purchased = self.shop_system.is_purchased(item.id)
+            can_buy, reason = self.shop_system.can_purchase(item.id, self.currency_system.get_balance())
+            
+            if is_purchased and item.one_time_purchase:
+                btn_text = "✓ Owned"
+                btn_state = "disabled"
+            elif user_level < item.level_required:
+                btn_text = "🔒 Locked"
+                btn_state = "disabled"
+            elif not can_buy:
+                btn_text = "Can't Afford"
+                btn_state = "disabled"
+            else:
+                btn_text = "Buy"
+                btn_state = "normal"
+            
+            buy_btn = ctk.CTkButton(
+                info_frame,
+                text=btn_text,
+                width=80,
+                state=btn_state,
+                command=lambda i=item: self._purchase_item(i)
+            )
+            buy_btn.pack(side="left", padx=5)
+    
+    def _purchase_item(self, item):
+        """Purchase an item from the shop"""
+        # Confirm purchase
+        from tkinter import messagebox
+        
+        confirm = messagebox.askyesno(
+            "Confirm Purchase",
+            f"Purchase {item.name} for ${item.price}?\n\n{item.description}"
+        )
+        
+        if not confirm:
+            return
+        
+        # Attempt purchase
+        success, message, purchased_item = self.shop_system.purchase_item(
+            item.id,
+            self.currency_system.get_balance(),
+            self.user_level_system.level if self.user_level_system else 1
+        )
+        
+        if success:
+            # Deduct money
+            self.currency_system.spend_money(item.price, f"Purchased {item.name}")
+            
+            # Update money display
+            if hasattr(self, 'shop_money_label'):
+                self.shop_money_label.configure(
+                    text=f"💰 Money: ${self.currency_system.get_balance()}"
+                )
+            
+            # Unlock in unlockables system if linked
+            if item.unlockable_id and self.unlockables_manager:
+                try:
+                    # Try to unlock the item
+                    for category in ['cursors', 'outfits', 'themes', 'animations']:
+                        items_dict = getattr(self.unlockables_manager, category, {})
+                        if item.unlockable_id in items_dict:
+                            items_dict[item.unlockable_id].unlocked = True
+                            items_dict[item.unlockable_id].unlock_date = datetime.now().isoformat()
+                            break
+                except Exception as e:
+                    logger.error(f"Error unlocking item: {e}")
+            
+            messagebox.showinfo("Purchase Successful", message)
+            
+            # Refresh shop display
+            self._display_shop_category(self.selected_category)
+        else:
+            messagebox.showerror("Purchase Failed", message)
+    
     def create_rewards_tab(self):
         """Create unlockables/rewards tab"""
         ctk.CTkLabel(self.tab_rewards, text="🎁 Unlockables & Rewards 🎁",
@@ -2684,6 +2934,36 @@ Built with:
         
         self.status_label = ctk.CTkLabel(status_frame, text="🐼 Ready", font=("Arial", 10))
         self.status_label.pack(side="left", padx=10, pady=5)
+        
+        # Add level and money display on the right
+        if self.user_level_system:
+            level_text = f"⭐ Level {self.user_level_system.level} - {self.user_level_system.get_title_for_level()}"
+            self.status_level_label = ctk.CTkLabel(status_frame, text=level_text, font=("Arial", 10))
+            self.status_level_label.pack(side="right", padx=10, pady=5)
+        
+        if self.currency_system:
+            money_text = f"💰 ${self.currency_system.get_balance()}"
+            self.status_money_label = ctk.CTkLabel(status_frame, text=money_text, font=("Arial", 10))
+            self.status_money_label.pack(side="right", padx=10, pady=5)
+        
+        # Add panda widget in a separate frame on bottom right
+        # Panda is always present - not a "mode"
+        if PANDA_WIDGET_AVAILABLE and self.panda:
+            panda_container = ctk.CTkFrame(self, corner_radius=10)
+            panda_container.place(relx=0.98, rely=0.98, anchor="se")
+            
+            self.panda_widget = PandaWidget(
+                panda_container, 
+                panda_character=self.panda,
+                panda_level_system=self.panda_level_system
+            )
+            self.panda_widget.pack(padx=5, pady=5)
+            
+            # Add panda level display
+            if self.panda_level_system:
+                panda_level_text = f"Panda Lvl {self.panda_level_system.level}"
+                panda_level_label = ctk.CTkLabel(panda_container, text=panda_level_text, font=("Arial", 9))
+                panda_level_label.pack(pady=2)
     
     def browse_input(self):
         """Browse for input directory"""
@@ -2947,6 +3227,72 @@ Built with:
                         self.log(f"  ... and {len(results['errors']) - MAX_RESULTS_ERROR_DISPLAY} more errors")
                 
                 self.log("=" * 60)
+                
+                # Award XP and money for sorting
+                files_sorted = results['processed']
+                if files_sorted > 0:
+                    # Award money
+                    if self.currency_system:
+                        money_per_file = self.currency_system.get_reward_for_action('file_processed')
+                        total_money = money_per_file * files_sorted
+                        
+                        # Bonus for large batches
+                        if files_sorted >= self.BATCH_BONUS_THRESHOLD:
+                            batch_bonus = self.currency_system.get_reward_for_action('batch_complete')
+                            total_money += batch_bonus
+                            self.log(f"💰 Earned ${total_money} (${money_per_file} per file + ${batch_bonus} batch bonus)")
+                        else:
+                            self.log(f"💰 Earned ${total_money} (${money_per_file} per file)")
+                        
+                        self.currency_system.earn_money(total_money, f"Sorted {files_sorted} files")
+                        
+                        # Update money display
+                        if hasattr(self, 'status_money_label'):
+                            self.after(0, lambda: self.status_money_label.configure(
+                                text=f"💰 ${self.currency_system.get_balance()}"
+                            ))
+                        if hasattr(self, 'shop_money_label'):
+                            self.after(0, lambda: self.shop_money_label.configure(
+                                text=f"💰 Money: ${self.currency_system.get_balance()}"
+                            ))
+                    
+                    # Award XP
+                    if self.user_level_system:
+                        xp_per_file = self.user_level_system.get_xp_reward('file_processed')
+                        total_xp = xp_per_file * files_sorted
+                        
+                        # Bonus for large batches
+                        if files_sorted >= self.BATCH_BONUS_THRESHOLD:
+                            batch_xp = self.user_level_system.get_xp_reward('batch_complete')
+                            total_xp += batch_xp
+                        
+                        leveled_up, new_level = self.user_level_system.add_xp(
+                            total_xp, 
+                            f"Sorted {files_sorted} files"
+                        )
+                        
+                        self.log(f"⭐ Earned {total_xp} XP")
+                        
+                        if leveled_up:
+                            title = self.user_level_system.get_title_for_level()
+                            self.log(f"🎉 LEVEL UP! You are now Level {new_level} - {title}!")
+                            
+                            # Award level up rewards
+                            rewards = self.user_level_system.get_rewards_for_level(new_level)
+                            for reward in rewards:
+                                if reward['type'] == 'money' and self.currency_system:
+                                    self.currency_system.earn_money(
+                                        reward['amount'], 
+                                        f"Level {new_level} bonus"
+                                    )
+                                    self.log(f"  💰 {reward['description']}")
+                                else:
+                                    self.log(f"  🎁 {reward['description']}")
+                        
+                        # Update level display
+                        if hasattr(self, 'status_level_label'):
+                            level_text = f"⭐ Level {self.user_level_system.level} - {self.user_level_system.get_title_for_level()}"
+                            self.after(0, lambda: self.status_level_label.configure(text=level_text))
                 
                 # Play completion sound if enabled
                 self._play_completion_sound()
