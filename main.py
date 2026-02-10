@@ -1777,6 +1777,8 @@ class PS2TextureSorter(ctk.CTk):
                 # Apply cursor changes to window and child widgets
                 cursor_type = value.get('type', 'arrow')
                 trail_enabled = value.get('trail', False)
+                trail_color = value.get('trail_color', 'rainbow')
+                cursor_size = value.get('size', 'medium')
                 # Map to valid tk cursor via _apply_cursor_to_widget
                 try:
                     # Propagate to main window and all child widgets
@@ -1786,11 +1788,11 @@ class PS2TextureSorter(ctk.CTk):
                 
                 # Handle cursor trail
                 try:
-                    self._setup_cursor_trail(trail_enabled)
+                    self._setup_cursor_trail(trail_enabled, trail_color=trail_color)
                 except Exception as trail_err:
                     logger.debug(f"Could not setup cursor trail: {trail_err}")
                     
-                self.log(f"✅ Cursor settings applied: {cursor_type}")
+                self.log(f"✅ Cursor settings applied: {cursor_type} (size: {cursor_size})")
                 
             elif setting_type == 'tooltip_mode':
                 # Apply tooltip mode change
@@ -1874,6 +1876,26 @@ class PS2TextureSorter(ctk.CTk):
         # Map custom cursor names to valid tkinter cursor types
         cursor_map = {
             'default': 'arrow',
+            'Arrow Pointer': 'arrow',
+            'Pointing Hand': 'hand2',
+            'Crosshair': 'crosshair',
+            'Text Select': 'xterm',
+            'Hourglass': 'watch',
+            'Pirate Skull': 'pirate',
+            'Heart': 'heart',
+            'Target Cross': 'tcross',
+            'Star': 'star',
+            'Circle': 'circle',
+            'Plus Sign': 'plus',
+            'Pencil': 'pencil',
+            'Dot': 'dot',
+            'X Cursor': 'X_cursor',
+            'Diamond': 'diamond_cross',
+            'Fleur': 'fleur',
+            'Spraycan': 'spraycan',
+            'Left Arrow': 'left_ptr',
+            'Right Arrow': 'right_ptr',
+            # Legacy names for backward compatibility
             'arrow': 'arrow',
             'hand': 'hand2',
             'crosshair': 'crosshair',
@@ -1896,7 +1918,7 @@ class PS2TextureSorter(ctk.CTk):
         except Exception:
             pass  # Ignore widgets that don't support cursor changes
     
-    def _setup_cursor_trail(self, enabled):
+    def _setup_cursor_trail(self, enabled, trail_color=None):
         """Setup or teardown cursor trail effect"""
         # Remove existing trail canvas if any
         if hasattr(self, '_trail_canvas') and self._trail_canvas:
@@ -1913,21 +1935,51 @@ class PS2TextureSorter(ctk.CTk):
             return
         
         import tkinter as tk
-        # Create transparent overlay canvas for trail
+        # Create overlay canvas for trail — use a valid background and make it
+        # transparent to mouse events so it doesn't block the UI underneath.
         self._trail_canvas = tk.Canvas(
-            self, bg='', highlightthickness=0,
+            self, highlightthickness=0,
             width=self.winfo_width(), height=self.winfo_height()
         )
         self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self._trail_canvas.lift()
-        # Canvas should not intercept events
-        self._trail_canvas.configure(cursor='')
+        # Make canvas transparent to all mouse/keyboard events
+        self._trail_canvas.bind('<Button-1>', lambda e: 'break')
+        self._trail_canvas.bind('<Button-2>', lambda e: 'break')
+        self._trail_canvas.bind('<Button-3>', lambda e: 'break')
+        self._trail_canvas.config(bg='SystemButtonFace')
+        # Use wm_attributes for transparency if possible, otherwise hide bg
+        try:
+            self._trail_canvas.config(bg=self.cget('bg'))
+        except Exception:
+            try:
+                self._trail_canvas.config(bg='#1a1a1a')
+            except Exception:
+                pass
+        # Critical: lower the canvas so it doesn't intercept events
+        self._trail_canvas.lower()
         
         self._trail_dots = []
         self._trail_max = 15
-        # Rainbow-inspired trail color palette
-        trail_colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
-                        '#5f27cd', '#01a3a4', '#f368e0', '#ff6348', '#7bed9f']
+        
+        # Determine trail colors based on setting
+        trail_color_setting = trail_color or config.get('ui', 'cursor_trail_color', default='rainbow')
+        trail_color_palettes = {
+            'rainbow': ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
+                        '#5f27cd', '#01a3a4', '#f368e0', '#ff6348', '#7bed9f'],
+            'fire': ['#ff0000', '#ff4500', '#ff6600', '#ff8c00', '#ffa500',
+                     '#ffcc00', '#ffff00', '#ffff66', '#ff3300', '#cc0000'],
+            'ice': ['#00ffff', '#00e5ff', '#00ccff', '#00b3ff', '#0099ff',
+                    '#0080ff', '#0066ff', '#e0f7ff', '#b3e5fc', '#81d4fa'],
+            'nature': ['#00cc00', '#33cc33', '#66cc66', '#00ff00', '#33ff33',
+                       '#228b22', '#32cd32', '#7cfc00', '#adff2f', '#98fb98'],
+            'galaxy': ['#9b59b6', '#8e44ad', '#6c3483', '#5b2c6f', '#4a235a',
+                       '#bb8fce', '#d7bde2', '#e8daef', '#c39bd3', '#af7ac5'],
+            'gold': ['#ffd700', '#ffcc00', '#daa520', '#b8860b', '#cd853f',
+                     '#f0e68c', '#eee8aa', '#fafad2', '#ffe4b5', '#ffdead'],
+        }
+        trail_colors = trail_color_palettes.get(trail_color_setting,
+                                                trail_color_palettes['rainbow'])
         
         def on_motion(event):
             try:
