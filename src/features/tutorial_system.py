@@ -670,13 +670,9 @@ class WidgetTooltip:
         self._after_id = self.widget.after(self.delay, self._show_tip)
     
     def _on_motion(self, event=None):
-        """Reset auto-hide timer on motion within the widget"""
-        if self.tip_window and self._auto_hide_id:
-            try:
-                self.widget.after_cancel(self._auto_hide_id)
-            except Exception:
-                pass
-            self._auto_hide_id = self.widget.after(5000, self._hide_tip)
+        """Track that mouse is still over the widget (no action needed,
+        auto-hide timer set in _show_tip handles cleanup)."""
+        pass
     
     def _on_leave(self, event=None):
         # Always cancel pending tooltip display

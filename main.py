@@ -1335,7 +1335,7 @@ class PS2TextureSorter(ctk.CTk):
             # Collect files incrementally with a hard cap to avoid freezing
             texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
             files = []
-            MAX_SCAN = 10000  # Stop scanning after this many matching files
+            MAX_MATCHING_FILES = 10000  # Stop collecting after this many matching files
             try:
                 for f in self.browser_current_dir.iterdir():
                     if not f.is_file():
@@ -1345,7 +1345,7 @@ class PS2TextureSorter(ctk.CTk):
                     if search_query and search_query not in f.name.lower():
                         continue
                     files.append(f)
-                    if len(files) >= MAX_SCAN:
+                    if len(files) >= MAX_MATCHING_FILES:
                         break
             except PermissionError:
                 pass
@@ -1371,8 +1371,8 @@ class PS2TextureSorter(ctk.CTk):
                 
                 if total_files > MAX_DISPLAY:
                     overflow_text = f"... and {total_files - MAX_DISPLAY} more files"
-                    if total_files >= MAX_SCAN:
-                        overflow_text += f" (showing first {MAX_DISPLAY} of {MAX_SCAN}+)"
+                    if total_files >= MAX_MATCHING_FILES:
+                        overflow_text += f" (showing first {MAX_DISPLAY} of {MAX_MATCHING_FILES}+)"
                     overflow_text += " (use search to filter)"
                     ctk.CTkLabel(self.browser_file_list, 
                                text=overflow_text,
@@ -1702,12 +1702,15 @@ class PS2TextureSorter(ctk.CTk):
             'sword': 'cross',
             'custom': 'arrow',
         }
-        tk_cursor = cursor_map.get(cursor_type, 'arrow')
+        tk_cursor = cursor_map.get(cursor_type, cursor_type)
+        self._apply_tk_cursor_recursive(widget, tk_cursor)
+    
+    def _apply_tk_cursor_recursive(self, widget, tk_cursor):
+        """Recursively apply a resolved tkinter cursor to a widget and its children"""
         try:
             widget.configure(cursor=tk_cursor)
-            # Recursively apply to children
             for child in widget.winfo_children():
-                self._apply_cursor_to_widget(child, cursor_type)
+                self._apply_tk_cursor_recursive(child, tk_cursor)
         except Exception:
             pass  # Ignore widgets that don't support cursor changes
     
