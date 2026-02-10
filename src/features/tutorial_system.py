@@ -658,7 +658,7 @@ class WidgetTooltip:
                 if child is not None:
                     child.bind("<Enter>", self._on_enter, add="+")
                     child.bind("<Leave>", self._on_leave, add="+")
-            except Exception:
+            except (AttributeError, tk.TclError):
                 pass
     
     def _on_enter(self, event=None):
@@ -675,7 +675,7 @@ class WidgetTooltip:
             h = self.widget.winfo_height()
             if 0 <= x <= w and 0 <= y <= h:
                 return  # Still inside the widget, ignore leave event
-        except Exception:
+        except (AttributeError, tk.TclError):
             pass
         if self._after_id:
             self.widget.after_cancel(self._after_id)
