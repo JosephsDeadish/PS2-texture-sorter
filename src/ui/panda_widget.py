@@ -19,18 +19,20 @@ logger = logging.getLogger(__name__)
 class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     """Interactive animated panda widget."""
     
-    def __init__(self, parent, panda_mode=None, **kwargs):
+    def __init__(self, parent, panda_mode=None, panda_level_system=None, **kwargs):
         """
         Initialize panda widget.
         
         Args:
             parent: Parent widget
             panda_mode: PandaMode instance for handling interactions
+            panda_level_system: PandaLevelSystem instance for XP tracking
             **kwargs: Additional frame arguments
         """
         super().__init__(parent, **kwargs)
         
         self.panda_mode = panda_mode
+        self.panda_level_system = panda_level_system
         self.current_animation = 'idle'
         self.animation_frame = 0
         self.animation_timer = None
@@ -84,6 +86,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             self.info_label.configure(text=response)
             # Play celebration animation briefly
             self.play_animation_once('celebrating')
+            
+            # Award XP for clicking
+            if self.panda_level_system:
+                xp = self.panda_level_system.XP_REWARDS.get('click', 1)
+                leveled_up, new_level = self.panda_level_system.add_xp(xp, 'Click interaction')
+                if leveled_up:
+                    self.info_label.configure(text=f"🎉 Panda Level {new_level}!")
     
     def _on_right_click(self, event=None):
         """Handle right click on panda."""
@@ -117,9 +126,25 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             reaction = self.panda_mode.pet_panda_minigame()
             self.info_label.configure(text=reaction)
             self.play_animation_once('celebrating')
+            
+            # Award XP for petting
+            if self.panda_level_system:
+                xp = self.panda_level_system.XP_REWARDS.get('pet', 5)
+                leveled_up, new_level = self.panda_level_system.add_xp(xp, 'Pet interaction')
+                if leveled_up:
+                    self.info_label.configure(text=f"🎉 Panda Level {new_level}!")
+                    
         elif action == 'feed_bamboo' and self.panda_mode:
             self.info_label.configure(text="🎋 *nom nom nom*")
             self.play_animation_once('working')
+            
+            # Award XP for feeding
+            if self.panda_level_system:
+                xp = self.panda_level_system.XP_REWARDS.get('feed', 10)
+                leveled_up, new_level = self.panda_level_system.add_xp(xp, 'Feed interaction')
+                if leveled_up:
+                    self.info_label.configure(text=f"🎉 Panda Level {new_level}!")
+                    
         elif action == 'check_mood' and self.panda_mode:
             mood = self.panda_mode.get_panda_mood_indicator()
             mood_name = self.panda_mode.current_mood.value

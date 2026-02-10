@@ -2934,7 +2934,11 @@ Built with:
             panda_container = ctk.CTkFrame(self, corner_radius=10)
             panda_container.place(relx=0.98, rely=0.98, anchor="se")
             
-            self.panda_widget = PandaWidget(panda_container, panda_mode=self.panda_mode)
+            self.panda_widget = PandaWidget(
+                panda_container, 
+                panda_mode=self.panda_mode,
+                panda_level_system=self.panda_level_system
+            )
             self.panda_widget.pack(padx=5, pady=5)
             
             # Add panda level display
@@ -3205,6 +3209,72 @@ Built with:
                         self.log(f"  ... and {len(results['errors']) - MAX_RESULTS_ERROR_DISPLAY} more errors")
                 
                 self.log("=" * 60)
+                
+                # Award XP and money for sorting
+                files_sorted = results['processed']
+                if files_sorted > 0:
+                    # Award money
+                    if self.currency_system:
+                        money_per_file = self.currency_system.get_reward_for_action('file_processed')
+                        total_money = money_per_file * files_sorted
+                        
+                        # Bonus for large batches
+                        if files_sorted >= 100:
+                            batch_bonus = self.currency_system.get_reward_for_action('batch_complete')
+                            total_money += batch_bonus
+                            self.log(f"💰 Earned ${total_money} (${money_per_file} per file + ${batch_bonus} batch bonus)")
+                        else:
+                            self.log(f"💰 Earned ${total_money} (${money_per_file} per file)")
+                        
+                        self.currency_system.earn_money(total_money, f"Sorted {files_sorted} files")
+                        
+                        # Update money display
+                        if hasattr(self, 'status_money_label'):
+                            self.after(0, lambda: self.status_money_label.configure(
+                                text=f"💰 ${self.currency_system.get_balance()}"
+                            ))
+                        if hasattr(self, 'shop_money_label'):
+                            self.after(0, lambda: self.shop_money_label.configure(
+                                text=f"💰 Money: ${self.currency_system.get_balance()}"
+                            ))
+                    
+                    # Award XP
+                    if self.user_level_system:
+                        xp_per_file = self.user_level_system.XP_REWARDS.get('file_processed', 1)
+                        total_xp = xp_per_file * files_sorted
+                        
+                        # Bonus for large batches
+                        if files_sorted >= 100:
+                            batch_xp = self.user_level_system.XP_REWARDS.get('batch_complete', 50)
+                            total_xp += batch_xp
+                        
+                        leveled_up, new_level = self.user_level_system.add_xp(
+                            total_xp, 
+                            f"Sorted {files_sorted} files"
+                        )
+                        
+                        self.log(f"⭐ Earned {total_xp} XP")
+                        
+                        if leveled_up:
+                            title = self.user_level_system.get_title_for_level()
+                            self.log(f"🎉 LEVEL UP! You are now Level {new_level} - {title}!")
+                            
+                            # Award level up rewards
+                            rewards = self.user_level_system.get_rewards_for_level(new_level)
+                            for reward in rewards:
+                                if reward['type'] == 'money' and self.currency_system:
+                                    self.currency_system.earn_money(
+                                        reward['amount'], 
+                                        f"Level {new_level} bonus"
+                                    )
+                                    self.log(f"  💰 {reward['description']}")
+                                else:
+                                    self.log(f"  🎁 {reward['description']}")
+                        
+                        # Update level display
+                        if hasattr(self, 'status_level_label'):
+                            level_text = f"⭐ Level {self.user_level_system.level} - {self.user_level_system.get_title_for_level()}"
+                            self.after(0, lambda: self.status_level_label.configure(text=level_text))
                 
                 # Play completion sound if enabled
                 self._play_completion_sound()
