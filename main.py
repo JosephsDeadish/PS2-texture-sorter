@@ -2739,12 +2739,6 @@ Built with:
                     style_class=style_class,
                     output_dir=str(output_path),
                     dry_run=False
-            
-                # Create engine
-                engine = OrganizationEngine(
-                    style_class=style_class,
-                    output_dir=str(output_path),
-                    dry_run=False
                 )
                 
                 self.log(f"Style: {engine.get_style_name()}")
