@@ -20,6 +20,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
     """Panel for customizing panda appearance."""
     
     def __init__(self, parent, panda_closet: PandaCloset,
+                 panda_character=None,
                  panda_preview_callback: Optional[object] = None, **kwargs):
         """
         Initialize closet panel.
@@ -27,18 +28,20 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         Args:
             parent: Parent widget
             panda_closet: PandaCloset instance
+            panda_character: PandaCharacter instance for name/gender
             panda_preview_callback: Callback to update panda preview
             **kwargs: Additional frame arguments
         """
         super().__init__(parent, **kwargs)
         
         self.closet = panda_closet
+        self.panda_character = panda_character
         self.panda_preview = panda_preview_callback
         self.current_category = CustomizationCategory.FUR_STYLE
         
         # Configure grid
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
         
         self._create_widgets()
         self._show_items()
@@ -57,9 +60,89 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         )
         header.grid(row=0, column=0, columnspan=2, padx=20, pady=10)
         
+        # Panda identity customization section
+        if self.panda_character:
+            identity_frame = ctk.CTkFrame(self) if ctk else tk.Frame(self, relief="groove", borderwidth=2)
+            identity_frame.grid(row=1, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
+            
+            # Name customization
+            name_label = ctk.CTkLabel(
+                identity_frame,
+                text="🐼 Panda Name:",
+                font=("Arial", 12, "bold")
+            ) if ctk else tk.Label(
+                identity_frame,
+                text="🐼 Panda Name:",
+                font=("Arial", 12, "bold")
+            )
+            name_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+            
+            self.name_entry = ctk.CTkEntry(
+                identity_frame,
+                placeholder_text="Enter panda name..."
+            ) if ctk else tk.Entry(identity_frame)
+            self.name_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+            self.name_entry.insert(0, self.panda_character.name)
+            
+            name_btn = ctk.CTkButton(
+                identity_frame,
+                text="Set Name",
+                command=self._update_name,
+                width=100
+            ) if ctk else tk.Button(
+                identity_frame,
+                text="Set Name",
+                command=self._update_name
+            )
+            name_btn.grid(row=0, column=2, padx=10, pady=5)
+            
+            # Gender selection
+            gender_label = ctk.CTkLabel(
+                identity_frame,
+                text="⚧ Gender:",
+                font=("Arial", 12, "bold")
+            ) if ctk else tk.Label(
+                identity_frame,
+                text="⚧ Gender:",
+                font=("Arial", 12, "bold")
+            )
+            gender_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+            
+            from src.features.panda_character import PandaGender
+            
+            self.gender_var = tk.StringVar(value=self.panda_character.gender.value)
+            
+            gender_options_frame = ctk.CTkFrame(identity_frame) if ctk else tk.Frame(identity_frame)
+            gender_options_frame.grid(row=1, column=1, columnspan=2, padx=10, pady=5, sticky="w")
+            
+            for i, (gender, label) in enumerate([
+                (PandaGender.MALE, "♂ Male"),
+                (PandaGender.FEMALE, "♀ Female"),
+                (PandaGender.NON_BINARY, "⚧ Non-Binary")
+            ]):
+                if ctk:
+                    rb = ctk.CTkRadioButton(
+                        gender_options_frame,
+                        text=label,
+                        variable=self.gender_var,
+                        value=gender.value,
+                        command=self._update_gender
+                    )
+                else:
+                    rb = tk.Radiobutton(
+                        gender_options_frame,
+                        text=label,
+                        variable=self.gender_var,
+                        value=gender.value,
+                        command=self._update_gender
+                    )
+                rb.grid(row=0, column=i, padx=10, pady=2)
+            
+            identity_frame.grid_columnconfigure(1, weight=1)
+        
         # Category selector sidebar
         category_frame = ctk.CTkFrame(self) if ctk else tk.Frame(self)
-        category_frame.grid(row=1, column=0, padx=10, pady=10, sticky="ns")
+        category_frame.grid(row=2, column=0, padx=10, pady=10, sticky="ns")
         
         # Category buttons
         categories = [
@@ -99,11 +182,11 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             canvas.create_window((0, 0), window=self.content_frame, anchor="nw")
             canvas.configure(yscrollcommand=scrollbar.set)
             
-            canvas.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
-            scrollbar.grid(row=1, column=2, sticky="ns")
+            canvas.grid(row=2, column=1, sticky="nsew", padx=10, pady=10)
+            scrollbar.grid(row=2, column=2, sticky="ns")
         
         if ctk:
-            self.content_frame.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
+            self.content_frame.grid(row=2, column=1, sticky="nsew", padx=10, pady=10)
         
         # Current appearance display
         appearance_frame = ctk.CTkFrame(self) if ctk else tk.Frame(self)
@@ -131,6 +214,63 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             font=("Arial", 10)
         )
         appearance_text.pack(side="left", padx=5)
+    
+    
+    def _update_name(self):
+        """Update panda name from entry field."""
+        if not self.panda_character:
+            return
+        
+        try:
+            new_name = self.name_entry.get().strip()
+            if new_name:
+                self.panda_character.set_name(new_name)
+                logger.info(f"Panda name updated to: {new_name}")
+                
+                # Save to config
+                try:
+                    from src.config import config
+                    config.set('panda', 'name', value=new_name)
+                    config.save()
+                except Exception as e:
+                    logger.warning(f"Failed to save panda name: {e}")
+                
+                # Show confirmation
+                if ctk:
+                    from tkinter import messagebox
+                    messagebox.showinfo("Success", f"Panda name changed to '{new_name}'!")
+        except Exception as e:
+            logger.error(f"Error updating panda name: {e}")
+    
+    def _update_gender(self):
+        """Update panda gender from radio button selection."""
+        if not self.panda_character:
+            return
+        
+        try:
+            from src.features.panda_character import PandaGender
+            
+            gender_value = self.gender_var.get()
+            gender = PandaGender(gender_value)
+            self.panda_character.set_gender(gender)
+            logger.info(f"Panda gender updated to: {gender.value}")
+            
+            # Save to config
+            try:
+                from src.config import config
+                config.set('panda', 'gender', value=gender.value)
+                config.save()
+            except Exception as e:
+                logger.warning(f"Failed to save panda gender: {e}")
+            
+            # Update panda preview if callback exists
+            if self.panda_preview:
+                try:
+                    self.panda_preview()
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.error(f"Error updating panda gender: {e}")
     
     def _select_category(self, category: CustomizationCategory):
         """Select a customization category."""

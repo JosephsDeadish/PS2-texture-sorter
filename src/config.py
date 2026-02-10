@@ -116,6 +116,15 @@ class Config:
                 "error_popups": True
             },
             
+            # Panda Character Settings
+            "panda": {
+                "name": "Panda",
+                "gender": "non_binary",  # male, female, non_binary
+                "position_x": 0.98,  # Relative position (0.0 to 1.0)
+                "position_y": 0.98,  # Relative position (0.0 to 1.0)
+                "enabled": True
+            },
+            
             # Session Management
             "session": {
                 "auto_save_state": True,
