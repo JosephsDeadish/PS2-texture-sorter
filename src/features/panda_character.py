@@ -16,6 +16,13 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
+class PandaGender(Enum):
+    """Panda gender options."""
+    MALE = "male"
+    FEMALE = "female"
+    NON_BINARY = "non_binary"
+
+
 class PandaMood(Enum):
     """Panda mood states."""
     HAPPY = "happy"
@@ -1460,6 +1467,25 @@ class PandaCharacter:
         "🐼 I was napping... 😴",
         "🐼 Click me again, I dare you!",
         "🐼 *waves paw* Hiya!",
+        "🐼 You rang? 🔔",
+        "🐼 Panda at your service! What's the mission?",
+        "🐼 *yawns* I'm awake, I'm awake!",
+        "🐼 Oh! You startled me! 😲",
+        "🐼 Just doing panda things, you know... 🎋",
+        "🐼 Did someone say snacks?",
+        "🐼 *stretches* Ah, that feels good!",
+        "🐼 Another click? You're persistent!",
+        "🐼 I'm here for moral support! 💪",
+        "🐼 Texture sorting is my passion! 🖼️",
+        "🐼 *does a little dance* 💃",
+        "🐼 You're doing great, keep it up!",
+        "🐼 Panda power activated! ⚡",
+        "🐼 Yes, yes, I see you there!",
+        "🐼 Want to hear a bamboo joke? ...Nah, they're too corny.",
+        "🐼 I'm basically a professional click receiver now.",
+        "🐼 *adjusts imaginary glasses* Professional panda, reporting!",
+        "🐼 Living my best panda life! ✨",
+        "🐼 Did you know pandas can climb trees? Cool, right?",
     ]
 
     # Feed responses
@@ -1472,6 +1498,23 @@ class PandaCharacter:
         "🎋 *panda food dance*",
         "🎋 You know the way to my heart!",
         "🎋 Om nom nom! 😋",
+        "🎋 Is this organic? Tastes organic! 🌿",
+        "🎋 *chef's kiss* Perfection!",
+        "🎋 This beats sorting textures any day!",
+        "🎋 My compliments to the chef! 👨‍🍳",
+        "🎋 I could eat this all day! Well, I do...",
+        "🎋 *burps* Excuse me! More, please!",
+        "🎋 Nothing beats fresh bamboo! 💚",
+        "🎋 Sharing is caring! ...But this is mine. 😏",
+        "🎋 *happy wiggle* Food makes everything better!",
+        "🎋 Bamboo: 10/10, would recommend!",
+        "🎋 You're officially my favorite person! ❤️",
+        "🎋 *munches contentedly* This is the life...",
+        "🎋 Did you grow this yourself? It's amazing!",
+        "🎋 I'm a simple panda with simple needs: bamboo!",
+        "🎋 *saves some for later* Thanks!",
+        "🎋 Food always improves my mood! 😊",
+        "🎋 You really understand pandas! 🐼💕",
     ]
 
     # Drag responses
@@ -1482,6 +1525,20 @@ class PandaCharacter:
         "🐼 Hold on tight!",
         "🐼 I can see my house from here!",
         "🐼 Faster! Faster!",
+        "🐼 Warp speed, engage! 🚀",
+        "🐼 Is this a rollercoaster?!",
+        "🐼 Best. Day. Ever!",
+        "🐼 *giggles* This tickles!",
+        "🐼 Are we there yet?",
+        "🐼 Zoom zoom! 💨",
+        "🐼 This is better than bamboo!",
+        "🐼 I believe I can fly! Well, glide...",
+        "🐼 Panda express coming through! 🚂",
+        "🐼 Wheee! Do it again!",
+        "🐼 *wind in fur* So exhilarating!",
+        "🐼 I'm getting dizzy! In a good way!",
+        "🐼 My paws aren't even touching the ground!",
+        "🐼 This is my new favorite thing!",
     ]
 
     # Toss responses
@@ -1492,6 +1549,20 @@ class PandaCharacter:
         "🐼 Do it again! Do it again!",
         "🐼 I believe I can fly! 🎵",
         "🐼 Panda airlines, departing!",
+        "🐼 To infinity and beyond!",
+        "🐼 Houston, we have liftoff! 🌙",
+        "🐼 *flails adorably* AHHH!",
+        "🐼 This wasn't in my job description!",
+        "🐼 I'm a bird! I'm a plane! I'm a panda!",
+        "🐼 Gravity is just a suggestion!",
+        "🐼 *air paws* Look ma, no hands!",
+        "🐼 This is either amazing or terrible!",
+        "🐼 Next stop: the ceiling!",
+        "🐼 I didn't know pandas could fly! 🦅",
+        "🐼 Woo-hoo! Best flight ever!",
+        "🐼 Coming in for a landing!",
+        "🐼 That was both terrifying and awesome!",
+        "🐼 Can we do that every day?!",
     ]
 
     # Wall hit responses
@@ -1502,6 +1573,20 @@ class PandaCharacter:
         "🐼 *sees stars* ⭐",
         "🐼 I need a helmet...",
         "🐼 Not the face!",
+        "🐼 Ow ow ow! 😵",
+        "🐼 That hurt more than my pride!",
+        "🐼 *rubs head* Maybe a softer wall next time?",
+        "🐼 I meant to do that... *cough*",
+        "🐼 The wall started it!",
+        "🐼 I'm okay! Just... give me a second...",
+        "🐼 Note to self: walls are solid.",
+        "🐼 *dazed* What happened?",
+        "🐼 I've had worse! ...Maybe not.",
+        "🐼 Someone put a wall there!",
+        "🐼 *shakes head* Everything's spinning!",
+        "🐼 I need ice. And bamboo. Mostly bamboo.",
+        "🐼 That wall came out of nowhere!",
+        "🐼 *groans* Why do walls have to be so hard?",
     ]
     
     # Panda hover thoughts
@@ -1514,6 +1599,28 @@ class PandaCharacter:
         "💭 Should I learn Python?",
         "💭 Life is good.",
         "💭 Texture sorting: 10/10 would recommend",
+        "💭 I wonder if other pandas sort textures...",
+        "💭 Maybe I should write a blog about this.",
+        "💭 Do I look cute from this angle?",
+        "💭 What if bamboo was blue instead of green?",
+        "💭 I could really go for a nap right now.",
+        "💭 Are clouds just sky fluff?",
+        "💭 Why is it called a 'texture' anyway?",
+        "💭 I'm basically a professional at this point.",
+        "💭 Note to self: more snack breaks.",
+        "💭 These pixels won't sort themselves!",
+        "💭 I wonder what the user is thinking...",
+        "💭 Life goals: unlimited bamboo.",
+        "💭 Just panda things... 🐼",
+        "💭 Maybe I should take up yoga.",
+        "💭 I'm pretty good at this job!",
+        "💭 Time flies when you're having fun!",
+        "💭 Should I get a haircut? Do pandas get haircuts?",
+        "💭 *deep thoughts about texture sorting*",
+        "💭 I bet I could sort 1000 files in my sleep.",
+        "💭 Existential panda thoughts...",
+        "💭 Living the dream! Well, a panda's dream.",
+        "💭 Wonder what's on the menu tonight...",
     ]
     
     # Petting responses
@@ -1524,6 +1631,25 @@ class PandaCharacter:
         "🐼 You're the best!",
         "🐼 *happy panda sounds*",
         "🐼 I could get used to this!",
+        "🐼 *leans into pets* Ahhh, perfect!",
+        "🐼 You really know how to treat a panda!",
+        "🐼 This is my happy place! 😊",
+        "🐼 *melts* So relaxing...",
+        "🐼 Best. Pets. Ever!",
+        "🐼 You have magic hands! ✨",
+        "🐼 *closes eyes contentedly* Bliss...",
+        "🐼 Don't stop! Please don't stop!",
+        "🐼 I'm officially your biggest fan now!",
+        "🐼 *tail wags* (Do pandas have tails? Whatever!)",
+        "🐼 This beats working any day!",
+        "🐼 You're hired as official panda petter!",
+        "🐼 *makes happy noises* 🎵",
+        "🐼 I could do this all day!",
+        "🐼 Petting: approved! ✅",
+        "🐼 You found my favorite spot!",
+        "🐼 *stretches* That's the good stuff!",
+        "🐼 Pure happiness right here! 💚",
+        "🐼 You're a natural at this!",
     ]
     
     # Easter egg triggers
@@ -1542,26 +1668,91 @@ class PandaCharacter:
             "Oh wow, took you long enough. 🙄",
             "Sure, I'll just wait here. Not like I have bamboo to eat.",
             "Faster? Nah, take your time. I'm immortal apparently.",
+            "Oh great, another texture. How exciting. 😒",
+            "Wow, you're really going for it today, huh?",
+            "I'm so thrilled I could... *yawn*... barely stay awake.",
+            "Fantastic. Just fantastic. Really.",
+            "Oh, is that what we're doing now? Cool. Cool cool cool.",
+            "I'm just HERE for moral support. Obviously.",
+            "This is fine. Everything is fine. 🔥",
         ],
         PandaMood.RAGE: [
             "THAT'S IT! I'VE HAD ENOUGH! 💢",
             "WHY DO YOU KEEP FAILING?! 🔥",
             "ANOTHER ERROR?! ARE YOU KIDDING ME?! 😤",
+            "I CAN'T TAKE IT ANYMORE! 😡",
+            "THIS IS UNACCEPTABLE! 💥",
+            "RAGE MODE: FULLY ACTIVATED!",
+            "DO I LOOK LIKE I'M JOKING?!",
+            "YOU'RE TESTING MY PATIENCE!",
+            "BAMBOO WON'T FIX THIS!",
+            "I'M A PANDA, NOT A MIRACLE WORKER!",
         ],
         PandaMood.DRUNK: [
             "Heyyy... you're pretty cool, you know that? 🍺",
             "*hiccup* Let's sort some... whatever those things are... 🥴",
             "Everything's... spinning... but in a good way! 🍻",
+            "I love you, man... I really do... 🍺",
+            "*stumbles* Whoops! The floor moved!",
+            "Bamboo tastes... *hiccup*... even better like this!",
+            "We should do karaoke! 🎤",
+            "Is there two of you or am I seeing double?",
+            "*giggles* Everything's so funny! 😂",
+            "I'm not drunk, YOU'RE drunk! ...Wait.",
         ],
         PandaMood.EXISTENTIAL: [
             "What is the meaning of sorting textures? 🌌",
             "Are we just... organizing pixels in an infinite void? ✨",
             "10,000 files... and for what? What does it all mean? 💭",
+            "Do textures dream of electric pandas?",
+            "In the grand scheme of things, does any of this matter?",
+            "We're all just stardust sorting stardust...",
+            "Is reality just a really well-organized texture pack?",
+            "What if WE'RE the textures being sorted?",
+            "The universe is so vast, and here I am... sorting.",
+            "Maybe the real textures were the friends we made along the way.",
+        ],
+        PandaMood.HAPPY: [
+            "Life is beautiful! 😊",
+            "What a wonderful day for sorting!",
+            "I'm so happy I could dance! 💃",
+            "Everything is awesome! 🎉",
+            "Best job ever!",
+            "I love texture sorting!",
+            "You're doing great! Keep it up!",
+            "This is fun! 🎈",
+        ],
+        PandaMood.EXCITED: [
+            "OMG OMG OMG! This is so cool! 🤩",
+            "I can't contain my excitement! ⚡",
+            "THIS IS AMAZING!",
+            "Best thing ever! EVER!",
+            "I'M SO PUMPED! 💪",
+            "LET'S GOOOOO!",
+            "YEAH! That's what I'm talking about!",
+            "Can you feel the energy?! ⚡",
+        ],
+        PandaMood.TIRED: [
+            "So... tired... 😮‍💨",
+            "Can we take a break? Please?",
+            "My paws are exhausted...",
+            "*yawns* Need... bamboo... and sleep...",
+            "I think I've earned a nap...",
+            "How many more textures? 😴",
+            "Coffee... need coffee... or bamboo...",
+            "Is it bedtime yet?",
         ],
     }
     
-    def __init__(self):
-        """Initialize the panda character."""
+    def __init__(self, name: str = "Panda", gender: PandaGender = PandaGender.NON_BINARY):
+        """Initialize the panda character.
+        
+        Args:
+            name: The panda's name (default: "Panda")
+            gender: The panda's gender (default: NON_BINARY)
+        """
+        self.name = name
+        self.gender = gender
         self.current_mood = PandaMood.HAPPY
         self.click_count = 0
         self.pet_count = 0
@@ -1573,6 +1764,46 @@ class PandaCharacter:
         self.failed_operations = 0
         
         self._lock = threading.RLock()
+    
+    def set_name(self, name: str):
+        """Set the panda's name."""
+        with self._lock:
+            self.name = name
+            logger.info(f"Panda renamed to: {name}")
+    
+    def set_gender(self, gender: PandaGender):
+        """Set the panda's gender."""
+        with self._lock:
+            self.gender = gender
+            logger.info(f"Panda gender set to: {gender.value}")
+    
+    def get_pronoun_subject(self) -> str:
+        """Get subject pronoun (he/she/they)."""
+        if self.gender == PandaGender.MALE:
+            return "he"
+        elif self.gender == PandaGender.FEMALE:
+            return "she"
+        else:
+            return "they"
+    
+    def get_pronoun_object(self) -> str:
+        """Get object pronoun (him/her/them)."""
+        if self.gender == PandaGender.MALE:
+            return "him"
+        elif self.gender == PandaGender.FEMALE:
+            return "her"
+        else:
+            return "them"
+    
+    def get_pronoun_possessive(self) -> str:
+        """Get possessive pronoun (his/her/their)."""
+        if self.gender == PandaGender.MALE:
+            return "his"
+        elif self.gender == PandaGender.FEMALE:
+            return "her"
+        else:
+            return "their"
+    
     
     def set_mood(self, mood: PandaMood):
         """Set panda's current mood."""
@@ -1705,6 +1936,8 @@ class PandaCharacter:
     def get_statistics(self) -> Dict:
         """Get panda statistics."""
         return {
+            'name': self.name,
+            'gender': self.gender.value,
             'current_mood': self.current_mood.value,
             'click_count': self.click_count,
             'pet_count': self.pet_count,

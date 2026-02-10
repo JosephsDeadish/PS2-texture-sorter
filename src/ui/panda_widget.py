@@ -24,7 +24,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     CLICK_THRESHOLD = 5
     
     def __init__(self, parent, panda_character=None, panda_level_system=None,
-                 widget_collection=None, **kwargs):
+                 widget_collection=None, panda_closet=None, **kwargs):
         """
         Initialize panda widget with drag functionality.
         
@@ -33,6 +33,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             panda_character: PandaCharacter instance for handling interactions
             panda_level_system: PandaLevelSystem instance for XP tracking
             widget_collection: WidgetCollection instance for toys/food
+            panda_closet: PandaCloset instance for customization
             **kwargs: Additional frame arguments
         """
         super().__init__(parent, **kwargs)
@@ -40,6 +41,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self.panda = panda_character
         self.panda_level_system = panda_level_system
         self.widget_collection = widget_collection
+        self.panda_closet = panda_closet
         self.current_animation = 'idle'
         self.animation_frame = 0
         self.animation_timer = None
@@ -52,38 +54,48 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._drag_moved = False  # Track if actual movement occurred
         self._last_drag_time = 0  # Throttle drag events (ms)
         
-        # Configure frame
+        # Configure frame - TRANSPARENT background
         if ctk:
-            self.configure(fg_color="transparent", corner_radius=10)
+            self.configure(fg_color="transparent", corner_radius=0, bg_color="transparent")
+        else:
+            self.configure(bg="", highlightthickness=0)
         
-        # Create panda display area
+        # Create panda display area - LARGER font
         self.panda_label = ctk.CTkLabel(
             self,
             text="",
-            font=("Courier New", 12),
+            font=("Courier New", 14),  # Increased from 12
             justify="left",
-            anchor="center"
+            anchor="center",
+            fg_color="transparent",
+            bg_color="transparent"
         ) if ctk else tk.Label(
             self,
             text="",
-            font=("Courier New", 12),
-            justify="left"
+            font=("Courier New", 14),  # Increased from 12
+            justify="left",
+            bg="",
+            highlightthickness=0
         )
-        self.panda_label.pack(pady=10, padx=10)
+        self.panda_label.pack(pady=12, padx=12)  # Increased padding
         
-        # Create info display
+        # Create info display - LARGER
         self.info_label = ctk.CTkLabel(
             self,
             text="Click me! 🐼",
-            font=("Arial", 10),
-            text_color="gray"
+            font=("Arial", 11),  # Increased from 10
+            text_color="gray",
+            fg_color="transparent",
+            bg_color="transparent"
         ) if ctk else tk.Label(
             self,
             text="Click me! 🐼",
-            font=("Arial", 10),
-            fg="gray"
+            font=("Arial", 11),  # Increased from 10
+            fg="gray",
+            bg="",
+            highlightthickness=0
         )
-        self.info_label.pack(pady=5)
+        self.info_label.pack(pady=6)  # Increased padding
         
         # Bind events for interaction
         self.panda_label.bind("<Button-3>", self._on_right_click)
@@ -409,6 +421,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         try:
             if self.panda:
                 frame = self.panda.get_animation_frame(animation_name)
+                # Enhance with equipped items
+                frame = self._get_enhanced_frame(frame)
                 self.panda_label.configure(text=frame)
         except Exception as e:
             logger.debug(f"Error setting animation frame: {e}")
@@ -432,6 +446,56 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 pass
             self.animation_timer = None
     
+    def _get_enhanced_frame(self, base_frame: str) -> str:
+        """
+        Enhance animation frame with equipped items from closet.
+        
+        Args:
+            base_frame: The base animation frame
+            
+        Returns:
+            Enhanced frame with equipped items shown
+        """
+        if not self.panda_closet:
+            return base_frame
+        
+        try:
+            appearance = self.panda_closet.get_current_appearance()
+            enhanced = base_frame
+            
+            # Add equipped items as emojis at the end
+            equipped_items = []
+            
+            if appearance.hat:
+                hat_item = self.panda_closet.get_item(appearance.hat)
+                if hat_item:
+                    equipped_items.append(hat_item.emoji)
+            
+            if appearance.clothing:
+                clothing_item = self.panda_closet.get_item(appearance.clothing)
+                if clothing_item:
+                    equipped_items.append(clothing_item.emoji)
+            
+            if appearance.shoes:
+                shoes_item = self.panda_closet.get_item(appearance.shoes)
+                if shoes_item:
+                    equipped_items.append(shoes_item.emoji)
+            
+            if appearance.accessories:
+                for acc_id in appearance.accessories[:2]:  # Max 2 accessories shown
+                    acc_item = self.panda_closet.get_item(acc_id)
+                    if acc_item:
+                        equipped_items.append(acc_item.emoji)
+            
+            if equipped_items:
+                # Add equipped items indicator at the bottom
+                enhanced += f"\n    Wearing: {' '.join(equipped_items)}"
+            
+            return enhanced
+        except Exception as e:
+            logger.debug(f"Error enhancing frame with items: {e}")
+            return base_frame
+    
     def _animate_loop(self):
         """Animate loop for continuous animation."""
         if self._destroyed:
@@ -439,10 +503,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         try:
             if self.panda:
                 frame = self.panda.get_animation_frame(self.current_animation)
+                # Enhance with equipped items
+                frame = self._get_enhanced_frame(frame)
                 self.panda_label.configure(text=frame)
             
             # Continue animation
-            self.animation_timer = self.after(500, self._animate_loop)
+            self.animation_timer = self.after(400, self._animate_loop)  # Slightly faster for smoother animations
         except Exception as e:
             logger.error(f"Error in animation loop: {e}")
             # Ensure animation loop continues even after errors
@@ -459,6 +525,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         try:
             if self.panda:
                 frame = self.panda.get_animation_frame(self.current_animation)
+                # Enhance with equipped items
+                frame = self._get_enhanced_frame(frame)
                 self.panda_label.configure(text=frame)
             
             # Return to idle after 1 second
