@@ -1942,11 +1942,6 @@ class PS2TextureSorter(ctk.CTk):
             width=self.winfo_width(), height=self.winfo_height()
         )
         self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        self._trail_canvas.lift()
-        # Make canvas transparent to all mouse/keyboard events
-        self._trail_canvas.bind('<Button-1>', lambda e: 'break')
-        self._trail_canvas.bind('<Button-2>', lambda e: 'break')
-        self._trail_canvas.bind('<Button-3>', lambda e: 'break')
         self._trail_canvas.config(bg='SystemButtonFace')
         # Use wm_attributes for transparency if possible, otherwise hide bg
         try:
@@ -1956,7 +1951,7 @@ class PS2TextureSorter(ctk.CTk):
                 self._trail_canvas.config(bg='#1a1a1a')
             except Exception:
                 pass
-        # Critical: lower the canvas so it doesn't intercept events
+        # Lower the canvas so it doesn't intercept events
         self._trail_canvas.lower()
         
         self._trail_dots = []
