@@ -2123,7 +2123,8 @@ class PS2TextureSorter(ctk.CTk):
                 # Lower the canvas below all other widgets
                 self._trail_canvas.lower()
                 
-                # Disable all mouse events on the canvas
+                # Disable all mouse events on canvas so they pass through to widgets below
+                # Using empty tuple removes all event bindings, making canvas non-interactive
                 self._trail_canvas.bindtags(())
                 
                 # Handle window resize to update canvas size
@@ -2286,12 +2287,16 @@ class PS2TextureSorter(ctk.CTk):
         
         def on_thumbnail_toggle():
             """Handle real-time thumbnail toggle"""
-            config.set('ui', 'show_thumbnails', value=show_thumb_var.get())
-            config.save()
-            # Immediately refresh browser if it's loaded
-            if hasattr(self, 'browser_current_dir'):
-                self.browser_refresh()
-            self.log(f"✅ Thumbnails {'enabled' if show_thumb_var.get() else 'disabled'}")
+            try:
+                config.set('ui', 'show_thumbnails', value=show_thumb_var.get())
+                config.save()
+                # Immediately refresh browser if it's loaded
+                if hasattr(self, 'browser_current_dir'):
+                    self.browser_refresh()
+                self.log(f"✅ Thumbnails {'enabled' if show_thumb_var.get() else 'disabled'}")
+            except Exception as e:
+                logger.error(f"Failed to save thumbnail setting: {e}")
+                self.log(f"❌ Error saving thumbnail setting: {e}")
         
         ctk.CTkCheckBox(thumb_toggle_frame, text="Show thumbnails in File Browser",
                        variable=show_thumb_var,
@@ -2306,15 +2311,19 @@ class PS2TextureSorter(ctk.CTk):
         
         def on_thumbnail_size_change(choice):
             """Handle real-time thumbnail size change"""
-            config.set('ui', 'thumbnail_size', value=int(choice))
-            config.save()
-            # Clear cache since size changed
-            if hasattr(self, '_thumbnail_cache'):
-                self._thumbnail_cache.clear()
-            # Refresh browser to show new size
-            if hasattr(self, 'browser_current_dir'):
-                self.browser_refresh()
-            self.log(f"✅ Thumbnail size changed to {choice}px")
+            try:
+                config.set('ui', 'thumbnail_size', value=int(choice))
+                config.save()
+                # Clear cache since size changed
+                if hasattr(self, '_thumbnail_cache'):
+                    self._thumbnail_cache.clear()
+                # Refresh browser to show new size
+                if hasattr(self, 'browser_current_dir'):
+                    self.browser_refresh()
+                self.log(f"✅ Thumbnail size changed to {choice}px")
+            except Exception as e:
+                logger.error(f"Failed to save thumbnail size: {e}")
+                self.log(f"❌ Error saving thumbnail size: {e}")
         
         thumb_size_menu = ctk.CTkOptionMenu(thumb_size_frame, variable=thumb_size_var,
                                             values=["16", "32", "64"],
