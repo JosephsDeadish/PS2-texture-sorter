@@ -2055,10 +2055,10 @@ class PandaCharacter:
                 self.set_mood(PandaMood.RAGE)
             elif errors >= 2:
                 self.set_mood(PandaMood.SARCASTIC)
-            elif idle_time_seconds > 300:  # 5 minutes idle
-                self.set_mood(PandaMood.SLEEPY)
             elif idle_time_seconds > 600:  # 10 minutes idle
                 self.set_mood(PandaMood.SLEEPING)
+            elif idle_time_seconds > 300:  # 5 minutes idle
+                self.set_mood(PandaMood.SLEEPY)
             elif files_processed > 100:
                 self.set_mood(PandaMood.TIRED)
             elif files_processed > 50:

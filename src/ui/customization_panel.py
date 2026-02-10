@@ -307,6 +307,12 @@ class ColorWheelWidget(ctk.CTkFrame):
 class CursorCustomizer(ctk.CTkFrame):
     """Cursor customization with preview"""
     
+    # Trail preview canvas dimensions
+    TRAIL_PREVIEW_MIN_Y = 5
+    TRAIL_PREVIEW_MAX_Y = 75
+    TRAIL_PREVIEW_DOT_RADIUS = 4
+    TRAIL_PREVIEW_MAX_DOTS = 20
+    
     # Icons for each cursor type
     CURSOR_ICONS = {
         "default": "🖱️",
@@ -462,7 +468,10 @@ class CursorCustomizer(ctk.CTkFrame):
             width=300, height=80
         )
         self._trail_preview_canvas.pack(padx=5, pady=(0, 5), fill="x")
-        self._trail_preview_canvas.bindtags(())  # Pass-through for mouse events
+        # Block click events but allow motion events to pass through
+        self._trail_preview_canvas.bind('<Button-1>', lambda e: 'break')
+        self._trail_preview_canvas.bind('<Button-2>', lambda e: 'break')
+        self._trail_preview_canvas.bind('<Button-3>', lambda e: 'break')
         
         # Bind motion on the preview area for trail demo
         self.preview_area.bind('<Motion>', self._on_preview_motion)
@@ -518,15 +527,16 @@ class CursorCustomizer(ctk.CTkFrame):
             colors = trail_color_palettes.get(self.trail_style, trail_color_palettes['rainbow'])
             
             x = event.x
-            y = min(max(event.y, 5), 75)
+            y = min(max(event.y, self.TRAIL_PREVIEW_MIN_Y), self.TRAIL_PREVIEW_MAX_Y)
             color_idx = len(self._trail_preview_dots) % len(colors)
+            r = self.TRAIL_PREVIEW_DOT_RADIUS
             dot = canvas.create_oval(
-                x - 4, y - 4, x + 4, y + 4,
+                x - r, y - r, x + r, y + r,
                 fill=colors[color_idx], outline=''
             )
             self._trail_preview_dots.append(dot)
             
-            if len(self._trail_preview_dots) > 20:
+            if len(self._trail_preview_dots) > self.TRAIL_PREVIEW_MAX_DOTS:
                 old_dot = self._trail_preview_dots.pop(0)
                 canvas.delete(old_dot)
             

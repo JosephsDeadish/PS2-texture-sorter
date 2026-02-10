@@ -510,6 +510,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     self.current_animation, self.animation_frame
                 )
                 self.animation_frame += 1
+                # Reset frame counter to prevent unbounded growth
+                if self.animation_frame > 10000:
+                    self.animation_frame = 0
                 # Enhance with equipped items
                 frame = self._get_enhanced_frame(frame)
                 self.panda_label.configure(text=frame)

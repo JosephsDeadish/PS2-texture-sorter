@@ -311,6 +311,9 @@ class PS2TextureSorter(ctk.CTk):
     GOODBYE_SPLASH_DISPLAY_MS = 800  # Time to display goodbye splash before exit
     BATCH_BONUS_THRESHOLD = 100  # Number of files for batch bonus
     
+    # Prefixes to strip when mapping shop unlockable_ids to closet item IDs
+    CLOSET_ID_PREFIXES = ['clothes_', 'acc_', 'panda_outfit_', 'food_']
+    
     # Constants for user interaction
     USER_INTERACTION_TIMEOUT = 300  # 5 minutes timeout for manual/suggested mode dialogs
     BATCH_BONUS_THRESHOLD = 100  # Number of files for batch bonus
@@ -3363,7 +3366,7 @@ class PS2TextureSorter(ctk.CTk):
                     # If not found, try stripped prefixes (clothes_tshirt -> tshirt, acc_sunglasses -> sunglasses)
                     if not closet_item:
                         stripped_id = item.unlockable_id
-                        for prefix in ['clothes_', 'acc_', 'panda_outfit_', 'food_']:
+                        for prefix in self.CLOSET_ID_PREFIXES:
                             if stripped_id.startswith(prefix):
                                 stripped_id = stripped_id[len(prefix):]
                                 break
