@@ -311,6 +311,10 @@ class PS2TextureSorter(ctk.CTk):
     GOODBYE_SPLASH_DISPLAY_MS = 800  # Time to display goodbye splash before exit
     BATCH_BONUS_THRESHOLD = 100  # Number of files for batch bonus
     
+    # Constants for user interaction
+    USER_INTERACTION_TIMEOUT = 300  # 5 minutes timeout for manual/suggested mode dialogs
+    BATCH_BONUS_THRESHOLD = 100  # Number of files for batch bonus
+    
     def __init__(self):
         super().__init__()
         
@@ -2854,27 +2858,47 @@ class PS2TextureSorter(ctk.CTk):
         # === SAVE BUTTON ===
         def save_settings_window():
             try:
-                # Performance
-                config.set('performance', 'max_threads', value=int(thread_slider.get()))
-                config.set('performance', 'memory_limit_mb', value=int(memory_var.get()))
-                config.set('performance', 'thumbnail_cache_size', value=int(cache_var.get()))
+                # Validate and save Performance settings
+                try:
+                    max_threads = int(thread_slider.get())
+                    memory_limit = int(memory_var.get())
+                    cache_size = int(cache_var.get())
+                    
+                    if max_threads < 1 or max_threads > 16:
+                        raise ValueError("Thread count must be between 1 and 16")
+                    if memory_limit < 512:
+                        raise ValueError("Memory limit must be at least 512 MB")
+                    if cache_size < 10:
+                        raise ValueError("Cache size must be at least 10")
+                    
+                    config.set('performance', 'max_threads', value=max_threads)
+                    config.set('performance', 'memory_limit_mb', value=memory_limit)
+                    config.set('performance', 'thumbnail_cache_size', value=cache_size)
+                    self._thumbnail_cache_max = cache_size
+                except ValueError as e:
+                    raise ValueError(f"Performance settings error: {e}")
                 
                 # Thumbnail & animation settings
                 config.set('ui', 'show_thumbnails', value=show_thumb_var.get())
                 config.set('ui', 'thumbnail_size', value=int(thumb_size_var.get()))
                 config.set('ui', 'disable_panda_animations', value=disable_panda_anim_var.get())
-                self._thumbnail_cache_max = int(cache_var.get())
                 
                 # UI / Appearance & Customization
                 config.set('ui', 'theme', value=theme_var.get())
                 config.set('ui', 'scale', value=scale_var.get())
-                # Tooltip mode, cursor, and panda mode are managed via Advanced Customization panel
                 
-                # File Handling
-                config.set('file_handling', 'create_backup', value=backup_var.get())
-                config.set('file_handling', 'overwrite_existing', value=overwrite_var.get())
-                config.set('file_handling', 'auto_save', value=autosave_var.get())
-                config.set('file_handling', 'undo_depth', value=int(undo_var.get()))
+                # Validate and save File Handling settings
+                try:
+                    undo_depth = int(undo_var.get())
+                    if undo_depth < 0:
+                        raise ValueError("Undo depth cannot be negative")
+                    
+                    config.set('file_handling', 'create_backup', value=backup_var.get())
+                    config.set('file_handling', 'overwrite_existing', value=overwrite_var.get())
+                    config.set('file_handling', 'auto_save', value=autosave_var.get())
+                    config.set('file_handling', 'undo_depth', value=undo_depth)
+                except ValueError as e:
+                    raise ValueError(f"File handling settings error: {e}")
                 
                 # Logging
                 config.set('logging', 'log_level', value=loglevel_var.get())
@@ -2887,23 +2911,44 @@ class PS2TextureSorter(ctk.CTk):
                 # AI Settings
                 config.set('ai', 'prefer_image_content', value=prefer_image_var.get())
                 
-                # Offline AI
-                config.set('ai', 'offline', 'enabled', value=offline_enabled_var.get())
-                config.set('ai', 'offline', 'use_image_analysis', value=offline_image_var.get())
-                config.set('ai', 'offline', 'num_threads', value=int(offline_threads_var.get()))
-                config.set('ai', 'offline', 'confidence_weight', value=float(offline_conf_slider.get()))
+                # Validate and save Offline AI settings
+                try:
+                    offline_threads = int(offline_threads_var.get())
+                    if offline_threads < 1 or offline_threads > 16:
+                        raise ValueError("Offline AI threads must be between 1 and 16")
+                    
+                    config.set('ai', 'offline', 'enabled', value=offline_enabled_var.get())
+                    config.set('ai', 'offline', 'use_image_analysis', value=offline_image_var.get())
+                    config.set('ai', 'offline', 'num_threads', value=offline_threads)
+                    config.set('ai', 'offline', 'confidence_weight', value=float(offline_conf_slider.get()))
+                except ValueError as e:
+                    raise ValueError(f"Offline AI settings error: {e}")
                 
-                # Online AI
-                config.set('ai', 'online', 'enabled', value=online_enabled_var.get())
-                config.set('ai', 'online', 'api_key', value=api_key_var.get())
-                config.set('ai', 'online', 'api_url', value=api_url_var.get())
-                config.set('ai', 'online', 'model', value=model_var.get())
-                config.set('ai', 'online', 'timeout', value=int(timeout_var.get()))
-                config.set('ai', 'online', 'max_requests_per_minute', value=int(rate_min_var.get()))
-                config.set('ai', 'online', 'max_requests_per_hour', value=int(rate_hour_var.get()))
-                config.set('ai', 'online', 'confidence_weight', value=float(online_conf_slider.get()))
-                config.set('ai', 'online', 'use_for_difficult_images', value=online_difficult_var.get())
-                config.set('ai', 'online', 'low_confidence_threshold', value=float(low_conf_slider.get()))
+                # Validate and save Online AI settings
+                try:
+                    timeout = int(timeout_var.get())
+                    rate_min = int(rate_min_var.get())
+                    rate_hour = int(rate_hour_var.get())
+                    
+                    if timeout < 1:
+                        raise ValueError("Timeout must be at least 1 second")
+                    if rate_min < 1:
+                        raise ValueError("Rate limit per minute must be at least 1")
+                    if rate_hour < 1:
+                        raise ValueError("Rate limit per hour must be at least 1")
+                    
+                    config.set('ai', 'online', 'enabled', value=online_enabled_var.get())
+                    config.set('ai', 'online', 'api_key', value=api_key_var.get())
+                    config.set('ai', 'online', 'api_url', value=api_url_var.get())
+                    config.set('ai', 'online', 'model', value=model_var.get())
+                    config.set('ai', 'online', 'timeout', value=timeout)
+                    config.set('ai', 'online', 'max_requests_per_minute', value=rate_min)
+                    config.set('ai', 'online', 'max_requests_per_hour', value=rate_hour)
+                    config.set('ai', 'online', 'confidence_weight', value=float(online_conf_slider.get()))
+                    config.set('ai', 'online', 'use_for_difficult_images', value=online_difficult_var.get())
+                    config.set('ai', 'online', 'low_confidence_threshold', value=float(low_conf_slider.get()))
+                except ValueError as e:
+                    raise ValueError(f"Online AI settings error: {e}")
                 
                 # AI Blending
                 config.set('ai', 'blend_mode', value=blend_var.get())
@@ -2942,6 +2987,11 @@ class PS2TextureSorter(ctk.CTk):
                 if GUI_AVAILABLE:
                     messagebox.showinfo("Settings Saved", "All settings have been saved and applied successfully!")
                     
+            except ValueError as e:
+                self.log(f"❌ Invalid input: {e}")
+                logger.error(f"Settings validation error: {e}")
+                if GUI_AVAILABLE:
+                    messagebox.showerror("Invalid Input", str(e))
             except Exception as e:
                 self.log(f"❌ Error saving settings: {e}")
                 logger.error(f"Error saving settings: {e}", exc_info=True)
@@ -4196,19 +4246,16 @@ Built with:
                         # Get AI suggestion first (for display only)
                         ai_category, ai_confidence = self.classifier.classify_texture(file_path)
                         
-                        # Show dialog in main thread and wait for result
+                        # Show dialog and wait for result using event-based approach
+                        result_event = threading.Event()
                         selected_category = [None]  # Use list to allow modification in nested function
                         
                         def show_manual_dialog():
                             """Show manual classification dialog"""
-                            from tkinter import simpledialog
                             # Get sorted category list
                             category_list = sorted(list(ALL_CATEGORIES.keys()))
                             
                             # Create a simple selection dialog
-                            msg = f"Classify: {file_path.name}\n\nAI suggests: {ai_category} (confidence: {ai_confidence:.2f})\n\nSelect category:"
-                            
-                            # Use a custom dialog with category dropdown
                             dialog_window = ctk.CTkToplevel(self)
                             dialog_window.title("Manual Classification")
                             dialog_window.geometry("500x400")
@@ -4246,41 +4293,41 @@ Built with:
                             def on_ok():
                                 selected_category[0] = category_var.get()
                                 dialog_window.destroy()
+                                result_event.set()
                             
                             def on_skip():
                                 selected_category[0] = "unclassified"
                                 dialog_window.destroy()
+                                result_event.set()
                             
                             ctk.CTkButton(button_frame, text="OK", command=on_ok, width=100).pack(side="left", padx=5)
                             ctk.CTkButton(button_frame, text="Skip", command=on_skip, width=100).pack(side="left", padx=5)
                             
-                            # Wait for dialog to close
-                            dialog_window.wait_window()
+                            # Handle dialog close
+                            def on_close():
+                                selected_category[0] = "unclassified"
+                                result_event.set()
+                            dialog_window.protocol("WM_DELETE_WINDOW", on_close)
                         
                         # Execute dialog in main thread
                         self.after(0, show_manual_dialog)
                         
-                        # Wait for selection (with timeout to prevent hanging)
-                        timeout = 300  # 5 minutes
-                        waited = 0
-                        while selected_category[0] is None and waited < timeout:
-                            import time
-                            time.sleep(0.1)
-                            waited += 0.1
-                        
-                        if selected_category[0] is None:
+                        # Wait for result using event
+                        if result_event.wait(timeout=self.USER_INTERACTION_TIMEOUT):
+                            category = selected_category[0] if selected_category[0] else ai_category
+                            confidence = 1.0  # User selection is 100% confident
+                        else:
                             # Timeout - use AI suggestion
                             category = ai_category
                             confidence = ai_confidence
-                        else:
-                            category = selected_category[0]
-                            confidence = 1.0  # User selection is 100% confident
+                            logger.warning(f"Manual classification timed out for {file_path.name}")
                     
                     elif mode == "suggested":
                         # Suggested: AI suggests, user confirms or changes
                         ai_category, ai_confidence = self.classifier.classify_texture(file_path)
                         
-                        # Show confirmation dialog in main thread
+                        # Show confirmation dialog using event-based approach
+                        result_event = threading.Event()
                         confirmed_category = [None]
                         
                         def show_suggested_dialog():
@@ -4324,14 +4371,17 @@ Built with:
                             def on_accept():
                                 confirmed_category[0] = ai_category
                                 dialog_window.destroy()
+                                result_event.set()
                             
                             def on_change():
                                 confirmed_category[0] = category_var.get()
                                 dialog_window.destroy()
+                                result_event.set()
                             
                             def on_skip():
                                 confirmed_category[0] = "unclassified"
                                 dialog_window.destroy()
+                                result_event.set()
                             
                             ctk.CTkButton(button_frame, text="✓ Accept", command=on_accept, 
                                         width=100, fg_color="green").pack(side="left", padx=5)
@@ -4340,26 +4390,24 @@ Built with:
                             ctk.CTkButton(button_frame, text="Skip", command=on_skip, 
                                         width=100).pack(side="left", padx=5)
                             
-                            dialog_window.wait_window()
+                            # Handle dialog close
+                            def on_close():
+                                confirmed_category[0] = "unclassified"
+                                result_event.set()
+                            dialog_window.protocol("WM_DELETE_WINDOW", on_close)
                         
                         # Execute dialog in main thread
                         self.after(0, show_suggested_dialog)
                         
-                        # Wait for confirmation
-                        timeout = 300
-                        waited = 0
-                        while confirmed_category[0] is None and waited < timeout:
-                            import time
-                            time.sleep(0.1)
-                            waited += 0.1
-                        
-                        if confirmed_category[0] is None:
+                        # Wait for confirmation using event
+                        if result_event.wait(timeout=self.USER_INTERACTION_TIMEOUT):
+                            category = confirmed_category[0] if confirmed_category[0] else ai_category
+                            confidence = 1.0  # User confirmation is 100% confident
+                        else:
                             # Timeout - use AI suggestion
                             category = ai_category
                             confidence = ai_confidence
-                        else:
-                            category = confirmed_category[0]
-                            confidence = 1.0  # User confirmation is 100% confident
+                            logger.warning(f"Suggested classification timed out for {file_path.name}")
                     
                     else:
                         # Fallback to automatic

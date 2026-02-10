@@ -29,6 +29,9 @@ from .categories import ALL_CATEGORIES, get_category_info
 class TextureClassifier:
     """Main texture classification engine"""
     
+    # Classification confidence thresholds
+    HIGH_CONFIDENCE_THRESHOLD = 0.7  # Threshold for accepting filename-based classification
+    
     def __init__(self, config=None, model_manager=None):
         self.config = config
         self.categories = ALL_CATEGORIES
@@ -82,7 +85,7 @@ class TextureClassifier:
                 logging.debug(f"AI model prediction failed for {file_path}: {e}")
         
         # Try filename-based classification (fast)
-        if confidence < 0.7:  # Use filename if AI confidence is low
+        if confidence < self.HIGH_CONFIDENCE_THRESHOLD:  # Use filename if AI confidence is low
             filename_category, filename_confidence = self._classify_by_filename(file_path)
             
             # If prefer_image_content is False, prioritize filename matching
@@ -95,7 +98,7 @@ class TextureClassifier:
                 confidence = filename_confidence
         
         # If confidence is still low and image analysis is enabled, try image analysis
-        if confidence < 0.7 and use_image_analysis and HAS_PIL:
+        if confidence < self.HIGH_CONFIDENCE_THRESHOLD and use_image_analysis and HAS_PIL:
             img_category, img_confidence = self._classify_by_image(file_path)
             if img_confidence > confidence:
                 category, confidence = img_category, img_confidence
