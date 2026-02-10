@@ -1800,7 +1800,7 @@ class PS2TextureSorter(ctk.CTk):
                         mode = TooltipMode(value)
                         self.tooltip_manager.set_mode(mode)
                         self.log(f"✅ Tooltip mode changed to: {value}")
-                    except (ValueError, Exception) as tooltip_err:
+                    except Exception as tooltip_err:
                         logger.debug(f"Could not change tooltip mode: {tooltip_err}")
                         self.log(f"⚠️ Could not change tooltip mode: {tooltip_err}")
                 else:

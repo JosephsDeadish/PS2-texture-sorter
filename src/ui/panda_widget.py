@@ -305,7 +305,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             logger.error(f"Error in animation loop: {e}")
             # Ensure animation loop continues even after errors
             try:
-                self.animation_timer = self.after(1000, self._animate_loop)
+                self.animation_timer = self.after(500, self._animate_loop)
             except Exception:
                 pass
     
