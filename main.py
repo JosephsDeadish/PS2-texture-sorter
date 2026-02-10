@@ -20,7 +20,7 @@ import os
 import time
 import threading
 import logging
-from collections import deque, OrderedDict
+from collections import OrderedDict
 from pathlib import Path
 from types import SimpleNamespace
 from datetime import datetime
@@ -694,6 +694,18 @@ class PS2TextureSorter(ctk.CTk):
         # Status bar
         self.create_status_bar()
     
+    def _has_popout_button(self, tab_frame):
+        """Check if tab frame already has a pop-out button"""
+        for widget in tab_frame.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                try:
+                    text = widget.cget('text')
+                    if text and ('Pop Out' in text or text == '↗'):
+                        return True
+                except Exception:
+                    continue
+        return False
+    
     def _add_popout_buttons(self):
         """Add pop-out/undock buttons to secondary tabs"""
         # Tools tabs that can be popped out
@@ -888,10 +900,7 @@ class PS2TextureSorter(ctk.CTk):
             parent_tv = self._tab_to_tabview.get(tab_name, self.tabview)
             tab_frame = parent_tv.tab(tab_name)
             
-            # Check if button already exists before creating
-            existing_buttons = [w for w in tab_frame.winfo_children() 
-                              if isinstance(w, ctk.CTkButton)]
-            if not any("Pop Out" in (getattr(w, 'cget', lambda x: '')('text') or '') for w in existing_buttons):
+            if not self._has_popout_button(tab_frame):
                 btn = ctk.CTkButton(
                     tab_frame, text="↗ Pop Out", width=90, height=26,
                     font=("Arial", 11),
@@ -931,9 +940,7 @@ class PS2TextureSorter(ctk.CTk):
             self._popout_children.pop(tab_name, None)
         
         # Re-add pop-out button only if it doesn't exist
-        existing_buttons = [w for w in tab_frame.winfo_children() 
-                          if isinstance(w, ctk.CTkButton)]
-        if not any("Pop Out" in (getattr(w, 'cget', lambda x: '')('text') or '') for w in existing_buttons):
+        if not self._has_popout_button(tab_frame):
             btn = ctk.CTkButton(
                 tab_frame, text="↗ Pop Out", width=90, height=26,
                 font=("Arial", 11),
@@ -1756,8 +1763,8 @@ class PS2TextureSorter(ctk.CTk):
                 # Move to end of LRU order (O(1) operation with OrderedDict)
                 self._thumbnail_cache.move_to_end(cache_key)
                 label = ctk.CTkLabel(parent_frame, image=cached_photo, text="")
-                # Store reference to prevent garbage collection
-                label._photo_ref = cached_photo
+                # Keep strong reference to prevent garbage collection (tkinter pattern)
+                label.photo_ref = cached_photo
                 return label
             
             # Load and resize image with proper resource cleanup
@@ -1790,8 +1797,8 @@ class PS2TextureSorter(ctk.CTk):
             
             # Create label with thumbnail
             label = ctk.CTkLabel(parent_frame, image=photo, text="")
-            # CRITICAL: Keep reference to prevent garbage collection
-            label._photo_ref = photo
+            # Keep strong reference to prevent garbage collection (tkinter pattern)
+            label.photo_ref = photo
             return label
             
         except Exception as e:
@@ -2301,7 +2308,7 @@ class PS2TextureSorter(ctk.CTk):
             """Handle real-time thumbnail size change"""
             config.set('ui', 'thumbnail_size', value=int(choice))
             config.save()
-            # Clear cache since size changed (OrderedDict has clear method)
+            # Clear cache since size changed
             if hasattr(self, '_thumbnail_cache'):
                 self._thumbnail_cache.clear()
             # Refresh browser to show new size
