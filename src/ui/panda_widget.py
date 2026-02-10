@@ -158,7 +158,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self.info_label.configure(text="🐼 Home sweet home!")
                 # Award XP for moving the panda
                 if self.panda_level_system:
-                    xp = self.panda_level_system.get_xp_reward('click') // 2
+                    # Use half the click reward for moving, or default to 5 XP
+                    try:
+                        xp = self.panda_level_system.get_xp_reward('click') // 2
+                    except (KeyError, AttributeError, TypeError):
+                        xp = 5  # Default XP for moving panda
                     self.panda_level_system.add_xp(xp, 'Moved panda')
     
     def _on_click(self, event=None):

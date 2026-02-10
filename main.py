@@ -3034,10 +3034,13 @@ Built with:
             panda_container = ctk.CTkFrame(self, corner_radius=10)
             
             # Restore saved position or use default
+            # Position coordinates are relative (0.0 to 1.0) not absolute pixels
+            # saved_x: 0.0 = left edge, 1.0 = right edge
+            # saved_y: 0.0 = top edge, 1.0 = bottom edge
             saved_x = config.get('panda', 'position_x', default=0.98)
             saved_y = config.get('panda', 'position_y', default=0.98)
             
-            # Position using saved coordinates
+            # Position using saved relative coordinates
             panda_container.place(relx=saved_x, rely=saved_y, anchor="se")
             
             self.panda_widget = PandaWidget(
