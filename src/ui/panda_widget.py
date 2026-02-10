@@ -17,21 +17,21 @@ logger = logging.getLogger(__name__)
 
 
 class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
-    """Interactive animated panda widget."""
+    """Interactive animated panda widget - always present."""
     
-    def __init__(self, parent, panda_mode=None, panda_level_system=None, **kwargs):
+    def __init__(self, parent, panda_character=None, panda_level_system=None, **kwargs):
         """
         Initialize panda widget.
         
         Args:
             parent: Parent widget
-            panda_mode: PandaMode instance for handling interactions
+            panda_character: PandaCharacter instance for handling interactions
             panda_level_system: PandaLevelSystem instance for XP tracking
             **kwargs: Additional frame arguments
         """
         super().__init__(parent, **kwargs)
         
-        self.panda_mode = panda_mode
+        self.panda = panda_character
         self.panda_level_system = panda_level_system
         self.current_animation = 'idle'
         self.animation_frame = 0
@@ -81,8 +81,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def _on_click(self, event=None):
         """Handle left click on panda."""
-        if self.panda_mode:
-            response = self.panda_mode.on_panda_click()
+        if self.panda:
+            response = self.panda.on_click()
             self.info_label.configure(text=response)
             # Play celebration animation briefly
             self.play_animation_once('celebrating')
@@ -96,8 +96,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def _on_right_click(self, event=None):
         """Handle right click on panda."""
-        if self.panda_mode:
-            menu_items = self.panda_mode.on_panda_right_click()
+        if self.panda:
+            menu_items = self.panda.get_context_menu()
             # Create context menu
             menu = tk.Menu(self, tearoff=0)
             for key, label in menu_items.items():
@@ -112,8 +112,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def _on_hover(self, event=None):
         """Handle hover over panda."""
-        if self.panda_mode:
-            thought = self.panda_mode.on_panda_hover()
+        if self.panda:
+            thought = self.panda.on_hover()
             self.info_label.configure(text=thought)
     
     def _on_leave(self, event=None):
@@ -122,8 +122,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def _handle_menu_action(self, action: str):
         """Handle menu item selection."""
-        if action == 'pet_panda' and self.panda_mode:
-            reaction = self.panda_mode.pet_panda_minigame()
+        if action == 'pet_panda' and self.panda:
+            reaction = self.panda.on_pet()
             self.info_label.configure(text=reaction)
             self.play_animation_once('celebrating')
             
@@ -134,8 +134,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 if leveled_up:
                     self.info_label.configure(text=f"🎉 Panda Level {new_level}!")
                     
-        elif action == 'feed_bamboo' and self.panda_mode:
-            self.info_label.configure(text="🎋 *nom nom nom*")
+        elif action == 'feed_bamboo' and self.panda:
+            response = self.panda.on_feed()
+            self.info_label.configure(text=response)
             self.play_animation_once('working')
             
             # Award XP for feeding
@@ -145,9 +146,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 if leveled_up:
                     self.info_label.configure(text=f"🎉 Panda Level {new_level}!")
                     
-        elif action == 'check_mood' and self.panda_mode:
-            mood = self.panda_mode.get_panda_mood_indicator()
-            mood_name = self.panda_mode.current_mood.value
+        elif action == 'check_mood' and self.panda:
+            mood = self.panda.get_mood_indicator()
+            mood_name = self.panda.current_mood.value
             self.info_label.configure(text=f"{mood} Mood: {mood_name}")
     
     def start_animation(self, animation_name: str):
@@ -164,8 +165,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def _animate_loop(self):
         """Animate loop for continuous animation."""
-        if self.panda_mode:
-            frame = self.panda_mode.get_animation_frame(self.current_animation)
+        if self.panda:
+            frame = self.panda.get_animation_frame(self.current_animation)
             self.panda_label.configure(text=frame)
         
         # Continue animation
@@ -173,8 +174,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def _animate_once(self):
         """Animate once then return to idle."""
-        if self.panda_mode:
-            frame = self.panda_mode.get_animation_frame(self.current_animation)
+        if self.panda:
+            frame = self.panda.get_animation_frame(self.current_animation)
             self.panda_label.configure(text=frame)
         
         # Return to idle after 1 second
@@ -182,8 +183,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     def set_mood(self, mood):
         """Update panda mood and animation."""
-        if self.panda_mode:
-            self.panda_mode.set_mood(mood)
+        if self.panda:
+            self.panda.set_mood(mood)
             # Change animation based on mood
             mood_animations = {
                 'happy': 'idle',

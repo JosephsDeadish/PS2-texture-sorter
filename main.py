@@ -60,7 +60,21 @@ except ImportError:
     CUSTOMIZATION_AVAILABLE = False
     print("Warning: UI customization panel not available.")
 
-# Import feature modules
+try:
+    from src.features.panda_character import PandaCharacter
+    PANDA_CHARACTER_AVAILABLE = True
+except ImportError:
+    PANDA_CHARACTER_AVAILABLE = False
+    print("Warning: Panda character not available.")
+
+try:
+    from src.features.tooltip_system import TooltipSystem
+    TOOLTIP_SYSTEM_AVAILABLE = True
+except ImportError:
+    TOOLTIP_SYSTEM_AVAILABLE = False
+    print("Warning: Tooltip system not available.")
+
+# Keep PandaMode import for backward compatibility during transition
 try:
     from src.features.panda_mode import PandaMode
     PANDA_MODE_AVAILABLE = True
@@ -326,7 +340,9 @@ class PS2TextureSorter(ctk.CTk):
         self.database = None  # Will be initialized when needed
         
         # Initialize feature modules
-        self.panda_mode = None
+        self.panda = None  # Always-present panda character
+        self.tooltip_system = None  # Tooltip system with vulgar option
+        self.panda_mode = None  # Deprecated - keeping for backward compatibility
         self.sound_manager = None
         self.achievement_manager = None
         self.unlockables_manager = None
@@ -349,8 +365,23 @@ class PS2TextureSorter(ctk.CTk):
         # Initialize features if GUI available
         if GUI_AVAILABLE:
             try:
-                if PANDA_MODE_AVAILABLE:
+                # Always create panda character - not a "mode"
+                if PANDA_CHARACTER_AVAILABLE:
+                    self.panda = PandaCharacter()
+                    logger.info("Panda character initialized (always present)")
+                
+                # Separate tooltip system with vulgar option
+                if TOOLTIP_SYSTEM_AVAILABLE:
+                    # Get vulgar mode setting from config
+                    vulgar_mode = config.get('ui', 'vulgar_tooltips', default=False)
+                    self.tooltip_system = TooltipSystem(vulgar_mode=vulgar_mode)
+                    logger.info(f"Tooltip system initialized (vulgar mode: {vulgar_mode})")
+                
+                # Keep old panda_mode for backward compatibility (will be deprecated)
+                if PANDA_MODE_AVAILABLE and not PANDA_CHARACTER_AVAILABLE:
                     self.panda_mode = PandaMode()
+                    logger.warning("Using deprecated PandaMode - should migrate to PandaCharacter")
+                
                 if SOUND_AVAILABLE:
                     self.sound_manager = SoundManager()
                 if ACHIEVEMENTS_AVAILABLE:
@@ -2930,13 +2961,14 @@ Built with:
             self.status_money_label.pack(side="right", padx=10, pady=5)
         
         # Add panda widget in a separate frame on bottom right
-        if PANDA_WIDGET_AVAILABLE and self.panda_mode:
+        # Panda is always present - not a "mode"
+        if PANDA_WIDGET_AVAILABLE and self.panda:
             panda_container = ctk.CTkFrame(self, corner_radius=10)
             panda_container.place(relx=0.98, rely=0.98, anchor="se")
             
             self.panda_widget = PandaWidget(
                 panda_container, 
-                panda_mode=self.panda_mode,
+                panda_character=self.panda,
                 panda_level_system=self.panda_level_system
             )
             self.panda_widget.pack(padx=5, pady=5)
