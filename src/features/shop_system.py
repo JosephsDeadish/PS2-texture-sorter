@@ -388,20 +388,20 @@ class ShopSystem:
         # Load saved data
         self.load()
     
-    def get_items_by_category(self, category: ShopCategory, user_level: int = 1) -> List[ShopItem]:
+    def get_items_by_category(self, category: ShopCategory, user_level: Optional[int] = None) -> List[ShopItem]:
         """
         Get items in a category that user can see.
         
         Args:
             category: Shop category
-            user_level: User's current level
+            user_level: User's current level (None means show all items)
             
         Returns:
             List of items in category
         """
         items = [
             item for item in self.CATALOG.values()
-            if item.category == category and item.level_required <= user_level
+            if item.category == category and (user_level is None or item.level_required <= user_level)
         ]
         return sorted(items, key=lambda x: x.price)
     

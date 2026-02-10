@@ -414,7 +414,11 @@ class PandaCloset:
         item.equipped = False
         
         # Update appearance
-        if item.category == CustomizationCategory.CLOTHING:
+        if item.category == CustomizationCategory.FUR_STYLE:
+            self.appearance.fur_style = "classic"
+        elif item.category == CustomizationCategory.FUR_COLOR:
+            self.appearance.fur_color = "black_white"
+        elif item.category == CustomizationCategory.CLOTHING:
             self.appearance.clothing = None
         elif item.category == CustomizationCategory.HAT:
             self.appearance.hat = None
