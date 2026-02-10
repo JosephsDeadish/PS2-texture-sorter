@@ -2773,7 +2773,6 @@ class PS2TextureSorter(ctk.CTk):
             # Handle food purchases — feed the panda directly
             if item.category.value == 'food' and self.panda:
                 try:
-                    food_id = item.id.replace('food_', '')
                     response = self.panda.on_feed()
                     if hasattr(self, 'panda_widget') and self.panda_widget:
                         self.panda_widget.info_label.configure(text=response)
