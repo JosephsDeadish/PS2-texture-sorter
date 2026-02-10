@@ -459,11 +459,9 @@ class AchievementSystem:
         """
         self.total_time_minutes += minutes
         
-        # Update marathon achievement
+        # Update marathon achievement with current session time
         if 'marathon' in self.achievements:
-            # Check if current session is marathon-worthy
-            # This is simplified - real implementation would track current session
-            pass
+            self.update_progress('marathon', minutes, increment=True)
     
     def increment_sessions(self) -> None:
         """Increment total sessions and update related achievements."""
