@@ -2702,16 +2702,39 @@ class PS2TextureSorter(ctk.CTk):
             # Unlock in unlockables system if linked
             if item.unlockable_id and self.unlockables_manager:
                 try:
-                    # Try to unlock the item
-                    for category in ['cursors', 'outfits', 'themes', 'animations']:
+                    # Try to unlock the item in unlockables
+                    for category in ['cursors', 'outfits', 'themes', 'animations',
+                                     'cursor_trails', 'clothes', 'accessories']:
                         items_dict = getattr(self.unlockables_manager, category, {})
-                        if item.unlockable_id in items_dict:
+                        if isinstance(items_dict, dict) and item.unlockable_id in items_dict:
                             items_dict[item.unlockable_id].unlocked = True
                             items_dict[item.unlockable_id].unlock_date = datetime.now().isoformat()
                             logger.info(f"Unlocked {category} item: {item.unlockable_id}")
                             break
                 except Exception as e:
                     logger.error(f"Error unlocking item: {e}")
+            
+            # Also unlock in panda closet for clothes/accessories
+            if item.unlockable_id and self.panda_closet:
+                try:
+                    closet_item = self.panda_closet.get_item(item.unlockable_id)
+                    if closet_item and not closet_item.unlocked:
+                        closet_item.unlocked = True
+                        self.panda_closet.save_to_file(
+                            str(CONFIG_DIR / 'closet.json')
+                        )
+                        logger.info(f"Unlocked closet item: {item.unlockable_id}")
+                except Exception as e:
+                    logger.debug(f"Item not in closet (expected for non-closet items): {e}")
+            
+            # Handle cursor trail purchases — save as available trail
+            if item.category.value == 'cursor_trails' and item.unlockable_id:
+                try:
+                    trail_name = item.unlockable_id.replace('trail_', '')
+                    config.set('ui', f'trail_{trail_name}_unlocked', value=True)
+                    logger.info(f"Unlocked cursor trail: {trail_name}")
+                except Exception as e:
+                    logger.debug(f"Could not save trail unlock: {e}")
             
             messagebox.showinfo("Purchase Successful", message)
             
