@@ -382,6 +382,8 @@ class PS2TextureSorter(ctk.CTk):
                 if ACHIEVEMENTS_AVAILABLE:
                     achievements_save = str(Path.home() / ".ps2_texture_sorter" / "achievements.json")
                     self.achievement_manager = AchievementSystem(save_file=achievements_save)
+                    # Register callback to grant rewards when achievements unlock
+                    self.achievement_manager.register_unlock_callback(self._on_achievement_unlocked)
                 if UNLOCKABLES_AVAILABLE:
                     self.unlockables_manager = UnlockablesSystem()
                 if STATISTICS_AVAILABLE:
@@ -1786,6 +1788,12 @@ class PS2TextureSorter(ctk.CTk):
                 except Exception as cursor_err:
                     logger.debug(f"Could not update all cursors: {cursor_err}")
                 
+                # Save cursor size to config
+                try:
+                    config.set('ui', 'cursor_size', value=cursor_size)
+                except Exception as size_err:
+                    logger.debug(f"Could not save cursor size: {size_err}")
+                
                 # Handle cursor trail
                 try:
                     self._setup_cursor_trail(trail_enabled, trail_color=trail_color)
@@ -1808,7 +1816,7 @@ class PS2TextureSorter(ctk.CTk):
                 else:
                     # Save to config directly if tooltip manager not available
                     try:
-                        config.set('ui', 'tooltip_mode', value)
+                        config.set('ui', 'tooltip_mode', value=value)
                         config.save()
                         self.log(f"✅ Tooltip mode saved: {value}")
                     except Exception as cfg_err:
@@ -1817,7 +1825,7 @@ class PS2TextureSorter(ctk.CTk):
             elif setting_type == 'sound_enabled':
                 # Apply sound toggle
                 try:
-                    config.set('ui', 'sound_enabled', value)
+                    config.set('ui', 'sound_enabled', value=value)
                     config.save()
                     self.log(f"✅ Sound {'enabled' if value else 'disabled'}")
                 except Exception as sound_err:
@@ -1826,7 +1834,7 @@ class PS2TextureSorter(ctk.CTk):
             elif setting_type == 'volume':
                 # Apply volume change
                 try:
-                    config.set('ui', 'volume', value)
+                    config.set('ui', 'volume', value=value)
                     config.save()
                 except Exception as vol_err:
                     logger.debug(f"Could not save volume setting: {vol_err}")
@@ -1935,15 +1943,13 @@ class PS2TextureSorter(ctk.CTk):
             return
         
         import tkinter as tk
-        # Create overlay canvas for trail — use a valid background and make it
-        # transparent to mouse events so it doesn't block the UI underneath.
+        # Create overlay canvas for trail — use a transparent background and
+        # disable all mouse events so it doesn't block the UI underneath.
         self._trail_canvas = tk.Canvas(
             self, highlightthickness=0,
             width=self.winfo_width(), height=self.winfo_height()
         )
         self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        self._trail_canvas.config(bg='SystemButtonFace')
-        # Use wm_attributes for transparency if possible, otherwise hide bg
         try:
             self._trail_canvas.config(bg=self.cget('bg'))
         except Exception:
@@ -1951,8 +1957,10 @@ class PS2TextureSorter(ctk.CTk):
                 self._trail_canvas.config(bg='#1a1a1a')
             except Exception:
                 pass
-        # Lower the canvas so it doesn't intercept events
+        # Lower the canvas below all other widgets so it doesn't cover them
         self._trail_canvas.lower()
+        # Disable all mouse events on the canvas so clicks pass through
+        self._trail_canvas.bindtags(('trail_canvas_passthrough',))
         
         self._trail_dots = []
         self._trail_max = 15
@@ -2490,44 +2498,75 @@ class PS2TextureSorter(ctk.CTk):
     
     def _get_achievement_rewards(self, achievement):
         """Get text describing what rewards an achievement unlocks"""
-        if not self.unlockables_manager or not UNLOCKABLES_AVAILABLE:
-            return f"{achievement.points} pts" if achievement.points > 0 else ""
-        
-        # Map achievement progress thresholds to unlockable conditions
         rewards = []
-        try:
-            # Check cursors
-            for cursor in self.unlockables_manager.cursors.values():
-                cond = cursor.unlock_condition
-                if cond.condition_type == UnlockConditionType.FILES_PROCESSED:
-                    if achievement.category == 'progress' and achievement.progress_max == cond.value:
-                        rewards.append(f"🖱️ {cursor.name} cursor")
-                elif cond.condition_type == UnlockConditionType.EASTER_EGG:
-                    if achievement.id == cond.value or achievement.category == 'easter_egg':
-                        if achievement.id == cond.value:
+        
+        # Add direct achievement rewards (separate from shop)
+        if hasattr(achievement, 'reward') and achievement.reward:
+            reward = achievement.reward
+            desc = reward.get('description', '')
+            if desc:
+                rewards.append(f"🎁 {desc}")
+        
+        if self.unlockables_manager and UNLOCKABLES_AVAILABLE:
+            # Map achievement progress thresholds to unlockable conditions
+            try:
+                # Check cursors
+                for cursor in self.unlockables_manager.cursors.values():
+                    cond = cursor.unlock_condition
+                    if cond.condition_type == UnlockConditionType.FILES_PROCESSED:
+                        if achievement.category == 'progress' and achievement.progress_max == cond.value:
                             rewards.append(f"🖱️ {cursor.name} cursor")
-            
-            # Check themes
-            for theme in self.unlockables_manager.themes.values():
-                cond = theme.unlock_condition
-                if cond.condition_type == UnlockConditionType.FILES_PROCESSED:
-                    if achievement.category == 'progress' and achievement.progress_max == cond.value:
-                        rewards.append(f"🎨 {theme.name} theme")
-            
-            # Check outfits
-            for outfit in self.unlockables_manager.outfits.values():
-                cond = outfit.unlock_condition
-                if cond.condition_type == UnlockConditionType.FILES_PROCESSED:
-                    if achievement.category == 'progress' and achievement.progress_max == cond.value:
-                        rewards.append(f"🐼 {outfit.name} outfit")
-        except Exception:
-            pass
+                    elif cond.condition_type == UnlockConditionType.EASTER_EGG:
+                        if achievement.id == cond.value or achievement.category == 'easter_egg':
+                            if achievement.id == cond.value:
+                                rewards.append(f"🖱️ {cursor.name} cursor")
+                
+                # Check themes
+                for theme in self.unlockables_manager.themes.values():
+                    cond = theme.unlock_condition
+                    if cond.condition_type == UnlockConditionType.FILES_PROCESSED:
+                        if achievement.category == 'progress' and achievement.progress_max == cond.value:
+                            rewards.append(f"🎨 {theme.name} theme")
+                
+                # Check outfits
+                for outfit in self.unlockables_manager.outfits.values():
+                    cond = outfit.unlock_condition
+                    if cond.condition_type == UnlockConditionType.FILES_PROCESSED:
+                        if achievement.category == 'progress' and achievement.progress_max == cond.value:
+                            rewards.append(f"🐼 {outfit.name} outfit")
+            except Exception:
+                pass
         
         # Add points info
         if achievement.points > 0:
             rewards.append(f"{achievement.points} pts")
         
         return ", ".join(rewards) if rewards else f"{achievement.points} pts"
+    
+    def _on_achievement_unlocked(self, achievement):
+        """Handle achievement unlock - grant direct rewards separate from shop"""
+        try:
+            if not hasattr(achievement, 'reward') or not achievement.reward:
+                return
+            
+            reward = achievement.reward
+            reward_type = reward.get('type', '')
+            
+            if reward_type == 'currency' and self.currency_system:
+                amount = reward.get('amount', 0)
+                if amount > 0:
+                    self.currency_system.add_money(amount, f"Achievement reward: {achievement.name}")
+                    self.log(f"🏆 Achievement '{achievement.name}' unlocked! Reward: {reward.get('description', f'${amount}')}")
+            elif reward_type == 'exclusive_title':
+                title = reward.get('title', '')
+                self.log(f"🏆 Achievement '{achievement.name}' unlocked! Reward: {reward.get('description', title)}")
+            elif reward_type == 'exclusive_item':
+                item_name = reward.get('item', '')
+                self.log(f"🏆 Achievement '{achievement.name}' unlocked! Reward: {reward.get('description', item_name)}")
+            else:
+                self.log(f"🏆 Achievement '{achievement.name}' unlocked!")
+        except Exception as e:
+            logger.error(f"Error granting achievement reward: {e}")
     
     
     def create_shop_tab(self):
@@ -2730,6 +2769,24 @@ class PS2TextureSorter(ctk.CTk):
                     logger.info(f"Unlocked cursor trail: {trail_name}")
                 except Exception as e:
                     logger.debug(f"Could not save trail unlock: {e}")
+            
+            # Handle food purchases — feed the panda directly
+            if item.category.value == 'food' and self.panda:
+                try:
+                    response = self.panda.on_feed()
+                    if hasattr(self, 'panda_widget') and self.panda_widget:
+                        self.panda_widget.info_label.configure(text=response)
+                        self.panda_widget.play_animation_once('working')
+                    self.log(f"🎋 Fed panda with {item.name}! {response}")
+                    # Award XP for feeding
+                    if self.panda_level_system:
+                        try:
+                            xp = self.panda_level_system.get_xp_reward('feed')
+                            self.panda_level_system.add_xp(xp, f'Fed with {item.name}')
+                        except Exception:
+                            pass
+                except Exception as e:
+                    logger.debug(f"Could not feed panda: {e}")
             
             messagebox.showinfo("Purchase Successful", message)
             
