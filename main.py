@@ -20,7 +20,7 @@ import os
 import time
 import threading
 import logging
-from collections import deque
+from collections import deque, OrderedDict
 from pathlib import Path
 from types import SimpleNamespace
 from datetime import datetime
@@ -370,9 +370,8 @@ class PS2TextureSorter(ctk.CTk):
         self.panda_widget = None
         self.widget_collection = None
         
-        # Thumbnail cache for file browser (LRU - prevent PhotoImage GC)
-        self._thumbnail_cache = {}
-        self._thumbnail_cache_order = deque()  # Track insertion order for LRU eviction
+        # Thumbnail cache for file browser (LRU using OrderedDict for O(1) operations)
+        self._thumbnail_cache = OrderedDict()
         self._thumbnail_cache_max = config.get('performance', 'thumbnail_cache_size', default=500)
         
         # Initialize features if GUI available
@@ -1726,7 +1725,7 @@ class PS2TextureSorter(ctk.CTk):
             preview_btn.pack(side="right", padx=2)
     
     def _create_thumbnail(self, file_path, parent_frame):
-        """Create a thumbnail for an image file with LRU cache"""
+        """Create a thumbnail for an image file with LRU cache (O(1) operations)"""
         try:
             from PIL import Image
             
@@ -1736,10 +1735,8 @@ class PS2TextureSorter(ctk.CTk):
             cache_key = f"{file_path}_{thumb_size}"
             if cache_key in self._thumbnail_cache:
                 cached_photo = self._thumbnail_cache[cache_key]
-                # Move to end of LRU order
-                if cache_key in self._thumbnail_cache_order:
-                    self._thumbnail_cache_order.remove(cache_key)
-                self._thumbnail_cache_order.append(cache_key)
+                # Move to end of LRU order (O(1) operation with OrderedDict)
+                self._thumbnail_cache.move_to_end(cache_key)
                 label = ctk.CTkLabel(parent_frame, image=cached_photo, text="")
                 # Store reference to prevent garbage collection
                 label._photo_ref = cached_photo
@@ -1759,13 +1756,13 @@ class PS2TextureSorter(ctk.CTk):
             # Use CTkImage for proper display in customtkinter
             photo = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_size, thumb_size))
             
-            # LRU eviction: remove oldest entries if cache exceeds max
-            while len(self._thumbnail_cache) >= self._thumbnail_cache_max and self._thumbnail_cache_order:
-                oldest_key = self._thumbnail_cache_order.popleft()
-                self._thumbnail_cache.pop(oldest_key, None)
+            # LRU eviction: remove oldest entry if cache exceeds max (O(1) with OrderedDict)
+            if len(self._thumbnail_cache) >= self._thumbnail_cache_max:
+                # Remove oldest item (first item in OrderedDict)
+                self._thumbnail_cache.popitem(last=False)
             
+            # Add to cache (at end, marking as most recently used)
             self._thumbnail_cache[cache_key] = photo
-            self._thumbnail_cache_order.append(cache_key)
             
             # Create label with thumbnail
             label = ctk.CTkLabel(parent_frame, image=photo, text="")
@@ -2255,8 +2252,19 @@ class PS2TextureSorter(ctk.CTk):
         thumb_toggle_frame.pack(fill="x", padx=10, pady=5)
         
         show_thumb_var = ctk.BooleanVar(value=config.get('ui', 'show_thumbnails', default=True))
+        
+        def on_thumbnail_toggle():
+            """Handle real-time thumbnail toggle"""
+            config.set('ui', 'show_thumbnails', value=show_thumb_var.get())
+            config.save()
+            # Immediately refresh browser if it's loaded
+            if hasattr(self, 'browser_current_dir'):
+                self.browser_refresh()
+            self.log(f"✅ Thumbnails {'enabled' if show_thumb_var.get() else 'disabled'}")
+        
         ctk.CTkCheckBox(thumb_toggle_frame, text="Show thumbnails in File Browser",
-                       variable=show_thumb_var).pack(side="left", padx=10)
+                       variable=show_thumb_var,
+                       command=on_thumbnail_toggle).pack(side="left", padx=10)
         
         # Thumbnail size selector
         thumb_size_frame = ctk.CTkFrame(perf_frame)
@@ -2264,8 +2272,22 @@ class PS2TextureSorter(ctk.CTk):
         
         ctk.CTkLabel(thumb_size_frame, text="Thumbnail Size:").pack(side="left", padx=10)
         thumb_size_var = ctk.StringVar(value=str(config.get('ui', 'thumbnail_size', default=32)))
+        
+        def on_thumbnail_size_change(choice):
+            """Handle real-time thumbnail size change"""
+            config.set('ui', 'thumbnail_size', value=int(choice))
+            config.save()
+            # Clear cache since size changed (OrderedDict has clear method)
+            if hasattr(self, '_thumbnail_cache'):
+                self._thumbnail_cache.clear()
+            # Refresh browser to show new size
+            if hasattr(self, 'browser_current_dir'):
+                self.browser_refresh()
+            self.log(f"✅ Thumbnail size changed to {choice}px")
+        
         thumb_size_menu = ctk.CTkOptionMenu(thumb_size_frame, variable=thumb_size_var,
-                                            values=["16", "32", "64"])
+                                            values=["16", "32", "64"],
+                                            command=on_thumbnail_size_change)
         thumb_size_menu.pack(side="left", padx=10)
         ctk.CTkLabel(thumb_size_frame, text="(default: 32)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
