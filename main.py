@@ -1841,9 +1841,9 @@ class PS2TextureSorter(ctk.CTk):
                 if sys.platform == 'win32':
                     os.startfile(str(logs_dir))
                 elif sys.platform == 'darwin':  # macOS
-                    subprocess.run(['open', str(logs_dir)])
+                    subprocess.run(['open', str(logs_dir)], check=True)
                 else:  # linux
-                    subprocess.run(['xdg-open', str(logs_dir)])
+                    subprocess.run(['xdg-open', str(logs_dir)], check=True)
                 
                 logger.info(f"Opened logs directory: {logs_dir}")
                 self.log(f"✅ Opened logs directory: {logs_dir}")
@@ -1862,9 +1862,9 @@ class PS2TextureSorter(ctk.CTk):
                 if sys.platform == 'win32':
                     os.startfile(str(config_dir))
                 elif sys.platform == 'darwin':  # macOS
-                    subprocess.run(['open', str(config_dir)])
+                    subprocess.run(['open', str(config_dir)], check=True)
                 else:  # linux
-                    subprocess.run(['xdg-open', str(config_dir)])
+                    subprocess.run(['xdg-open', str(config_dir)], check=True)
                 
                 logger.info(f"Opened config directory: {config_dir}")
                 self.log(f"✅ Opened config directory: {config_dir}")
@@ -1883,9 +1883,9 @@ class PS2TextureSorter(ctk.CTk):
                 if sys.platform == 'win32':
                     os.startfile(str(cache_dir))
                 elif sys.platform == 'darwin':  # macOS
-                    subprocess.run(['open', str(cache_dir)])
+                    subprocess.run(['open', str(cache_dir)], check=True)
                 else:  # linux
-                    subprocess.run(['xdg-open', str(cache_dir)])
+                    subprocess.run(['xdg-open', str(cache_dir)], check=True)
                 
                 logger.info(f"Opened cache directory: {cache_dir}")
                 self.log(f"✅ Opened cache directory: {cache_dir}")
@@ -2653,6 +2653,7 @@ Built with:
                     except Exception as e:
                         logger.warning(f"Failed to get file stats for {file_path}: {e}")
                         # Use -1 as sentinel value to indicate unknown size (not actually zero bytes)
+                        # We use -1 instead of None because TextureInfo.file_size expects an integer
                         stat = SimpleNamespace(st_size=-1)
                     
                     # Create TextureInfo
