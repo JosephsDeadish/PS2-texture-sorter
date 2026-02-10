@@ -6,6 +6,7 @@ Author: Dead On The Inside / JosephsDeadish
 
 import logging
 import random
+import time
 import tkinter as tk
 from typing import Optional, Callable
 try:
@@ -112,7 +113,6 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             return
         
         # Throttle drag events to ~60fps (16ms) to prevent frame spikes
-        import time
         now = time.monotonic()
         if now - self._last_drag_time < 0.016:
             return

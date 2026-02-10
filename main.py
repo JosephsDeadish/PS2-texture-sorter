@@ -20,6 +20,7 @@ import os
 import time
 import threading
 import logging
+from collections import deque
 from pathlib import Path
 from types import SimpleNamespace
 from datetime import datetime
@@ -363,7 +364,7 @@ class PS2TextureSorter(ctk.CTk):
         
         # Thumbnail cache for file browser (LRU - prevent PhotoImage GC)
         self._thumbnail_cache = {}
-        self._thumbnail_cache_order = []  # Track insertion order for LRU eviction
+        self._thumbnail_cache_order = deque()  # Track insertion order for LRU eviction
         self._thumbnail_cache_max = config.get('performance', 'thumbnail_cache_size', default=500)
         
         # Initialize features if GUI available
@@ -1465,6 +1466,8 @@ class PS2TextureSorter(ctk.CTk):
             return
         
         # Debounce rapid refresh calls (e.g. from search typing)
+        # Note: This flag is only accessed from the main UI thread
+        # (_browser_update_ui is scheduled via self.after), so no lock is needed.
         if hasattr(self, '_browser_refresh_pending') and self._browser_refresh_pending:
             return
         self._browser_refresh_pending = True
@@ -1621,9 +1624,10 @@ class PS2TextureSorter(ctk.CTk):
         image_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga', '.tif', '.tiff', '.gif', '.webp'}
         if show_thumbnails and file_path.suffix.lower() in image_extensions:
             try:
-                # Skip files over 50MB to prevent preview lag
+                # Skip files exceeding preview size limit to prevent lag
+                THUMBNAIL_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
                 try:
-                    if file_path.stat().st_size > 50 * 1024 * 1024:
+                    if file_path.stat().st_size > THUMBNAIL_MAX_FILE_SIZE:
                         logger.debug(f"Skipping thumbnail for large file: {file_path.name}")
                     else:
                         thumbnail_label = self._create_thumbnail(file_path, entry_frame)
@@ -1693,7 +1697,7 @@ class PS2TextureSorter(ctk.CTk):
             
             # LRU eviction: remove oldest entries if cache exceeds max
             while len(self._thumbnail_cache) >= self._thumbnail_cache_max and self._thumbnail_cache_order:
-                oldest_key = self._thumbnail_cache_order.pop(0)
+                oldest_key = self._thumbnail_cache_order.popleft()
                 self._thumbnail_cache.pop(oldest_key, None)
             
             self._thumbnail_cache[cache_key] = photo
