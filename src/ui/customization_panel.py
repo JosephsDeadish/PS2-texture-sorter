@@ -457,8 +457,8 @@ class CursorCustomizer(ctk.CTkFrame):
         # Update the option menu widget with new values
         try:
             self.cursor_menu.configure(values=self.cursor_types)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Failed to update cursor menu options: {e}")
 
 
 class ThemeManager(ctk.CTkFrame):

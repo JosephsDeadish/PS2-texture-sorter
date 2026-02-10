@@ -28,10 +28,10 @@ class TestPandaCharacterDeadlockFix(unittest.TestCase):
         self.assertIsInstance(self.panda._lock, type(threading.RLock()))
 
     def test_on_click_does_not_deadlock(self):
-        """Test that clicking the panda 10 times (triggering rage) doesn't deadlock."""
+        """Test that clicking the panda past the rage threshold doesn't deadlock."""
         # The rage mode triggers set_mood() which re-acquires the lock
         # With threading.Lock() this would deadlock; with RLock() it works
-        for i in range(15):
+        for i in range(PandaCharacter.RAGE_CLICK_THRESHOLD + 5):
             response = self.panda.on_click()
             self.assertIsNotNone(response)
             self.assertIsInstance(response, str)

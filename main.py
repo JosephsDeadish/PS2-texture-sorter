@@ -1883,17 +1883,14 @@ class PS2TextureSorter(ctk.CTk):
         )
         self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
         self._trail_canvas.lift()
-        # Make canvas pass-through for events
-        self._trail_canvas.bind('<Button-1>', lambda e: 'break' if False else None)
+        # Canvas should not intercept events
         self._trail_canvas.configure(cursor='')
-        # Pass all events through the canvas
-        self._trail_canvas.bind('<Enter>', lambda e: None)
-        self._trail_canvas.bind('<Leave>', lambda e: None)
         
         self._trail_dots = []
         self._trail_max = 15
-        self._trail_colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
-                              '#5f27cd', '#01a3a4', '#f368e0', '#ff6348', '#7bed9f']
+        # Rainbow-inspired trail color palette
+        trail_colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff',
+                        '#5f27cd', '#01a3a4', '#f368e0', '#ff6348', '#7bed9f']
         
         def on_motion(event):
             try:
@@ -1901,10 +1898,10 @@ class PS2TextureSorter(ctk.CTk):
                 if not canvas or not canvas.winfo_exists():
                     return
                 x, y = event.x_root - self.winfo_rootx(), event.y_root - self.winfo_rooty()
-                color_idx = len(self._trail_dots) % len(self._trail_colors)
+                color_idx = len(self._trail_dots) % len(trail_colors)
                 dot = canvas.create_oval(
                     x - 3, y - 3, x + 3, y + 3,
-                    fill=self._trail_colors[color_idx], outline=''
+                    fill=trail_colors[color_idx], outline=''
                 )
                 self._trail_dots.append(dot)
                 # Fade old dots
