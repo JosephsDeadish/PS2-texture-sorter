@@ -344,7 +344,18 @@ class PS2TextureSorter(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         
         # Initialize core components
-        self.classifier = TextureClassifier(config)
+        # Initialize model manager for AI
+        self.model_manager = None
+        if config.get('ai', 'offline', 'enabled', default=True) or config.get('ai', 'online', 'enabled', default=False):
+            try:
+                from src.ai.model_manager import ModelManager
+                self.model_manager = ModelManager.create_default(config.settings.get('ai', {}))
+                logger.info("AI Model Manager initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize AI Model Manager: {e}")
+                self.model_manager = None
+        
+        self.classifier = TextureClassifier(config=config, model_manager=self.model_manager)
         self.lod_detector = LODDetector()
         self.file_handler = FileHandler(create_backup=config.get('file_handling', 'create_backup', default=True))
         self.database = None  # Will be initialized when needed
