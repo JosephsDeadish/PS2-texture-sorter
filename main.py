@@ -20,7 +20,7 @@ import os
 import time
 import threading
 import logging
-from collections import deque
+from collections import OrderedDict
 from pathlib import Path
 from types import SimpleNamespace
 from datetime import datetime
@@ -370,9 +370,8 @@ class PS2TextureSorter(ctk.CTk):
         self.panda_widget = None
         self.widget_collection = None
         
-        # Thumbnail cache for file browser (LRU - prevent PhotoImage GC)
-        self._thumbnail_cache = {}
-        self._thumbnail_cache_order = deque()  # Track insertion order for LRU eviction
+        # Thumbnail cache for file browser (LRU using OrderedDict for O(1) operations)
+        self._thumbnail_cache = OrderedDict()
         self._thumbnail_cache_max = config.get('performance', 'thumbnail_cache_size', default=500)
         
         # Initialize features if GUI available
@@ -695,6 +694,18 @@ class PS2TextureSorter(ctk.CTk):
         # Status bar
         self.create_status_bar()
     
+    def _has_popout_button(self, tab_frame):
+        """Check if tab frame already has a pop-out button"""
+        for widget in tab_frame.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                try:
+                    text = widget.cget('text')
+                    if text and ('Pop Out' in text or text == '↗'):
+                        return True
+                except Exception:
+                    continue
+        return False
+    
     def _add_popout_buttons(self):
         """Add pop-out/undock buttons to secondary tabs"""
         # Tools tabs that can be popped out
@@ -716,7 +727,7 @@ class PS2TextureSorter(ctk.CTk):
         self._tab_to_tabview = {name: tv for name, (_, tv) in all_dockable.items()}
         for tab_name, (tab_frame, _) in all_dockable.items():
             btn = ctk.CTkButton(
-                tab_frame, text="⬗", width=30, height=26,
+                tab_frame, text="↗", width=30, height=26,
                 font=("Arial", 11),
                 fg_color="gray40",
                 command=lambda n=tab_name: self._popout_tab(n)
@@ -762,17 +773,26 @@ class PS2TextureSorter(ctk.CTk):
             container.pack(fill="both", expand=True, padx=5, pady=5)
             
             for child in children_info:
-                child.pack_forget()
-                child.place_forget()
-                child.grid_forget()
                 try:
+                    # Clear ALL geometry managers
+                    child.pack_forget()
+                    child.place_forget()
+                    child.grid_forget()
+                    
+                    # Check widget still exists
+                    if not child.winfo_exists():
+                        logger.debug(f"Widget {child} no longer exists during popout, skipping")
+                        continue
+                    
+                    # Reparent with explicit error handling
                     child.pack(in_=container, fill="both", expand=True, padx=5, pady=5)
-                except Exception:
-                    pass
+                    logger.debug(f"Successfully reparented {child} to popout")
+                except Exception as e:
+                    logger.error(f"Failed to reparent {child} to popout: {e}")
         
         # Add dock-back button
         dock_btn = ctk.CTkButton(
-            popout, text="⬙ Dock Back", width=100, height=28,
+            popout, text="📌 Dock Back", width=100, height=28,
             command=lambda n=tab_name: self._dock_tab(n, self._popout_children.get(n), popout)
         )
         dock_btn.pack(side="bottom", pady=5)
@@ -873,19 +893,21 @@ class PS2TextureSorter(ctk.CTk):
         if tab_name == "📝 Notepad":
             if hasattr(self, '_popout_note_textboxes'):
                 self._popout_save_notes()
-            if popout_window.winfo_exists():
+            if popout_window and popout_window.winfo_exists():
                 popout_window.destroy()
             self._popout_windows.pop(tab_name, None)
-            # Re-add pop-out button
+            # Re-add pop-out button only if it doesn't exist
             parent_tv = self._tab_to_tabview.get(tab_name, self.tabview)
             tab_frame = parent_tv.tab(tab_name)
-            btn = ctk.CTkButton(
-                tab_frame, text="⬗ Pop Out", width=90, height=26,
-                font=("Arial", 11),
-                fg_color="gray40",
-                command=lambda: self._popout_tab(tab_name)
-            )
-            btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+            
+            if not self._has_popout_button(tab_frame):
+                btn = ctk.CTkButton(
+                    tab_frame, text="↗ Pop Out", width=90, height=26,
+                    font=("Arial", 11),
+                    fg_color="gray40",
+                    command=lambda: self._popout_tab(tab_name)
+                )
+                btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
             return
         
         # For other tabs, reparent children back
@@ -893,32 +915,39 @@ class PS2TextureSorter(ctk.CTk):
         tab_frame = parent_tv.tab(tab_name)
         
         if children:
-            # Reparent children back
+            # Reparent children back with proper error handling
             for child in children:
-                child.pack_forget()
-                child.place_forget()
-                child.grid_forget()
                 try:
+                    child.pack_forget()
+                    child.place_forget()
+                    child.grid_forget()
+                    
+                    if not child.winfo_exists():
+                        logger.debug(f"Widget {child} no longer exists during docking")
+                        continue
+                    
                     child.pack(in_=tab_frame, fill="both", expand=True, padx=5, pady=5)
-                except Exception:
-                    pass
+                    logger.debug(f"Successfully reparented {child} back to tab")
+                except Exception as e:
+                    logger.error(f"Failed to reparent {child} back to tab: {e}")
         
         # Destroy pop-out window
-        if popout_window.winfo_exists():
+        if popout_window and popout_window.winfo_exists():
             popout_window.destroy()
         
         self._popout_windows.pop(tab_name, None)
         if hasattr(self, '_popout_children'):
             self._popout_children.pop(tab_name, None)
         
-        # Re-add pop-out button
-        btn = ctk.CTkButton(
-            tab_frame, text="⬗ Pop Out", width=90, height=26,
-            font=("Arial", 11),
-            fg_color="gray40",
-            command=lambda: self._popout_tab(tab_name)
-        )
-        btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
+        # Re-add pop-out button only if it doesn't exist
+        if not self._has_popout_button(tab_frame):
+            btn = ctk.CTkButton(
+                tab_frame, text="↗ Pop Out", width=90, height=26,
+                font=("Arial", 11),
+                fg_color="gray40",
+                command=lambda: self._popout_tab(tab_name)
+            )
+            btn.place(relx=1.0, rely=0.0, anchor="ne", x=-5, y=5)
         
         # Switch to the docked tab
         parent_tv = self._tab_to_tabview.get(tab_name, self.tabview)
@@ -1530,31 +1559,48 @@ class PS2TextureSorter(ctk.CTk):
                 files = []
                 MAX_MATCHING_FILES = 10000
                 try:
-                    for f in current_dir.iterdir():
-                        if not f.is_file():
+                    # Use list() to ensure iterator is properly consumed and closed
+                    dir_entries = list(current_dir.iterdir())
+                    for f in dir_entries:
+                        try:
+                            if not f.is_file():
+                                continue
+                            if not show_all and f.suffix.lower() not in texture_extensions:
+                                continue
+                            if search_query and search_query not in f.name.lower():
+                                continue
+                            files.append(f)
+                            if len(files) >= MAX_MATCHING_FILES:
+                                break
+                        except (OSError, PermissionError) as e:
+                            logger.debug(f"Error accessing file {f}: {e}")
                             continue
-                        if not show_all and f.suffix.lower() not in texture_extensions:
-                            continue
-                        if search_query and search_query not in f.name.lower():
-                            continue
-                        files.append(f)
-                        if len(files) >= MAX_MATCHING_FILES:
-                            break
-                except PermissionError:
-                    pass
+                except (PermissionError, OSError, FileNotFoundError) as e:
+                    logger.error(f"Error scanning directory {current_dir}: {e}")
+                    files = []
                 
                 files_sorted = sorted(files)
                 
                 # Collect folders
                 folders = []
                 try:
-                    folders = sorted([f for f in current_dir.iterdir() if f.is_dir()])
-                except PermissionError:
-                    pass
+                    dir_entries = list(current_dir.iterdir())
+                    for f in dir_entries:
+                        try:
+                            if f.is_dir():
+                                folders.append(f)
+                        except (OSError, PermissionError) as e:
+                            logger.debug(f"Error accessing directory {f}: {e}")
+                            continue
+                    folders = sorted(folders)
+                except (PermissionError, OSError, FileNotFoundError) as e:
+                    logger.error(f"Error scanning folders in {current_dir}: {e}")
+                    folders = []
                 
-                # Schedule UI update on main thread
-                self.after(0, lambda: self._browser_update_ui(
-                    files_sorted, folders, show_all, search_query, MAX_MATCHING_FILES))
+                # Schedule UI update on main thread - check window still exists
+                if self.winfo_exists():
+                    self.after(0, lambda: self._browser_update_ui(
+                        files_sorted, folders, show_all, search_query, MAX_MATCHING_FILES))
             
             thread = threading.Thread(target=_scan_files, daemon=True)
             thread.start()
@@ -1562,6 +1608,7 @@ class PS2TextureSorter(ctk.CTk):
         except Exception as e:
             self._browser_refresh_pending = False
             self.browser_status.configure(text=f"Error: {e}")
+            logger.error(f"Browser refresh error: {e}")
     
     def _browser_update_ui(self, files_sorted, folders, show_all, search_query, max_matching):
         """Update browser UI on the main thread after scanning completes"""
@@ -1703,7 +1750,7 @@ class PS2TextureSorter(ctk.CTk):
             preview_btn.pack(side="right", padx=2)
     
     def _create_thumbnail(self, file_path, parent_frame):
-        """Create a thumbnail for an image file with LRU cache"""
+        """Create a thumbnail for an image file with LRU cache (O(1) operations)"""
         try:
             from PIL import Image
             
@@ -1713,37 +1760,45 @@ class PS2TextureSorter(ctk.CTk):
             cache_key = f"{file_path}_{thumb_size}"
             if cache_key in self._thumbnail_cache:
                 cached_photo = self._thumbnail_cache[cache_key]
-                # Move to end of LRU order
-                if cache_key in self._thumbnail_cache_order:
-                    self._thumbnail_cache_order.remove(cache_key)
-                self._thumbnail_cache_order.append(cache_key)
+                # Move to end of LRU order (O(1) operation with OrderedDict)
+                self._thumbnail_cache.move_to_end(cache_key)
                 label = ctk.CTkLabel(parent_frame, image=cached_photo, text="")
+                # Keep strong reference to prevent garbage collection (tkinter pattern)
+                label.photo_ref = cached_photo
                 return label
             
-            # Load and resize image
-            img = Image.open(file_path)
+            # Load and resize image with proper resource cleanup
+            img = None
+            try:
+                img = Image.open(file_path)
+                
+                # Convert DDS if needed
+                if file_path.suffix.lower() == '.dds':
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGBA')
+                
+                # Create thumbnail at configured size
+                img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
+                
+                # Use CTkImage for proper display in customtkinter
+                photo = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_size, thumb_size))
+            finally:
+                # Close image file to prevent resource leak
+                if img is not None:
+                    img.close()
             
-            # Convert DDS if needed
-            if file_path.suffix.lower() == '.dds':
-                if img.mode not in ('RGB', 'RGBA'):
-                    img = img.convert('RGBA')
+            # LRU eviction: remove oldest entry if cache exceeds max (O(1) with OrderedDict)
+            if len(self._thumbnail_cache) >= self._thumbnail_cache_max:
+                # Remove oldest item (first item in OrderedDict)
+                self._thumbnail_cache.popitem(last=False)
             
-            # Create thumbnail at configured size
-            img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
-            
-            # Use CTkImage for proper display in customtkinter
-            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_size, thumb_size))
-            
-            # LRU eviction: remove oldest entries if cache exceeds max
-            while len(self._thumbnail_cache) >= self._thumbnail_cache_max and self._thumbnail_cache_order:
-                oldest_key = self._thumbnail_cache_order.popleft()
-                self._thumbnail_cache.pop(oldest_key, None)
-            
+            # Add to cache (at end, marking as most recently used)
             self._thumbnail_cache[cache_key] = photo
-            self._thumbnail_cache_order.append(cache_key)
             
             # Create label with thumbnail
             label = ctk.CTkLabel(parent_frame, image=photo, text="")
+            # Keep strong reference to prevent garbage collection (tkinter pattern)
+            label.photo_ref = photo
             return label
             
         except Exception as e:
@@ -2030,33 +2085,64 @@ class PS2TextureSorter(ctk.CTk):
                 self.unbind('<Motion>', self._trail_bind_id)
             except Exception:
                 pass
+            try:
+                if hasattr(self, '_trail_configure_bind'):
+                    self.unbind('<Configure>', self._trail_configure_bind)
+            except Exception:
+                pass
             self._trail_canvas.destroy()
             self._trail_canvas = None
             self._trail_bind_id = None
+            self._trail_configure_bind = None
             self._trail_dots = []
         
         if not enabled:
             return
         
         import tkinter as tk
-        # Create overlay canvas for trail — use a transparent background and
-        # disable all mouse events so it doesn't block the UI underneath.
-        self._trail_canvas = tk.Canvas(
-            self, highlightthickness=0,
-            width=self.winfo_width(), height=self.winfo_height()
-        )
-        self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        try:
-            self._trail_canvas.config(bg=self.cget('bg'))
-        except Exception:
+        
+        # Create overlay canvas for trail with proper dimensions
+        # Use after_idle to ensure window has been drawn and has proper dimensions
+        def create_canvas():
             try:
-                self._trail_canvas.config(bg='#1a1a1a')
-            except Exception:
-                pass
-        # Lower the canvas below all other widgets so it doesn't cover them
-        self._trail_canvas.lower()
-        # Disable all mouse events on the canvas so clicks pass through
-        self._trail_canvas.bindtags(('trail_canvas_passthrough',))
+                self._trail_canvas = tk.Canvas(
+                    self, highlightthickness=0,
+                    bg='', cursor='arrow'
+                )
+                self._trail_canvas.place(x=0, y=0, relwidth=1, relheight=1)
+                
+                # Try to match background for transparency effect
+                try:
+                    self._trail_canvas.config(bg=self.cget('bg'), highlightthickness=0, relief='flat')
+                except Exception:
+                    try:
+                        self._trail_canvas.config(bg='#1a1a1a', highlightthickness=0, relief='flat')
+                    except Exception:
+                        pass
+                
+                # Lower the canvas below all other widgets
+                self._trail_canvas.lower()
+                
+                # Disable all mouse events on canvas so they pass through to widgets below
+                # Using empty tuple removes all event bindings, making canvas non-interactive
+                self._trail_canvas.bindtags(())
+                
+                # Handle window resize to update canvas size
+                def on_configure(event):
+                    try:
+                        if hasattr(self, '_trail_canvas') and self._trail_canvas:
+                            # Update canvas to match window size
+                            self._trail_canvas.config(width=event.width, height=event.height)
+                    except Exception as e:
+                        logger.debug(f"Trail canvas resize error: {e}")
+                
+                self._trail_configure_bind = self.bind('<Configure>', on_configure, add='+')
+                
+            except Exception as e:
+                logger.error(f"Failed to create cursor trail canvas: {e}")
+                return
+        
+        self.after_idle(create_canvas)
         
         self._trail_dots = []
         self._trail_max = 15
@@ -2086,20 +2172,32 @@ class PS2TextureSorter(ctk.CTk):
                 if not canvas or not canvas.winfo_exists():
                     return
                 x, y = event.x_root - self.winfo_rootx(), event.y_root - self.winfo_rooty()
+                
+                # Clamp coordinates to canvas bounds to avoid drawing errors
+                canvas_width = canvas.winfo_width()
+                canvas_height = canvas.winfo_height()
+                if canvas_width <= 1 or canvas_height <= 1:
+                    return  # Canvas not yet properly sized
+                
+                if x < 0 or y < 0 or x > canvas_width or y > canvas_height:
+                    return
+                
                 color_idx = len(self._trail_dots) % len(trail_colors)
                 dot = canvas.create_oval(
                     x - 3, y - 3, x + 3, y + 3,
                     fill=trail_colors[color_idx], outline=''
                 )
                 self._trail_dots.append(dot)
+                
                 # Fade old dots
                 if len(self._trail_dots) > self._trail_max:
                     old_dot = self._trail_dots.pop(0)
                     canvas.delete(old_dot)
+                
                 # Auto-fade after delay
                 canvas.after(300, lambda d=dot: self._fade_trail_dot(d))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Cursor trail motion error: {e}")
         
         self._trail_bind_id = self.bind('<Motion>', on_motion, add='+')
     
@@ -2186,8 +2284,23 @@ class PS2TextureSorter(ctk.CTk):
         thumb_toggle_frame.pack(fill="x", padx=10, pady=5)
         
         show_thumb_var = ctk.BooleanVar(value=config.get('ui', 'show_thumbnails', default=True))
+        
+        def on_thumbnail_toggle():
+            """Handle real-time thumbnail toggle"""
+            try:
+                config.set('ui', 'show_thumbnails', value=show_thumb_var.get())
+                config.save()
+                # Immediately refresh browser if it's loaded
+                if hasattr(self, 'browser_current_dir'):
+                    self.browser_refresh()
+                self.log(f"✅ Thumbnails {'enabled' if show_thumb_var.get() else 'disabled'}")
+            except Exception as e:
+                logger.error(f"Failed to save thumbnail setting: {e}")
+                self.log(f"❌ Error saving thumbnail setting: {e}")
+        
         ctk.CTkCheckBox(thumb_toggle_frame, text="Show thumbnails in File Browser",
-                       variable=show_thumb_var).pack(side="left", padx=10)
+                       variable=show_thumb_var,
+                       command=on_thumbnail_toggle).pack(side="left", padx=10)
         
         # Thumbnail size selector
         thumb_size_frame = ctk.CTkFrame(perf_frame)
@@ -2195,8 +2308,26 @@ class PS2TextureSorter(ctk.CTk):
         
         ctk.CTkLabel(thumb_size_frame, text="Thumbnail Size:").pack(side="left", padx=10)
         thumb_size_var = ctk.StringVar(value=str(config.get('ui', 'thumbnail_size', default=32)))
+        
+        def on_thumbnail_size_change(choice):
+            """Handle real-time thumbnail size change"""
+            try:
+                config.set('ui', 'thumbnail_size', value=int(choice))
+                config.save()
+                # Clear cache since size changed
+                if hasattr(self, '_thumbnail_cache'):
+                    self._thumbnail_cache.clear()
+                # Refresh browser to show new size
+                if hasattr(self, 'browser_current_dir'):
+                    self.browser_refresh()
+                self.log(f"✅ Thumbnail size changed to {choice}px")
+            except Exception as e:
+                logger.error(f"Failed to save thumbnail size: {e}")
+                self.log(f"❌ Error saving thumbnail size: {e}")
+        
         thumb_size_menu = ctk.CTkOptionMenu(thumb_size_frame, variable=thumb_size_var,
-                                            values=["16", "32", "64"])
+                                            values=["16", "32", "64"],
+                                            command=on_thumbnail_size_change)
         thumb_size_menu.pack(side="left", padx=10)
         ctk.CTkLabel(thumb_size_frame, text="(default: 32)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
