@@ -1552,31 +1552,48 @@ class PS2TextureSorter(ctk.CTk):
                 files = []
                 MAX_MATCHING_FILES = 10000
                 try:
-                    for f in current_dir.iterdir():
-                        if not f.is_file():
+                    # Use list() to ensure iterator is properly consumed and closed
+                    dir_entries = list(current_dir.iterdir())
+                    for f in dir_entries:
+                        try:
+                            if not f.is_file():
+                                continue
+                            if not show_all and f.suffix.lower() not in texture_extensions:
+                                continue
+                            if search_query and search_query not in f.name.lower():
+                                continue
+                            files.append(f)
+                            if len(files) >= MAX_MATCHING_FILES:
+                                break
+                        except (OSError, PermissionError) as e:
+                            logger.debug(f"Error accessing file {f}: {e}")
                             continue
-                        if not show_all and f.suffix.lower() not in texture_extensions:
-                            continue
-                        if search_query and search_query not in f.name.lower():
-                            continue
-                        files.append(f)
-                        if len(files) >= MAX_MATCHING_FILES:
-                            break
-                except PermissionError:
-                    pass
+                except (PermissionError, OSError, FileNotFoundError) as e:
+                    logger.error(f"Error scanning directory {current_dir}: {e}")
+                    files = []
                 
                 files_sorted = sorted(files)
                 
                 # Collect folders
                 folders = []
                 try:
-                    folders = sorted([f for f in current_dir.iterdir() if f.is_dir()])
-                except PermissionError:
-                    pass
+                    dir_entries = list(current_dir.iterdir())
+                    for f in dir_entries:
+                        try:
+                            if f.is_dir():
+                                folders.append(f)
+                        except (OSError, PermissionError) as e:
+                            logger.debug(f"Error accessing directory {f}: {e}")
+                            continue
+                    folders = sorted(folders)
+                except (PermissionError, OSError, FileNotFoundError) as e:
+                    logger.error(f"Error scanning folders in {current_dir}: {e}")
+                    folders = []
                 
-                # Schedule UI update on main thread
-                self.after(0, lambda: self._browser_update_ui(
-                    files_sorted, folders, show_all, search_query, MAX_MATCHING_FILES))
+                # Schedule UI update on main thread - check window still exists
+                if self.winfo_exists():
+                    self.after(0, lambda: self._browser_update_ui(
+                        files_sorted, folders, show_all, search_query, MAX_MATCHING_FILES))
             
             thread = threading.Thread(target=_scan_files, daemon=True)
             thread.start()
@@ -1584,6 +1601,7 @@ class PS2TextureSorter(ctk.CTk):
         except Exception as e:
             self._browser_refresh_pending = False
             self.browser_status.configure(text=f"Error: {e}")
+            logger.error(f"Browser refresh error: {e}")
     
     def _browser_update_ui(self, files_sorted, folders, show_all, search_query, max_matching):
         """Update browser UI on the main thread after scanning completes"""
@@ -1742,19 +1760,25 @@ class PS2TextureSorter(ctk.CTk):
                 label._photo_ref = cached_photo
                 return label
             
-            # Load and resize image
-            img = Image.open(file_path)
-            
-            # Convert DDS if needed
-            if file_path.suffix.lower() == '.dds':
-                if img.mode not in ('RGB', 'RGBA'):
-                    img = img.convert('RGBA')
-            
-            # Create thumbnail at configured size
-            img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
-            
-            # Use CTkImage for proper display in customtkinter
-            photo = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_size, thumb_size))
+            # Load and resize image with proper resource cleanup
+            img = None
+            try:
+                img = Image.open(file_path)
+                
+                # Convert DDS if needed
+                if file_path.suffix.lower() == '.dds':
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGBA')
+                
+                # Create thumbnail at configured size
+                img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
+                
+                # Use CTkImage for proper display in customtkinter
+                photo = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_size, thumb_size))
+            finally:
+                # Close image file to prevent resource leak
+                if img is not None:
+                    img.close()
             
             # LRU eviction: remove oldest entry if cache exceeds max (O(1) with OrderedDict)
             if len(self._thumbnail_cache) >= self._thumbnail_cache_max:
