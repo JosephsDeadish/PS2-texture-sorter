@@ -1210,12 +1210,16 @@ PS2 Texture Sorter - Quick Help
 This application helps you organize and manage texture files from PS2 game dumps.
 
 Key Features:
-• Automatic texture classification
-• LOD (Level of Detail) detection
-• Format conversion (DDS ↔ PNG ↔ JPG)
+• Automatic texture classification with 50+ categories
+• LOD (Level of Detail) detection and grouping
+• Format conversion (DDS ↔ PNG ↔ JPG ↔ BMP ↔ TGA)
 • Duplicate detection
-• Achievement system
-• Customizable themes
+• File browser with thumbnail previews
+• Interactive panda companion (drag, toss, pet, feed!)
+• Achievement system with Bamboo Bucks currency
+• Customizable themes, cursors, and tooltips
+• Undo/redo with 50-level history
+• Pop-out tabs for multi-monitor setups
 
 Press F1 anytime for context-sensitive help based on what you're doing.
 
@@ -1296,19 +1300,31 @@ Q: What is LOD Detection?
 A: LOD (Level of Detail) detection finds different quality versions of the same texture (LOD0, LOD1, LOD2, etc.) and can group them together.
 
 Q: Can I undo sorting operations?
-A: Yes! The app supports undo/redo with configurable history depth (default 10 operations). Check Settings → File Handling.
+A: Yes! The app supports undo/redo with configurable history depth (default 50 operations). Check Settings -> File Handling.
 
 Q: What is the Panda Character?
-A: An interactive companion that reacts to your actions! The panda has 13 moods, levels up, provides helpful tips, and makes sorting fun. Click, hover, or right-click the panda to interact!
+A: An interactive companion that reacts to your actions! The panda has 13 moods, levels up, provides helpful tips, and makes sorting fun. Click, hover, drag, toss, pet, or right-click the panda to interact! You can throw it and watch it bounce off walls.
+
+Q: Can I toss the panda?
+A: Yes! Drag the panda and release with some speed. It will bounce off walls and the floor with physics, playing different animations as it goes.
+
+Q: How do I change tooltip modes?
+A: Go to Settings -> UI & Appearance and change the tooltip mode. Changes take effect immediately - no restart needed. Choose Normal, Beginner, or Vulgar Panda mode.
 
 Q: How do keyboard shortcuts work?
 A: Press F1 for help, Ctrl+P to start processing, Ctrl+S to save, and more. Check the About tab for a complete list of shortcuts.
 
 Q: How do I customize the UI theme?
-A: Click Settings button → UI & Appearance to change colors, cursors (default/skull/panda/sword), themes, and tooltip verbosity.
+A: Click Settings button -> UI & Appearance to change colors, cursors (default/skull/panda/sword), themes, and tooltip verbosity. The Vulgar Panda theme uses a red color scheme.
+
+Q: How do I see thumbnails in the File Browser?
+A: Check the "Thumbnails" checkbox in the File Browser tab header. You can also adjust thumbnail size in Settings -> Performance.
+
+Q: Can I pop out tabs into separate windows?
+A: Yes! Click the pop-out button on any secondary tab to open it in its own window. Click "Dock Back" or close the window to return it.
 
 Q: The app is slow with many files. What can I do?
-A: Settings → Performance: Increase thread count (use number of CPU cores), increase memory limit, and enable database indexing.
+A: Settings -> Performance: Increase thread count (use number of CPU cores), increase memory limit, and enable database indexing.
 
 Q: What are Bamboo Bucks?
 A: In-app currency earned through usage, achievements, and interactions. Spend it in the Shop tab on themes, customizations, and unlockables!
@@ -1320,9 +1336,12 @@ Q: Does this require internet?
 A: No! PS2 Texture Sorter is 100% offline. No network calls, complete privacy.
 
 Q: Where are my settings and data stored?
-A: In your user profile folder: ~/.ps2_texture_sorter/ (or %USERPROFILE%\.ps2_texture_sorter\ on Windows)
+A: In your user profile folder: ~/.ps2_texture_sorter/ (or %USERPROFILE%\\.ps2_texture_sorter\\ on Windows)
 
-Still need help? Check the PANDA_MODE_GUIDE.md and other documentation files in the repository!
+Q: Can I dress up the panda?
+A: Yes! Unlock outfits, hats, shoes, and accessories through achievements and the shop, then customize your panda in the Closet tab.
+
+Still need help? Check the documentation files in the repository!
             """
         }
         

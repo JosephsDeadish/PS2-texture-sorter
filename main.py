@@ -1589,6 +1589,22 @@ class PS2TextureSorter(ctk.CTk):
                        command=self.browser_refresh)
         browser_show_all_cb.pack(side="left", padx=10)
         
+        # Add show thumbnails checkbox directly in browser
+        self.browser_show_thumbs = ctk.BooleanVar(value=config.get('ui', 'show_thumbnails', default=True))
+        
+        def on_browser_thumb_toggle():
+            config.set('ui', 'show_thumbnails', value=self.browser_show_thumbs.get())
+            try:
+                config.save()
+            except Exception:
+                pass
+            self.browser_refresh()
+        
+        browser_thumb_cb = ctk.CTkCheckBox(file_header, text="🖼️ Thumbnails",
+                       variable=self.browser_show_thumbs,
+                       command=on_browser_thumb_toggle)
+        browser_thumb_cb.pack(side="left", padx=10)
+        
         # File list (scrollable)
         self.browser_file_list = ctk.CTkScrollableFrame(right_pane, height=450)
         self.browser_file_list.pack(fill="both", expand=True, padx=5, pady=5)
@@ -1801,8 +1817,8 @@ class PS2TextureSorter(ctk.CTk):
         entry_frame = ctk.CTkFrame(self.browser_file_list)
         entry_frame.pack(fill="x", padx=5, pady=2)
         
-        # Add thumbnail for image/texture files if enabled in settings
-        show_thumbnails = config.get('ui', 'show_thumbnails', default=True)
+        # Add thumbnail for image/texture files if enabled
+        show_thumbnails = self.browser_show_thumbs.get() if hasattr(self, 'browser_show_thumbs') else config.get('ui', 'show_thumbnails', default=True)
         image_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga', '.tif', '.tiff', '.gif', '.webp'}
         if show_thumbnails and file_path.suffix.lower() in image_extensions:
             try:
@@ -1863,25 +1879,24 @@ class PS2TextureSorter(ctk.CTk):
                 label.photo_ref = cached_photo
                 return label
             
-            # Load and resize image with proper resource cleanup
-            img = None
-            try:
-                img = Image.open(file_path)
-                
+            # Load and resize image
+            with Image.open(file_path) as img:
                 # Convert DDS if needed
                 if file_path.suffix.lower() == '.dds':
                     if img.mode not in ('RGB', 'RGBA'):
                         img = img.convert('RGBA')
                 
+                # Force load pixel data before creating CTkImage
+                img.load()
+                
                 # Create thumbnail at configured size
                 img.thumbnail((thumb_size, thumb_size), Image.Resampling.LANCZOS)
                 
-                # Use CTkImage for proper display in customtkinter
-                photo = ctk.CTkImage(light_image=img, dark_image=img, size=(thumb_size, thumb_size))
-            finally:
-                # Close image file to prevent resource leak
-                if img is not None:
-                    img.close()
+                # Make a copy so the file handle can be released
+                thumb_img = img.copy()
+            
+            # Use CTkImage for proper display in customtkinter
+            photo = ctk.CTkImage(light_image=thumb_img, dark_image=thumb_img, size=(thumb_size, thumb_size))
             
             # LRU eviction: remove oldest entry if cache exceeds max (O(1) with OrderedDict)
             if len(self._thumbnail_cache) >= self._thumbnail_cache_max:

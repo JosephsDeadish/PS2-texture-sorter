@@ -25,14 +25,23 @@ A professional, single-executable Windows application for automatically sorting 
 ### User Interface
 - **🐼 Interactive Panda Character** - Animated companion with 13 mood states, leveling system, and personality
 - **🎨 Full Customization** - Colors, cursors (skull, panda, sword), themes, layouts, custom color palettes
-- **💡 4-Level Tooltips** - From expert mode to "Panda Explains It" mode with 250+ tooltip variations
-- **🌓 Dark/Light Mode** - Built-in theme switching with 5+ preset themes
+- **💡 4-Level Tooltips** - From expert mode to "Panda Explains It" mode with 250+ tooltip variations that change dynamically
+- **🌓 Dark/Light Mode** - Built-in theme switching with 5+ preset themes including Vulgar Panda (red)
 - **📊 Real-Time Monitoring** - Live progress for massive operations with detailed statistics
 - **📝 Built-in Notepad** - Multi-tab notepad with pop-out support
 - **🏆 Achievements & Unlockables** - 50+ achievements, unlockable features, and rewards
 - **🛒 In-App Shop** - Spend earned currency on themes, cursors, and customizations
 - **🔊 Sound Effects** - Audio feedback with customizable volume
 - **❓ Context-Sensitive Help** - Press F1 for help anywhere in the app
+- **🖼️ File Browser Thumbnails** - Preview textures directly in the file browser with toggle control
+- **📌 Undockable Tabs** - Pop out any tab into its own window for multi-monitor setups
+
+### Panda Companion
+- **🐼 Drag & Toss** - Drag the panda and throw it to watch it bounce off walls and floor
+- **🎭 13 Mood States** - Happy, excited, working, tired, celebrating, sleeping, sarcastic, rage, drunk, existential, motivating, tech_support, sleepy
+- **🎮 Interactive** - Click, pet, rub, shake, spin, feed, and dress up your panda
+- **📈 Leveling System** - Both you and the panda gain experience and level up
+- **👔 Outfit System** - Dress up your panda with unlocked hats, clothing, shoes, and accessories
 
 ### Performance
 - **⚡ Multi-threaded** - Utilize all CPU cores for scanning and processing
@@ -128,13 +137,13 @@ Settings are stored in: `%USERPROFILE%\.ps2_texture_sorter\config.json`
 
 ### Key Settings Categories
 
-- **UI Settings** - Theme, colors, cursors, tooltips (expert/normal/beginner/panda modes), layout, animation speed
-- **Performance** - Thread count, memory limits, cache size, batch sizes
-- **File Handling** - Backup options, overwrite behavior, auto-save, undo depth (default 10)
+- **UI Settings** - Theme, colors, cursors, tooltips (expert/normal/beginner/panda modes), layout, animation speed, thumbnail controls
+- **Performance** - Thread count, memory limits, cache size, batch sizes, thumbnail cache
+- **File Handling** - Backup options, overwrite behavior, auto-save, undo depth (default 50)
 - **Sorting** - Classification mode, organization style, grouping options, LOD detection
 - **Logging** - Log level, crash reports, performance metrics
 - **Notifications** - Sounds, alerts, completion notifications
-- **Panda Settings** - Panda mode, mood displays, interaction frequency, vulgar mode (opt-in)
+- **Panda Settings** - Panda name, gender, position, mood displays, interaction history, vulgar mode (opt-in)
 - **Achievement Tracking** - Enable/disable achievements, notification preferences
 - **Hotkeys** - Customizable keyboard shortcuts for all major functions
 
@@ -157,14 +166,36 @@ Settings are stored in: `%USERPROFILE%\.ps2_texture_sorter\config.json`
 PS2-texture-sorter/
 ├── main.py                      # Application entry point
 ├── src/                         # Source code
+│   ├── config.py                # Configuration management
 │   ├── classifier/              # Texture classification engine
 │   │   ├── categories.py        # 50+ category definitions
 │   │   └── classifier_engine.py # AI classification logic
+│   ├── ai/                      # AI/ML models (offline & online)
+│   ├── core/                    # Threading & performance management
 │   ├── lod_detector/            # LOD detection system
 │   ├── file_handler/            # File operations & conversion
 │   ├── database/                # SQLite indexing
+│   ├── organizer/               # 9+ organization style presets
+│   ├── features/                # Feature modules
+│   │   ├── panda_character.py   # Panda moods, animations, interactions
+│   │   ├── panda_mode.py        # 250+ tooltip variants & facts
+│   │   ├── panda_closet.py      # Panda outfit system
+│   │   ├── tutorial_system.py   # Tutorial, tooltips & help
+│   │   ├── achievements.py      # 50+ achievements
+│   │   ├── shop_system.py       # In-app shop
+│   │   ├── currency_system.py   # Bamboo Bucks currency
+│   │   ├── level_system.py      # User & panda leveling
+│   │   ├── unlockables_system.py # Unlockable content
+│   │   ├── minigame_system.py   # Mini-games for rewards
+│   │   ├── hotkey_manager.py    # Global hotkeys
+│   │   ├── sound_manager.py     # Audio effects
+│   │   ├── statistics.py        # Operation statistics
+│   │   └── ...                  # Additional feature modules
 │   ├── ui/                      # User interface components
-│   ├── settings/                # Settings management
+│   │   ├── panda_widget.py      # Interactive panda canvas widget
+│   │   ├── customization_panel.py # Theme & color customization
+│   │   ├── closet_panel.py      # Panda outfit selector
+│   │   └── ...                  # Additional UI panels
 │   ├── utils/                   # Helper utilities
 │   └── resources/               # Icons, cursors, themes, sounds
 ├── requirements.txt             # Python dependencies
@@ -293,11 +324,14 @@ License TBD by author. All rights reserved to Dead On The Inside / JosephsDeadis
 
 The panda character is more than just a mascot - it's an interactive companion that:
 - **Reacts to Your Actions** - 13 mood states including happy, working, celebrating, rage, and even drunk mode
+- **Can Be Tossed** - Drag and throw the panda to watch it bounce off walls and floor with physics simulation
 - **Levels Up** - Both you and the panda gain experience and level up through app usage
-- **Provides Personality** - 250+ tooltip variations ranging from helpful to hilariously sarcastic
-- **Offers Rewards** - Earn currency and unlock achievements through interactions
+- **Provides Personality** - 250+ tooltip variations ranging from helpful to hilariously sarcastic, with random variants shown each hover
+- **Offers Rewards** - Earn Bamboo Bucks currency and unlock achievements through interactions
 - **Gives Context Help** - Click, hover, or right-click the panda for tips and Easter eggs
-- **Stays Fun** - Optional vulgar mode for uncensored panda commentary
+- **Customizable** - Dress up the panda with unlockable outfits, hats, shoes, and accessories
+- **Stays Fun** - Optional vulgar mode (red theme) for uncensored panda commentary
+- **Tooltip Modes** - Switch between Normal, Beginner, and Vulgar Panda modes instantly without restart
 
 The panda makes texture sorting enjoyable while maintaining professional functionality!
 
