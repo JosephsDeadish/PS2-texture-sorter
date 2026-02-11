@@ -602,214 +602,348 @@ class TooltipVerbosityManager:
         return base_tooltips
     
     def _get_dumbed_down_tooltips(self) -> Dict[str, str]:
-        """Detailed explanations for beginners"""
+        """Detailed explanations for beginners with random variants"""
         return {
-            'sort_button': (
+            'sort_button': [
                 "This button will look at all your texture files, figure out what type "
                 "each one is (UI, character, environment, etc.), and move them into "
-                "neat, organized folders. Just click it to start!"
-            ),
-            'convert_button': (
+                "neat, organized folders. Just click it to start!",
+                "Press this to automatically organize your textures! The app scans each "
+                "file and sorts it into the right category folder for you.",
+                "Ready to organize? Click here and the app will sort all your texture "
+                "files into tidy folders based on what they are.",
+            ],
+            'convert_button': [
                 "Use this to change your texture files from one format to another. "
                 "For example, you can convert DDS files to PNG, or PNG to DDS. "
-                "This is useful when different programs need different file formats."
-            ),
-            'input_browse': (
+                "This is useful when different programs need different file formats.",
+                "Need your textures in a different format? This converts them! "
+                "Great for switching between DDS (game format) and PNG (editing format).",
+            ],
+            'input_browse': [
                 "Click this button to find and select the folder on your computer "
                 "that has all your texture files in it. This is where the app will "
-                "look for textures to organize."
-            ),
-            'output_browse': (
+                "look for textures to organize.",
+                "Pick the folder that contains your texture files. The app will "
+                "scan everything inside this folder.",
+            ],
+            'output_browse': [
                 "Click here to choose where you want your organized textures to be saved. "
-                "The app will create new folders here and put your sorted textures inside them."
-            ),
-            'detect_lods': (
+                "The app will create new folders here and put your sorted textures inside them.",
+                "Choose a destination folder where the sorted textures will go. "
+                "New category folders will be created inside automatically.",
+            ],
+            'detect_lods': [
                 "LOD means 'Level of Detail'. Many games use multiple versions of the same "
                 "texture at different quality levels. Enable this to automatically find and "
-                "group these different versions together."
-            ),
-            'lod_detection': (
+                "group these different versions together.",
+                "Games often have high-quality and low-quality versions of the same texture. "
+                "Turn this on to find and group those versions together.",
+            ],
+            'lod_detection': [
                 "LOD means 'Level of Detail'. Many games use multiple versions of the same "
                 "texture at different quality levels. Enable this to automatically find and "
-                "group these different versions together."
-            ),
-            'group_lods': (
+                "group these different versions together.",
+                "This finds different quality versions of the same texture (high, medium, low) "
+                "and groups them so you can easily compare them.",
+            ],
+            'group_lods': [
                 "When enabled, this keeps all the different quality versions of the same "
-                "texture in one folder, making it easier to find related files."
-            ),
-            'detect_duplicates': (
+                "texture in one folder, making it easier to find related files.",
+                "Keeps related LOD textures together in one folder instead of "
+                "spreading them across different category folders.",
+            ],
+            'detect_duplicates': [
                 "This feature will scan your textures and find any files that are exact "
-                "copies of each other, helping you save disk space and keep things clean."
-            ),
-            'style_dropdown': (
+                "copies of each other, helping you save disk space and keep things clean.",
+                "Find duplicate files that are taking up extra space. The app will "
+                "identify exact copies so you can decide what to keep.",
+            ],
+            'style_dropdown': [
                 "This dropdown menu lets you choose different ways to organize your files. "
                 "'Simple Flat' puts files in category folders. 'By Game Area' sorts by "
-                "level, 'By Module' sorts by character/vehicle/UI, and more."
-            ),
-            'settings_button': (
+                "level, 'By Module' sorts by character/vehicle/UI, and more.",
+                "Pick an organization style! Each one arranges your files differently. "
+                "Try 'Simple Flat' if you're not sure which to choose.",
+            ],
+            'settings_button': [
                 "Click here to open the settings window where you can customize how the "
-                "app looks and behaves. You can change themes, adjust performance, and more!"
-            ),
-            'theme_button': (
+                "app looks and behaves. You can change themes, adjust performance, and more!",
+                "Open settings to personalize the app. Change colors, themes, "
+                "performance options, and lots more!",
+            ],
+            'theme_button': [
                 "Switch between a dark theme (easier on the eyes) and a light theme (better "
-                "for bright environments). Just click to toggle!"
-            ),
-            'theme_selector': (
+                "for bright environments). Just click to toggle!",
+                "Toggle dark/light mode. Dark mode is great for working at night!",
+            ],
+            'theme_selector': [
                 "Switch between a dark theme (easier on the eyes) and a light theme (better "
-                "for bright environments). Or try a fun custom theme!"
-            ),
-            'help_button': (
+                "for bright environments). Or try a fun custom theme!",
+                "Pick a visual theme for the app. There are several presets to choose from!",
+            ],
+            'help_button': [
                 "Need help? Click this button to open the help panel with guides, FAQs, "
-                "and troubleshooting tips."
-            ),
-            'tutorial_button': (
+                "and troubleshooting tips.",
+                "Stuck? Click here for help, FAQs, and step-by-step guides!",
+            ],
+            'tutorial_button': [
                 "Click here to start or restart the interactive tutorial. It will walk "
-                "you through all the features step by step!"
-            ),
-            'file_selection': (
+                "you through all the features step by step!",
+                "New here? Start the tutorial to learn how everything works!",
+            ],
+            'file_selection': [
                 "Click here to open a file picker and navigate to the folder "
-                "that contains your texture files."
-            ),
-            'search_button': (
+                "that contains your texture files.",
+            ],
+            'search_button': [
                 "Type in here to search for specific texture files by their name. "
-                "It will filter the file list as you type!"
-            ),
-            'batch_operations': (
+                "It will filter the file list as you type!",
+                "Search for files by typing part of their name. Results update as you type!",
+            ],
+            'batch_operations': [
                 "This lets you work with multiple files at the same time instead "
-                "of one at a time, saving you lots of effort!"
-            ),
-            'achievements_tab': (
+                "of one at a time, saving you lots of effort!",
+            ],
+            'achievements_tab': [
                 "This tab shows all the achievements you can earn by using the app. "
-                "Each achievement tracks your progress and unlocks rewards when completed!"
-            ),
-            'shop_tab': (
+                "Each achievement tracks your progress and unlocks rewards when completed!",
+                "View your achievements! Complete challenges to earn rewards and "
+                "unlock new features.",
+            ],
+            'shop_tab': [
                 "This is where you trade points for cool stuff. You earn points by "
-                "sorting textures and completing achievements, then spend them here!"
-            ),
-            'shop_buy_button': (
+                "sorting textures and completing achievements, then spend them here!",
+                "The shop! Spend your earned Bamboo Bucks on themes, cursors, "
+                "outfits, and other fun items.",
+            ],
+            'shop_buy_button': [
                 "Click this button to buy the item. Make sure you have enough points "
-                "first! The price is shown next to the item."
-            ),
-            'shop_category_button': (
+                "first! The price is shown next to the item.",
+            ],
+            'shop_category_button': [
                 "Click one of these buttons to show only items from that category. "
-                "This helps you find what you're looking for faster."
-            ),
-            'rewards_tab': (
+                "This helps you find what you're looking for faster.",
+            ],
+            'rewards_tab': [
                 "This tab shows all the things you can unlock, like custom cursors, "
-                "themes, and panda outfits. Each item shows what you need to do to get it!"
-            ),
-            'closet_tab': (
+                "themes, and panda outfits. Each item shows what you need to do to get it!",
+            ],
+            'closet_tab': [
                 "This is where you dress up your panda companion! Choose from outfits "
-                "and accessories you've unlocked to make your panda look unique."
-            ),
-            'browser_browse_button': (
+                "and accessories you've unlocked to make your panda look unique.",
+                "Dress up your panda! Pick outfits, hats, and accessories "
+                "from your unlocked collection.",
+            ],
+            'browser_browse_button': [
                 "Click this button to open a folder picker. Navigate to the folder "
-                "where your texture files are stored to browse them."
-            ),
-            'browser_refresh_button': (
+                "where your texture files are stored to browse them.",
+            ],
+            'browser_refresh_button': [
                 "Click this to reload the list of files. Use it if you've added or "
-                "removed files while the browser is open."
-            ),
-            'browser_search': (
+                "removed files while the browser is open.",
+            ],
+            'browser_search': [
                 "Type a file name (or part of one) here to filter the file list. "
-                "Only files matching what you type will be shown."
-            ),
-            'browser_show_all': (
+                "Only files matching what you type will be shown.",
+            ],
+            'browser_show_all': [
                 "By default, only texture files are shown. Check this box to see "
-                "ALL files in the folder, including non-texture files."
-            ),
+                "ALL files in the folder, including non-texture files.",
+            ],
             # Tab tooltips
-            'sort_tab': (
+            'sort_tab': [
                 "This is where you sort your texture files! Select an input folder "
-                "with your textures, an output folder, and click Sort to organize them."
-            ),
-            'convert_tab': (
+                "with your textures, an output folder, and click Sort to organize them.",
+            ],
+            'convert_tab': [
                 "This tab lets you change your texture files from one format to another. "
-                "For example, DDS to PNG or PNG to DDS."
-            ),
-            'browser_tab': (
+                "For example, DDS to PNG or PNG to DDS.",
+            ],
+            'browser_tab': [
                 "Use this tab to look through your texture files. You can preview them "
-                "and search for specific files."
-            ),
-            'notepad_tab': (
+                "and search for specific files.",
+            ],
+            'notepad_tab': [
                 "A handy notepad where you can write down notes about your project, "
-                "keep track of what you've done, or plan your next steps."
-            ),
-            'about_tab': (
+                "keep track of what you've done, or plan your next steps.",
+            ],
+            'about_tab': [
                 "Information about the app, who made it, and a handy list of "
-                "all the keyboard shortcuts you can use."
-            ),
+                "all the keyboard shortcuts you can use.",
+            ],
             # Category tooltips
-            'tools_category': (
+            'tools_category': [
                 "This section has all the main tools: sorting textures, converting "
-                "file formats, and browsing your texture files."
-            ),
-            'features_category': (
+                "file formats, and browsing your texture files.",
+            ],
+            'features_category': [
                 "This section has fun extras: your panda companion, the shop where "
-                "you spend points, achievements, and your inventory."
-            ),
+                "you spend points, achievements, and your inventory.",
+            ],
             # Feature tab tooltips
-            'inventory_tab': (
+            'inventory_tab': [
                 "Your collection of toys and food items! Use them to interact with "
-                "your panda and make it happy."
-            ),
-            'panda_stats_tab': (
+                "your panda and make it happy.",
+            ],
+            'panda_stats_tab': [
                 "See how your panda is doing! Check its mood, how many times "
-                "you've petted or fed it, and other fun stats."
-            ),
-            'keyboard_controls': (
+                "you've petted or fed it, and other fun stats.",
+            ],
+            'keyboard_controls': [
                 "View all keyboard shortcuts and change them to whatever keys "
-                "you prefer. Click Edit next to any shortcut to change it."
-            ),
-            'tooltip_mode': (
+                "you prefer. Click Edit next to any shortcut to change it.",
+            ],
+            'tooltip_mode': [
                 "Choose how tooltips are shown: Normal gives standard info, "
-                "Dumbed Down gives extra detail, Vulgar Panda adds humor."
-            ),
-            'theme_selector': (
+                "Dumbed Down gives extra detail, Vulgar Panda adds humor.",
+                "Control tooltip style: Normal, Beginner-friendly, or Panda mode "
+                "with sarcastic commentary!",
+            ],
+            'theme_selector': [
                 "Pick a color theme for the application. Try dark mode for "
-                "late-night sessions or light mode for daytime use."
-            ),
+                "late-night sessions or light mode for daytime use.",
+            ],
         }
     
     def _get_vulgar_panda_tooltips(self) -> Dict[str, Any]:
         """Fun/sarcastic tooltips from PandaMode (vulgar mode)"""
         base_tooltips = {
-            'sort_button': "Click this to sort your damn textures. It's not rocket science, Karen.",
-            'convert_button': "Turn your textures into whatever the hell format you need.",
-            'input_browse': "Find your texture folder. Come on, you can do this.",
-            'output_browse': "Where do you want this beautiful organized mess?",
-            'detect_lods': "LOD detection. Fancy words for 'find the quality variants'.",
-            'group_lods': "Keep LOD buddies together. They get lonely apart.",
-            'detect_duplicates': "Find duplicate textures. Because apparently you have trust issues.",
-            'style_dropdown': "How do you want your stuff organized? Pick one, any one.",
-            'settings_button': "Tweak sh*t. Make it yours. Go nuts.",
-            'theme_button': "Dark mode = hacker vibes. Light mode = boomer energy.",
-            'help_button': "Lost? Confused? Click here, we'll hold your hand.",
-            'achievements_tab': "Check your trophies, you overachiever.",
-            'shop_tab': "This is the loot cave. Spend your shiny points, idiot.",
-            'shop_buy_button': "Yeet your money at this item. Do it.",
-            'shop_category_button': "Filter the shop. Because scrolling is for peasants.",
-            'rewards_tab': "Your loot table. See what you can unlock.",
-            'closet_tab': "Dress up your panda. Fashion show time.",
-            'browser_browse_button': "Pick a folder. Any folder. Let's see what's inside.",
-            'browser_refresh_button': "Refresh. In case something magically changed.",
-            'browser_search': "Find your damn files. Type something.",
-            'browser_show_all': "Show EVERYTHING. Even the weird files.",
+            'sort_button': [
+                "Click this to sort your damn textures. It's not rocket science, Karen.",
+                "Hit this button and watch your textures get organized. Magic, right?",
+            ],
+            'convert_button': [
+                "Turn your textures into whatever the hell format you need.",
+                "Format conversion. Because one format is never enough for you people.",
+            ],
+            'input_browse': [
+                "Find your texture folder. Come on, you can do this.",
+                "Navigate to your texture folder. I believe in you. Maybe.",
+            ],
+            'output_browse': [
+                "Where do you want this beautiful organized mess?",
+                "Pick where the sorted stuff goes. Any folder. Your call.",
+            ],
+            'detect_lods': [
+                "LOD detection. Fancy words for 'find the quality variants'.",
+                "Find the blurry and sharp versions of the same texture. Science!",
+            ],
+            'group_lods': [
+                "Keep LOD buddies together. They get lonely apart.",
+                "Group quality variants together. Like a texture family reunion.",
+            ],
+            'detect_duplicates': [
+                "Find duplicate textures. Because apparently you have trust issues.",
+                "Spot the copycats. Your hard drive will thank you.",
+            ],
+            'style_dropdown': [
+                "How do you want your stuff organized? Pick one, any one.",
+                "Organization style. Because everyone's a control freak about something.",
+            ],
+            'settings_button': [
+                "Tweak sh*t. Make it yours. Go nuts.",
+                "Settings. Where the magic happens. Or where things break.",
+            ],
+            'theme_button': [
+                "Dark mode = hacker vibes. Light mode = boomer energy.",
+                "Toggle the dark side. Or the light side. No judgment.",
+            ],
+            'help_button': [
+                "Lost? Confused? Click here, we'll hold your hand.",
+                "Need help? That's what this button is for, genius.",
+            ],
+            'achievements_tab': [
+                "Check your trophies, you overachiever.",
+                "See how many fake awards you've collected. Congrats, I guess.",
+            ],
+            'shop_tab': [
+                "This is the loot cave. Spend your shiny points, idiot.",
+                "The shop. Where your hard-earned points go to die.",
+            ],
+            'shop_buy_button': [
+                "Yeet your money at this item. Do it.",
+                "Buy it. You know you want to. Impulse control is overrated.",
+            ],
+            'shop_category_button': [
+                "Filter the shop. Because scrolling is for peasants.",
+                "Narrow it down. Too many choices hurting your brain?",
+            ],
+            'rewards_tab': [
+                "Your loot table. See what you can unlock.",
+                "All the shiny things you haven't earned yet. Motivating, right?",
+            ],
+            'closet_tab': [
+                "Dress up your panda. Fashion show time.",
+                "Panda makeover! Because even virtual bears need style.",
+            ],
+            'browser_browse_button': [
+                "Pick a folder. Any folder. Let's see what's inside.",
+                "Open a folder. I promise we won't judge your file organization. Much.",
+            ],
+            'browser_refresh_button': [
+                "Refresh. In case something magically changed.",
+                "Reload the file list. For the paranoid types.",
+            ],
+            'browser_search': [
+                "Find your damn files. Type something.",
+                "Search for files. Use your keyboard. That's the thing with letters on it.",
+            ],
+            'browser_show_all': [
+                "Show EVERYTHING. Even the weird files.",
+                "Toggle this to see ALL files. Prepare yourself.",
+            ],
             # Tab tooltips
-            'sort_tab': "The main event. Sort your textures or go home.",
-            'convert_tab': "Format conversion. Because one format is never enough.",
-            'browser_tab': "Snoop through your texture files like a pro.",
-            'notepad_tab': "Scribble your thoughts. No one's judging. Maybe.",
-            'about_tab': "Credits and keyboard shortcuts. Riveting stuff.",
+            'sort_tab': [
+                "The main event. Sort your textures or go home.",
+                "Sorting tab. Where the real work happens.",
+            ],
+            'convert_tab': [
+                "Format conversion. Because one format is never enough.",
+                "Convert stuff. DDS, PNG, whatever floats your boat.",
+            ],
+            'browser_tab': [
+                "Snoop through your texture files like a pro.",
+                "Browse your files. Digital window shopping.",
+            ],
+            'notepad_tab': [
+                "Scribble your thoughts. No one's judging. Maybe.",
+                "Write notes. Or a novel. We don't care.",
+            ],
+            'about_tab': [
+                "Credits and keyboard shortcuts. Riveting stuff.",
+                "Who made this thing and how to use it. Thrilling.",
+            ],
             # Category tooltips
-            'tools_category': "The useful stuff. Sorting, converting, browsing.",
-            'features_category': "The fun stuff. Panda, shop, achievements, bling.",
+            'tools_category': [
+                "The useful stuff. Sorting, converting, browsing.",
+                "Work tools. The boring but necessary section.",
+            ],
+            'features_category': [
+                "The fun stuff. Panda, shop, achievements, bling.",
+                "The cool extras. Panda time!",
+            ],
             # Feature tab tooltips
-            'inventory_tab': "Your hoard of toys and snacks. Use 'em or lose 'em.",
-            'panda_stats_tab': "Stalk your panda's mood and life choices.",
-            'keyboard_controls': "Keyboard shortcuts. Customize 'em if you dare.",
-            'tooltip_mode': "Control the sass level. You've been warned.",
-            'theme_selector': "Pick a vibe. Dark mode or boomer mode.",
+            'inventory_tab': [
+                "Your hoard of toys and snacks. Use 'em or lose 'em.",
+                "All your stuff. Feed the panda or play with toys.",
+            ],
+            'panda_stats_tab': [
+                "Stalk your panda's mood and life choices.",
+                "Check on your panda. Is it happy? Who cares. Check anyway.",
+            ],
+            'keyboard_controls': [
+                "Keyboard shortcuts. Customize 'em if you dare.",
+                "Hotkeys. For when clicking is too much effort.",
+            ],
+            'tooltip_mode': [
+                "Control the sass level. You've been warned.",
+                "Switch tooltip modes. You're in vulgar mode. Obviously.",
+            ],
+            'theme_selector': [
+                "Pick a vibe. Dark mode or boomer mode.",
+                "Choose your aesthetic. Make it pretty. Or ugly. Your call.",
+            ],
         }
         
         # Pull from PandaMode TOOLTIPS if available
@@ -825,15 +959,23 @@ class TooltipVerbosityManager:
 
 
 class WidgetTooltip:
-    """Simple hover tooltip for widgets"""
+    """Simple hover tooltip for widgets.
     
-    def __init__(self, widget, text, delay=500):
+    When ``widget_id`` and ``tooltip_manager`` are provided, the displayed
+    text is resolved dynamically each time the tooltip is shown so that
+    tooltip-mode changes take effect immediately without a restart.
+    """
+    
+    def __init__(self, widget, text, delay=500, widget_id=None, tooltip_manager=None):
         self.widget = widget
         self.text = text
         self.delay = delay
         self.tip_window = None
         self._after_id = None
         self._auto_hide_id = None
+        # Dynamic tooltip support
+        self.widget_id = widget_id
+        self.tooltip_manager = tooltip_manager
         
         # Bind to the widget using add="+" to avoid overriding existing bindings
         widget.bind("<Enter>", self._on_enter, add="+")
@@ -851,6 +993,17 @@ class WidgetTooltip:
                     child.bind("<Leave>", self._on_leave, add="+")
             except (AttributeError, tk.TclError):
                 pass
+    
+    def _get_display_text(self):
+        """Get the text to display, resolving dynamically if possible."""
+        if self.widget_id and self.tooltip_manager:
+            try:
+                dynamic = self.tooltip_manager.get_tooltip(self.widget_id)
+                if dynamic:
+                    return dynamic
+            except Exception:
+                pass
+        return self.text
     
     def _on_enter(self, event=None):
         if self._after_id:
@@ -873,7 +1026,8 @@ class WidgetTooltip:
         self._hide_tip()
     
     def _show_tip(self):
-        if not self.text:
+        display_text = self._get_display_text()
+        if not display_text:
             return
         
         # Check if widget is still visible and mapped
@@ -894,7 +1048,7 @@ class WidgetTooltip:
             tw.attributes('-topmost', True)
             
             # Create label with larger styling for better visibility
-            label = tk.Label(tw, text=self.text, wraplength=400,
+            label = tk.Label(tw, text=display_text, wraplength=400,
                            font=("Arial", 13),
                            bg="#2b2b2b",
                            fg="#ffffff",

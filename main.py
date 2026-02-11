@@ -787,39 +787,53 @@ class PS2TextureSorter(ctk.CTk):
             self._popout_original_frames = {}
         self._popout_original_frames[tab_name] = tab_frame
         
+        # Store original packing info for each child before moving them
+        if not hasattr(self, '_popout_pack_info'):
+            self._popout_pack_info = {}
+        self._popout_pack_info[tab_name] = []
+        
         # Create container in popout window
         container = ctk.CTkFrame(popout)
         container.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Hide original tab content (don't destroy or reparent)
-        for child in tab_frame.winfo_children():
-            # Skip the popout button
-            if self._is_popout_button(child):
-                continue
-            child.pack_forget()
+        # Header label
+        ctk.CTkLabel(container, text=f"{tab_name} (Undocked)",
+                    font=("Arial Bold", 16)).pack(pady=(5, 10))
         
-        # Create tab content based on tab type
+        # Content frame to hold reparented widgets
+        content = ctk.CTkFrame(container)
+        content.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Special handling for notepad: sync content instead of reparenting
         if tab_name == "📝 Notepad":
-            self._create_popout_notepad(popout, container)
-        elif tab_name == "📁 File Browser":
-            self._create_popout_browser(popout, container)
-        elif tab_name == "ℹ️ About":
-            self._create_popout_about(popout, container)
-        elif tab_name == "🏆 Achievements":
-            self._create_popout_achievements(popout, container)
-        elif tab_name == "🛒 Shop":
-            self._create_popout_shop(popout, container)
-        elif tab_name == "🎁 Rewards":
-            self._create_popout_rewards(popout, container)
-        elif tab_name == "📦 Inventory":
-            self._create_popout_inventory(popout, container)
-        elif tab_name == "📊 Panda Stats & Mood":
-            self._create_popout_panda_stats(popout, container)
+            self._create_popout_notepad(popout, content)
         else:
-            # Generic handler - log warning for unimplemented popouts
-            logger.warning(f"No specific popout handler for tab '{tab_name}', using generic display")
-            ctk.CTkLabel(container, text=f"{tab_name} (Undocked)", 
-                        font=("Arial Bold", 16)).pack(pady=20)
+            # Move original children from tab to popout window
+            children = list(tab_frame.winfo_children())
+            for child in children:
+                if self._is_popout_button(child):
+                    continue
+                try:
+                    # Save pack info
+                    try:
+                        pack_info = child.pack_info()
+                    except Exception:
+                        pack_info = None
+                    self._popout_pack_info[tab_name].append((child, pack_info))
+                    
+                    # Reparent to popout container
+                    child.pack_forget()
+                    child.master = content
+                    child.configure(master=content) if hasattr(child, 'configure') else None
+                    # Reparent via internal tk call
+                    child.tk.call(child._w, 'configure', '-master', str(content))
+                    # Repack with original settings or sensible defaults
+                    if pack_info:
+                        child.pack(**{k: v for k, v in pack_info.items() if k != 'in'})
+                    else:
+                        child.pack(fill="both", expand=True)
+                except Exception as e:
+                    logger.debug(f"Could not reparent widget for popout: {e}")
         
         # Add dock-back button
         dock_btn = ctk.CTkButton(
@@ -925,28 +939,29 @@ class PS2TextureSorter(ctk.CTk):
                         self._popout_save_notes()
                     except Exception as e:
                         logger.error(f"Error saving popout notes during dock: {e}")
+            else:
+                # Reparent widgets back to original tab frame
+                if hasattr(self, '_popout_pack_info') and tab_name in self._popout_pack_info:
+                    tab_frame = self._popout_original_frames.get(tab_name)
+                    if tab_frame and tab_frame.winfo_exists():
+                        for child, pack_info in self._popout_pack_info[tab_name]:
+                            try:
+                                if child.winfo_exists():
+                                    child.pack_forget()
+                                    child.tk.call(child._w, 'configure', '-master', str(tab_frame))
+                                    if pack_info:
+                                        child.pack(**{k: v for k, v in pack_info.items() if k != 'in'})
+                                    else:
+                                        child.pack(fill="both", expand=True)
+                            except Exception as e:
+                                logger.debug(f"Could not reparent widget back: {e}")
+                    self._popout_pack_info.pop(tab_name, None)
             
             # Destroy pop-out window
             if popout_window and popout_window.winfo_exists():
                 popout_window.destroy()
             
             self._popout_windows.pop(tab_name, None)
-            
-            # Restore original tab content by repacking hidden children
-            if hasattr(self, '_popout_original_frames'):
-                tab_frame = self._popout_original_frames.get(tab_name)
-                if tab_frame and tab_frame.winfo_exists():
-                    for child in tab_frame.winfo_children():
-                        # Skip the popout button
-                        if self._is_popout_button(child):
-                            continue
-                        # Repack hidden children
-                        try:
-                            # Check if widget needs repacking (not currently visible)
-                            if not child.winfo_ismapped():
-                                child.pack(fill="both", expand=True, padx=10, pady=10)
-                        except Exception as e:
-                            logger.debug(f"Could not repack widget: {e}")
             
             # Switch to the docked tab
             parent_tv = self._tab_to_tabview.get(tab_name, self.tabview)
@@ -1166,12 +1181,13 @@ class PS2TextureSorter(ctk.CTk):
         if not WidgetTooltip:
             return
         tt = self._get_tooltip_text
+        tm = self.tooltip_manager
         # Store tooltip references to prevent garbage collection
-        self._tooltips.append(WidgetTooltip(self.start_button, tt('sort_button')))
+        self._tooltips.append(WidgetTooltip(self.start_button, tt('sort_button'), widget_id='sort_button', tooltip_manager=tm))
         self._tooltips.append(WidgetTooltip(self.pause_button, "Pause the current sorting operation"))
         self._tooltips.append(WidgetTooltip(self.stop_button, "Stop the sorting operation completely"))
-        self._tooltips.append(WidgetTooltip(browse_in_btn, tt('input_browse')))
-        self._tooltips.append(WidgetTooltip(browse_out_btn, tt('output_browse')))
+        self._tooltips.append(WidgetTooltip(browse_in_btn, tt('input_browse'), widget_id='input_browse', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(browse_out_btn, tt('output_browse'), widget_id='output_browse', tooltip_manager=tm))
         self._tooltips.append(WidgetTooltip(mode_menu, 
             "Sorting mode:\n"
             "• automatic – AI classifies textures automatically based on image content and filenames\n"
@@ -1188,10 +1204,11 @@ class PS2TextureSorter(ctk.CTk):
             "• By Asset Pipeline – Type/Resolution/Format\n"
             "• By Module – Characters/Vehicles/UI/etc.\n"
             "• Maximum Detail – Deep nested hierarchy\n"
-            "• Custom – User-defined rules"))
-        self._tooltips.append(WidgetTooltip(detect_lods_cb, tt('lod_detection') or "Automatically detect Level of Detail (LOD) textures"))
-        self._tooltips.append(WidgetTooltip(group_lods_cb, tt('group_lods') or "Group LOD textures together in folders"))
-        self._tooltips.append(WidgetTooltip(detect_dupes_cb, tt('detect_duplicates') or "Find and mark duplicate texture files"))
+            "• Custom – User-defined rules",
+            widget_id='style_dropdown', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(detect_lods_cb, tt('lod_detection') or "Automatically detect Level of Detail (LOD) textures", widget_id='lod_detection', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(group_lods_cb, tt('group_lods') or "Group LOD textures together in folders", widget_id='group_lods', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(detect_dupes_cb, tt('detect_duplicates') or "Find and mark duplicate texture files", widget_id='detect_duplicates', tooltip_manager=tm))
     
     def _get_tooltip_text(self, widget_id):
         """Get tooltip text from the tooltip manager"""
@@ -1215,10 +1232,11 @@ class PS2TextureSorter(ctk.CTk):
         if not WidgetTooltip:
             return
         tt = self._get_tooltip_text
+        tm = self.tooltip_manager
         # Store tooltip references to prevent garbage collection
-        self._tooltips.append(WidgetTooltip(self.convert_start_button, tt('convert_button') or "Start batch conversion of texture files"))
-        self._tooltips.append(WidgetTooltip(input_btn, tt('input_browse') or "Select directory containing files to convert"))
-        self._tooltips.append(WidgetTooltip(output_btn, tt('output_browse') or "Choose where to save converted files"))
+        self._tooltips.append(WidgetTooltip(self.convert_start_button, tt('convert_button') or "Start batch conversion of texture files", widget_id='convert_button', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(input_btn, tt('input_browse') or "Select directory containing files to convert", widget_id='input_browse', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(output_btn, tt('output_browse') or "Choose where to save converted files", widget_id='output_browse', tooltip_manager=tm))
         self._tooltips.append(WidgetTooltip(from_menu, "Select source file format to convert from"))
         self._tooltips.append(WidgetTooltip(to_menu, "Select target file format to convert to"))
         self._tooltips.append(WidgetTooltip(recursive_cb, "Also convert files in subdirectories"))
@@ -1229,26 +1247,28 @@ class PS2TextureSorter(ctk.CTk):
         if not WidgetTooltip:
             return
         tt = self._get_tooltip_text
+        tm = self.tooltip_manager
         # Store tooltip references to prevent garbage collection
-        self._tooltips.append(WidgetTooltip(browse_btn, tt('browser_browse_button') or tt('file_selection') or "Select a directory to browse texture files"))
-        self._tooltips.append(WidgetTooltip(refresh_btn, tt('browser_refresh_button') or "Refresh the file list"))
-        self._tooltips.append(WidgetTooltip(search_entry, tt('browser_search') or tt('search_button') or "Search for specific files by name"))
-        self._tooltips.append(WidgetTooltip(show_all_cb, tt('browser_show_all') or "Show all file types, not just textures"))
+        self._tooltips.append(WidgetTooltip(browse_btn, tt('browser_browse_button') or tt('file_selection') or "Select a directory to browse texture files", widget_id='browser_browse_button', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(refresh_btn, tt('browser_refresh_button') or "Refresh the file list", widget_id='browser_refresh_button', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(search_entry, tt('browser_search') or tt('search_button') or "Search for specific files by name", widget_id='browser_search', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(show_all_cb, tt('browser_show_all') or "Show all file types, not just textures", widget_id='browser_show_all', tooltip_manager=tm))
     
     def _apply_menu_tooltips(self, tutorial_btn, settings_btn, theme_btn, help_btn):
         """Apply tooltips to menu bar widgets"""
         if not WidgetTooltip:
             return
         tt = self._get_tooltip_text
+        tm = self.tooltip_manager
         # Store tooltip references to prevent garbage collection
         if tutorial_btn:
-            self._tooltips.append(WidgetTooltip(tutorial_btn, tt('tutorial_button') or "Start or restart the interactive tutorial"))
+            self._tooltips.append(WidgetTooltip(tutorial_btn, tt('tutorial_button') or "Start or restart the interactive tutorial", widget_id='tutorial_button', tooltip_manager=tm))
         if settings_btn:
-            self._tooltips.append(WidgetTooltip(settings_btn, tt('settings_button') or "Open application settings and preferences"))
+            self._tooltips.append(WidgetTooltip(settings_btn, tt('settings_button') or "Open application settings and preferences", widget_id='settings_button', tooltip_manager=tm))
         if theme_btn:
-            self._tooltips.append(WidgetTooltip(theme_btn, tt('theme_selector') or "Toggle between light and dark theme"))
+            self._tooltips.append(WidgetTooltip(theme_btn, tt('theme_selector') or "Toggle between light and dark theme", widget_id='theme_selector', tooltip_manager=tm))
         if help_btn:
-            self._tooltips.append(WidgetTooltip(help_btn, tt('help_button') or "Open context-sensitive help (F1)"))
+            self._tooltips.append(WidgetTooltip(help_btn, tt('help_button') or "Open context-sensitive help (F1)", widget_id='help_button', tooltip_manager=tm))
     
     def create_convert_tab(self):
         """Create file format conversion tab"""
