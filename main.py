@@ -4940,29 +4940,16 @@ Built with:
             self.status_money_label = ctk.CTkLabel(status_frame, text=money_text, font=("Arial", 10))
             self.status_money_label.pack(side="right", padx=10, pady=5)
         
-        # Add panda widget in a separate frame on bottom right
+        # Add panda widget (renders in its own Toplevel window)
         # Panda is always present - not a "mode"
         if PANDA_WIDGET_AVAILABLE and self.panda:
-            panda_container = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent", bg_color="transparent")
-            
-            # Restore saved position or use default
-            # Position coordinates are relative (0.0 to 1.0) not absolute pixels
-            # saved_x: 0.0 = left edge, 1.0 = right edge
-            # saved_y: 0.0 = top edge, 1.0 = bottom edge
-            saved_x = config.get('panda', 'position_x', default=0.98)
-            saved_y = config.get('panda', 'position_y', default=0.98)
-            
-            # Position using saved relative coordinates
-            panda_container.place(relx=saved_x, rely=saved_y, anchor="se")
-            
             self.panda_widget = PandaWidget(
-                panda_container, 
+                self,
                 panda_character=self.panda,
                 panda_level_system=self.panda_level_system,
                 widget_collection=self.widget_collection,
                 panda_closet=self.panda_closet
             )
-            self.panda_widget.pack(padx=5, pady=5)
     
     def browse_input(self):
         """Browse for input directory"""
