@@ -377,6 +377,28 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     # Toplevel position helpers
     # ------------------------------------------------------------------
 
+    def _get_main_window_bounds(self):
+        """Return the main application window bounds as (min_x, min_y, max_x, max_y) in screen coordinates.
+
+        ``min_x`` / ``min_y`` are the minimum allowed origin (top-left
+        corner of the application content area).  ``max_x`` / ``max_y``
+        are the maximum allowed origin for the panda Toplevel so that
+        it stays fully inside the application.
+        """
+        root = self.winfo_toplevel()
+        root.update_idletasks()
+        rx = root.winfo_rootx()
+        ry = root.winfo_rooty()
+        rw = max(1, root.winfo_width())
+        rh = max(1, root.winfo_height())
+        tw = max(1, self._toplevel.winfo_width())
+        th = max(1, self._toplevel.winfo_height())
+        min_x = rx
+        min_y = ry
+        max_x = max(rx, rx + rw - tw)
+        max_y = max(ry, ry + rh - th)
+        return min_x, min_y, max_x, max_y
+
     def _initial_toplevel_position(self):
         """Position the Toplevel window relative to the main app window."""
         if self._destroyed:
@@ -1383,22 +1405,17 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             new_x = tx + (event.x - self.drag_start_x)
             new_y = ty + (event.y - self.drag_start_y)
             
-            # Screen bounds for wall detection
-            screen_w = self._toplevel.winfo_screenwidth()
-            screen_h = self._toplevel.winfo_screenheight()
-            tw = self._toplevel.winfo_width()
-            th = self._toplevel.winfo_height()
-            max_x = max(0, screen_w - tw)
-            max_y = max(0, screen_h - th)
+            # Application window bounds for wall detection
+            min_x, min_y, max_x, max_y = self._get_main_window_bounds()
             
             hit_wall = False
-            if new_x < 0 or new_x > max_x:
+            if new_x < min_x or new_x > max_x:
                 hit_wall = True
-            if new_y < 0 or new_y > max_y:
+            if new_y < min_y or new_y > max_y:
                 hit_wall = True
             
-            new_x = max(0, min(new_x, max_x))
-            new_y = max(0, min(new_y, max_y))
+            new_x = max(min_x, min(new_x, max_x))
+            new_y = max(min_y, min(new_y, max_y))
             
             self._toplevel.geometry(f"+{new_x}+{new_y}")
             
@@ -1511,11 +1528,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             return
         
         try:
-            # Screen bounds
-            screen_w = self._toplevel.winfo_screenwidth()
-            screen_h = self._toplevel.winfo_screenheight()
-            tw = max(1, self._toplevel.winfo_width())
-            th = max(1, self._toplevel.winfo_height())
+            # Application window bounds
+            min_x, min_y, max_x, max_y = self._get_main_window_bounds()
             
             # Current screen position
             x = float(self._toplevel.winfo_x())
@@ -1532,13 +1546,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             x += self._toss_velocity_x
             y += self._toss_velocity_y
             
-            # Bounce off screen edges
-            max_x = max(0, screen_w - tw)
-            max_y = max(0, screen_h - th)
-            
+            # Bounce off application window edges
             bounced = False
-            if x <= 0:
-                x = 0
+            if x <= min_x:
+                x = min_x
                 self._toss_velocity_x = abs(self._toss_velocity_x) * self.TOSS_BOUNCE_DAMPING
                 bounced = True
             elif x >= max_x:
@@ -1546,8 +1557,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self._toss_velocity_x = -abs(self._toss_velocity_x) * self.TOSS_BOUNCE_DAMPING
                 bounced = True
             
-            if y <= 0:
-                y = 0
+            if y <= min_y:
+                y = min_y
                 self._toss_velocity_y = abs(self._toss_velocity_y) * self.TOSS_BOUNCE_DAMPING
                 bounced = True
             elif y >= max_y:
