@@ -1995,43 +1995,60 @@ class PS2TextureSorter(ctk.CTk):
         if theme_name == 'vulgar_panda':
             theme_name = 'red_panda'
         
-        if theme_name in ['dark', 'light']:
-            ctk.set_appearance_mode(theme_name)
-            config.set('ui', 'theme', value=theme_name)
-            self.log(f"Theme changed to: {theme_name}")
-        else:
-            # Handle custom themes from THEME_PRESETS
+        try:
+            if theme_name in ['dark', 'light']:
+                ctk.set_appearance_mode(theme_name)
+                config.set('ui', 'theme', value=theme_name)
+                self.log(f"Theme changed to: {theme_name}")
+                # Force widget refresh to prevent invisible elements
+                self.update_idletasks()
+            else:
+                # Handle custom themes from THEME_PRESETS
+                try:
+                    from src.ui.customization_panel import THEME_PRESETS
+                    if theme_name in THEME_PRESETS:
+                        theme = THEME_PRESETS[theme_name]
+                        appearance = theme.get("appearance_mode", "dark")
+                        ctk.set_appearance_mode(appearance)
+                        config.set('ui', 'theme', value=theme_name)
+                        # Apply colors to existing widgets
+                        colors = theme.get("colors", {})
+                        if colors:
+                            try:
+                                # Apply background color to the main window
+                                if 'background' in colors:
+                                    try:
+                                        self.configure(fg_color=colors['background'])
+                                    except Exception:
+                                        pass
+                                for widget in self.winfo_children():
+                                    self._apply_theme_to_widget(widget, colors)
+                            except Exception as widget_err:
+                                logger.warning(f"Error applying theme to widgets: {widget_err}")
+                        self.log(f"Theme changed to: {theme['name']}")
+                        # Force widget refresh to prevent invisible elements
+                        self.update_idletasks()
+                    else:
+                        # Fall back to dark/light based on name hint
+                        mode = 'light' if 'light' in theme_name.lower() else 'dark'
+                        ctk.set_appearance_mode(mode)
+                        config.set('ui', 'theme', value=theme_name)
+                        self.log(f"Theme changed to: {theme_name}")
+                        # Force widget refresh
+                        self.update_idletasks()
+                except ImportError as imp_err:
+                    logger.warning(f"Import error loading theme: {imp_err}")
+                    ctk.set_appearance_mode('dark')
+                    self.log(f"Theme changed to dark (fallback)")
+                    self.update_idletasks()
+        except Exception as e:
+            logger.error(f"Error applying theme: {e}")
+            self.log(f"⚠️ Theme change error, reverting to safe mode")
             try:
-                from src.ui.customization_panel import THEME_PRESETS
-                if theme_name in THEME_PRESETS:
-                    theme = THEME_PRESETS[theme_name]
-                    appearance = theme.get("appearance_mode", "dark")
-                    ctk.set_appearance_mode(appearance)
-                    config.set('ui', 'theme', value=theme_name)
-                    # Apply colors to existing widgets
-                    colors = theme.get("colors", {})
-                    if colors:
-                        try:
-                            # Apply background color to the main window
-                            if 'background' in colors:
-                                try:
-                                    self.configure(fg_color=colors['background'])
-                                except Exception:
-                                    pass
-                            for widget in self.winfo_children():
-                                self._apply_theme_to_widget(widget, colors)
-                        except Exception:
-                            pass
-                    self.log(f"Theme changed to: {theme['name']}")
-                else:
-                    # Fall back to dark/light based on name hint
-                    mode = 'light' if 'light' in theme_name.lower() else 'dark'
-                    ctk.set_appearance_mode(mode)
-                    config.set('ui', 'theme', value=theme_name)
-                    self.log(f"Theme changed to: {theme_name}")
-            except ImportError:
                 ctk.set_appearance_mode('dark')
-                self.log(f"Theme changed to dark (fallback)")
+                self.update_idletasks()
+            except Exception:
+                pass
     
     def apply_ui_scaling(self, scale_value):
         """Apply UI scaling"""
@@ -2096,6 +2113,8 @@ class PS2TextureSorter(ctk.CTk):
                     except Exception as widget_err:
                         logger.debug(f"Could not update all widget colors: {widget_err}")
                 
+                # Force widget refresh to prevent invisible elements
+                self.update_idletasks()
                 self.log(f"✅ Theme applied: {theme.get('name', 'Unknown')}")
                 
             elif setting_type == 'color':
@@ -2107,7 +2126,8 @@ class PS2TextureSorter(ctk.CTk):
                         self._apply_color_to_widget(widget, accent_color)
                 except Exception as color_err:
                     logger.debug(f"Could not update all widget colors: {color_err}")
-                    
+                
+                self.update_idletasks()
                 self.log(f"✅ Accent color changed: {accent_color}")
                 
             elif setting_type == 'cursor':
@@ -2565,8 +2585,13 @@ class PS2TextureSorter(ctk.CTk):
                 x = event.x_root - self.winfo_rootx()
                 y = event.y_root - self.winfo_rooty()
                 
-                # Only draw within the window bounds
-                if x < 0 or y < 0 or x > self.winfo_width() or y > self.winfo_height():
+                # Draw trail even outside window bounds, but clip to visible area
+                # This allows trail to extend to full window including decorations
+                window_width = self.winfo_width()
+                window_height = self.winfo_height()
+                
+                # Only skip if way outside reasonable bounds (prevents excessive dots)
+                if x < -50 or y < -50 or x > window_width + 50 or y > window_height + 50:
                     return
                 
                 color_idx = len(self._trail_dots_widgets) % len(trail_colors)
@@ -4686,17 +4711,19 @@ Built with:
             font=("Arial Bold", 18))
         self.panda_mood_label.pack(anchor="w", padx=20, pady=5)
 
-        # Panda animation preview
+        # Panda preview info
         anim_frame = ctk.CTkFrame(scrollable_frame)
         anim_frame.pack(fill="x", padx=10, pady=10)
         ctk.CTkLabel(anim_frame, text="🐼 Panda Preview",
                      font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
 
-        current_anim = self.panda.get_animation_frame('idle')
-        self.panda_preview_label = ctk.CTkLabel(
-            anim_frame, text=current_anim,
-            font=("Courier", 10), justify="left")
-        self.panda_preview_label.pack(anchor="w", padx=20, pady=5)
+        # Reference to the interactive canvas panda
+        preview_text = "Your panda is visible in the bottom-right corner of the application.\n" \
+                       "You can drag, click, and interact with them directly!\n" \
+                       f"Current animation: {self.panda_widget.current_animation if hasattr(self, 'panda_widget') and self.panda_widget else 'idle'}"
+        ctk.CTkLabel(
+            anim_frame, text=preview_text,
+            font=("Arial", 11), justify="left", text_color="#888888").pack(anchor="w", padx=20, pady=5)
 
         # Statistics
         stats = self.panda.get_statistics()
@@ -4788,9 +4815,6 @@ Built with:
                 mood_indicator = self.panda.get_mood_indicator()
                 mood_name = self.panda.current_mood.value.title()
                 self.panda_mood_label.configure(text=f"{mood_indicator} {mood_name}")
-            if hasattr(self, 'panda_preview_label') and self.panda:
-                current_anim = self.panda.get_animation_frame('idle')
-                self.panda_preview_label.configure(text=current_anim)
 
     def _start_stats_auto_refresh(self):
         """Auto-refresh panda stats every 5 seconds when the stats tab is visible.
@@ -4807,12 +4831,6 @@ Built with:
                     mood_indicator = self.panda.get_mood_indicator()
                     mood_name = self.panda.current_mood.value.title()
                     self.panda_mood_label.configure(text=f"{mood_indicator} {mood_name}")
-                except Exception:
-                    pass
-            if hasattr(self, 'panda_preview_label') and self.panda:
-                try:
-                    current_anim = self.panda.get_animation_frame('idle')
-                    self.panda_preview_label.configure(text=current_anim)
                 except Exception:
                     pass
             # Schedule next refresh
@@ -5652,11 +5670,22 @@ Built with:
     
     def toggle_theme(self):
         """Toggle between dark and light theme"""
-        current = config.get('ui', 'theme', default='dark')
-        new_theme = 'light' if current == 'dark' else 'dark'
-        config.set('ui', 'theme', value=new_theme)
-        ctk.set_appearance_mode(new_theme)
-        self.log(f"Theme changed to: {new_theme}")
+        try:
+            current = config.get('ui', 'theme', default='dark')
+            new_theme = 'light' if current == 'dark' else 'dark'
+            config.set('ui', 'theme', value=new_theme)
+            ctk.set_appearance_mode(new_theme)
+            self.log(f"Theme changed to: {new_theme}")
+            # Force widget refresh to prevent invisible elements
+            self.update_idletasks()
+        except Exception as e:
+            logger.error(f"Error toggling theme: {e}")
+            self.log(f"⚠️ Theme toggle error")
+            try:
+                ctk.set_appearance_mode('dark')
+                self.update_idletasks()
+            except Exception:
+                pass
 
 
 def main():
