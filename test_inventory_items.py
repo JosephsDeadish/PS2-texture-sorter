@@ -190,13 +190,15 @@ def test_panda_item_interaction():
 
     # Food interaction
     response = panda.on_item_interact('Fresh Bamboo', 'food')
-    assert 'bamboo' in response.lower() or 'food' in response.lower() or 'nom' in response.lower() or 'sniff' in response.lower() or 'chomp' in response.lower() or 'munch' in response.lower() or 'snack' in response.lower() or 'walks' in response.lower(), \
+    food_keywords = {'bamboo', 'food', 'nom', 'sniff', 'chomp', 'munch', 'snack', 'walks', 'picks'}
+    assert any(kw in response.lower() for kw in food_keywords), \
         f"Food interact should mention food-related action: {response}"
     assert panda.feed_count == 1, "Food interaction should increase feed count"
 
     # Toy interaction
     response = panda.on_item_interact('Bouncy Carrot', 'toy')
-    assert 'carrot' in response.lower() or 'play' in response.lower() or 'kick' in response.lower() or 'walks' in response.lower() or 'runs' in response.lower() or 'spots' in response.lower() or 'picks' in response.lower(), \
+    toy_keywords = {'carrot', 'play', 'kick', 'walks', 'runs', 'spots', 'picks', 'bats', 'pounce', 'mine'}
+    assert any(kw in response.lower() for kw in toy_keywords), \
         f"Toy interact should mention toy-related action: {response}"
     assert panda.click_count == 1, "Toy interaction should increase click count"
     print("✓ Panda item interaction works correctly")

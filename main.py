@@ -5046,6 +5046,7 @@ Built with:
             
             # Physics state
             physics = widget.physics
+            weight_divisor = max(physics.weight, 0.1)
             state = {
                 'vx': 0.0, 'vy': 0.0,
                 'dragging': False,
@@ -5053,6 +5054,7 @@ Built with:
                 'last_x': 0, 'last_y': 0,
                 'timer': None,
                 'is_tossing': False,
+                'food_consumed': False,
             }
             
             def on_drag_start(event):
@@ -5079,8 +5081,8 @@ Built with:
                 x = item_win.winfo_x() + dx
                 y = item_win.winfo_y() + dy
                 item_win.geometry(f"+{x}+{y}")
-                state['vx'] = (event.x_root - state['last_x']) / max(physics.weight, 0.1)
-                state['vy'] = (event.y_root - state['last_y']) / max(physics.weight, 0.1)
+                state['vx'] = (event.x_root - state['last_x']) / weight_divisor
+                state['vy'] = (event.y_root - state['last_y']) / weight_divisor
                 state['drag_x'] = event.x_root
                 state['drag_y'] = event.y_root
                 state['last_x'] = event.x_root
@@ -5103,6 +5105,7 @@ Built with:
                     
                     # For food, close the window after panda "eats" it
                     if item_type == 'food':
+                        state['food_consumed'] = True
                         item_win.after(2000, safe_destroy)
             
             def physics_tick():
@@ -5163,8 +5166,8 @@ Built with:
             
             # Double-click to dismiss
             def on_double_click(event):
-                # Return food quantity if not consumed yet
-                if widget.consumable and widget.widget_type == WidgetType.FOOD:
+                # Return food quantity only if it wasn't already consumed by panda
+                if widget.consumable and widget.widget_type == WidgetType.FOOD and not state['food_consumed']:
                     widget.quantity += 1  # Return the item
                 safe_destroy()
             

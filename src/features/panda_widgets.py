@@ -245,6 +245,9 @@ class AccessoryWidget(PandaWidget):
 class WidgetCollection:
     """Manages the collection of all panda widgets."""
     
+    # Prefixes to strip when mapping shop unlockable_ids to widget keys
+    SHOP_ID_PREFIXES = ['food_', 'toy_']
+    
     # Predefined widgets
     DEFAULT_WIDGETS = {
         # Toys - infinite use, different physics behaviors
@@ -421,7 +424,7 @@ class WidgetCollection:
             return shop_unlockable_id
         
         # Strip common prefixes
-        for prefix in ['food_', 'toy_']:
+        for prefix in self.SHOP_ID_PREFIXES:
             if shop_unlockable_id.startswith(prefix):
                 stripped = shop_unlockable_id[len(prefix):]
                 if stripped in self.widgets:
