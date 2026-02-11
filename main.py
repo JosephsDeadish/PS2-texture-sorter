@@ -392,9 +392,9 @@ class PS2TextureSorter(ctk.CTk):
         self._thumbnail_cache = OrderedDict()
         self._thumbnail_cache_max = config.get('performance', 'thumbnail_cache_size', default=500)
         
-        # Sorting dialog state flags
-        self._sorting_skip_all = False
-        self._sorting_cancelled = False
+        # Sorting dialog state flags (thread-safe events)
+        self._sorting_skip_all = threading.Event()
+        self._sorting_cancelled = threading.Event()
         
         # Initialize features if GUI available
         if GUI_AVAILABLE:
@@ -4976,8 +4976,8 @@ Built with:
             logger.debug("UI buttons state updated - sorting controls enabled")
             
             # Reset sorting dialog state flags
-            self._sorting_skip_all = False
-            self._sorting_cancelled = False
+            self._sorting_skip_all.clear()
+            self._sorting_cancelled.clear()
             
             # Start sorting in background thread with all parameters
             try:
@@ -5053,9 +5053,12 @@ Built with:
                     elif mode == "manual":
                         # Manual: User selects category for each file
                         # Check skip_all flag
-                        if self._sorting_skip_all:
+                        if self._sorting_skip_all.is_set():
                             category, confidence = self.classifier.classify_texture(file_path)
-                        elif self._sorting_cancelled:
+                            if i == 0 or (i > 0 and not hasattr(self, '_skip_all_logged')):
+                                self.log("⏩ Skip All active - using automatic classification for remaining files")
+                                self._skip_all_logged = True
+                        elif self._sorting_cancelled.is_set():
                             self.log("⚠️ Sorting cancelled by user")
                             return
                         else:
@@ -5131,13 +5134,13 @@ Built with:
                                     result_event.set()
                                 
                                 def on_skip_all():
-                                    self._sorting_skip_all = True
+                                    self._sorting_skip_all.set()
                                     selected_category[0] = "unclassified"
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_cancel():
-                                    self._sorting_cancelled = True
+                                    self._sorting_cancelled.set()
                                     selected_category[0] = None
                                     dialog_window.destroy()
                                     result_event.set()
@@ -5160,7 +5163,7 @@ Built with:
                             
                             # Wait for result using event
                             if result_event.wait(timeout=self.USER_INTERACTION_TIMEOUT):
-                                if self._sorting_cancelled:
+                                if self._sorting_cancelled.is_set():
                                     self.log("⚠️ Sorting cancelled by user")
                                     return
                                 category = selected_category[0] if selected_category[0] else ai_category
@@ -5176,10 +5179,13 @@ Built with:
                         ai_category, ai_confidence = self.classifier.classify_texture(file_path)
                         
                         # Check skip_all flag
-                        if self._sorting_skip_all:
+                        if self._sorting_skip_all.is_set():
                             category = ai_category
                             confidence = ai_confidence
-                        elif self._sorting_cancelled:
+                            if not hasattr(self, '_skip_all_logged'):
+                                self.log("⏩ Skip All active - accepting AI suggestions for remaining files")
+                                self._skip_all_logged = True
+                        elif self._sorting_cancelled.is_set():
                             self.log("⚠️ Sorting cancelled by user")
                             return
                         else:
@@ -5255,13 +5261,13 @@ Built with:
                                     result_event.set()
                                 
                                 def on_skip_all():
-                                    self._sorting_skip_all = True
+                                    self._sorting_skip_all.set()
                                     confirmed_category[0] = ai_category
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_cancel():
-                                    self._sorting_cancelled = True
+                                    self._sorting_cancelled.set()
                                     confirmed_category[0] = None
                                     dialog_window.destroy()
                                     result_event.set()
@@ -5288,7 +5294,7 @@ Built with:
                             
                             # Wait for confirmation using event
                             if result_event.wait(timeout=self.USER_INTERACTION_TIMEOUT):
-                                if self._sorting_cancelled:
+                                if self._sorting_cancelled.is_set():
                                     self.log("⚠️ Sorting cancelled by user")
                                     return
                                 category = confirmed_category[0] if confirmed_category[0] else ai_category

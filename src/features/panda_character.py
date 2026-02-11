@@ -2477,9 +2477,10 @@ class PandaCharacter:
                 return self.EASTER_EGGS['panda_rage']
             
             response = random.choice(self.CLICK_RESPONSES)
-            # Replace generic panda references with custom name
+            # Replace generic panda references with custom name if renamed
             if self.name != "Panda":
-                response = response.replace("🐼 Panda ", f"🐼 {self.name} ")
+                import re
+                response = re.sub(r'\bPanda\b', self.name, response)
             return response
     
     def on_hover(self) -> str:
