@@ -3834,7 +3834,12 @@ class PS2TextureSorter(ctk.CTk):
                          font=("Arial", 14)).pack(pady=50)
             return
         
-        closet_panel = ClosetPanel(self.tab_closet, self.panda_closet)
+        closet_panel = ClosetPanel(
+            self.tab_closet,
+            self.panda_closet,
+            panda_character=self.panda,
+            panda_preview_callback=self.panda_widget
+        )
         closet_panel.pack(fill="both", expand=True, padx=10, pady=10)
     
     def create_notepad_tab(self):
@@ -4470,7 +4475,8 @@ Built with:
                 panda_container, 
                 panda_character=self.panda,
                 panda_level_system=self.panda_level_system,
-                widget_collection=self.widget_collection
+                widget_collection=self.widget_collection,
+                panda_closet=self.panda_closet
             )
             self.panda_widget.pack(padx=5, pady=5)
             
