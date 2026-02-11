@@ -68,6 +68,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     MIN_RUB_POSITIONS = 4
     # Cooldown in seconds between rub detections
     RUB_COOLDOWN_SECONDS = 2.0
+    # Cooldown in seconds between wall hit reactions
+    WALL_HIT_COOLDOWN_SECONDS = 1.0
     
     # Animation timing (ms)
     ANIMATION_INTERVAL = 150
@@ -80,6 +82,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     MIN_SHAKE_MOVEMENT = 2          # Min px movement for a direction change
     MIN_ROTATION_ANGLE = 0.05       # Min angle diff (radians) for spin detection
     SPIN_CONSISTENCY_THRESHOLD = 0.7  # Required ratio of consistent rotations
+    
+    # Toss physics constants
+    TOSS_FRICTION = 0.92            # Velocity decay per frame
+    TOSS_GRAVITY = 1.5              # Downward acceleration per frame
+    TOSS_BOUNCE_DAMPING = 0.6       # Velocity retained after bounce
+    TOSS_MIN_VELOCITY = 1.5         # Minimum velocity to keep bouncing
+    TOSS_FRAME_INTERVAL = 20        # Physics tick interval (ms)
+    TOSS_FRAME_TIME = 0.016         # Approximate frame time in seconds (~60fps)
     
     # Emoji decorations shown next to the panda for each animation type
     ANIMATION_EMOJIS = {
@@ -133,6 +143,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Track drag positions for pattern detection
         self._drag_positions = []  # list of (x, y, time) tuples
         self._last_drag_time = 0  # Throttle drag events (ms)
+        self._last_wall_hit_time = 0  # Cooldown for wall hit reactions
+        
+        # Toss physics state
+        self._toss_velocity_x = 0.0
+        self._toss_velocity_y = 0.0
+        self._toss_timer = None
+        self._is_tossing = False
+        self._prev_drag_x = 0
+        self._prev_drag_y = 0
+        self._prev_drag_time = 0
         
         # Configure frame - TRANSPARENT background
         if ctk:
@@ -894,6 +914,18 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self.drag_start_y = event.y
         self.is_dragging = True
         self._drag_moved = False
+        # Stop any active toss physics
+        if self._toss_timer:
+            try:
+                self.after_cancel(self._toss_timer)
+            except Exception:
+                pass
+            self._toss_timer = None
+            self._is_tossing = False
+        # Init velocity tracking
+        self._prev_drag_x = event.x_root
+        self._prev_drag_y = event.y_root
+        self._prev_drag_time = time.monotonic()
     
     def _on_drag_motion(self, event):
         """Handle drag motion - move the panda container with throttling."""
@@ -910,6 +942,15 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._drag_positions.append((event.x_root, event.y_root, now))
         # Keep only recent positions
         self._drag_positions = [(x, y, t) for x, y, t in self._drag_positions if now - t < self.DRAG_HISTORY_SECONDS]
+        
+        # Track velocity for toss
+        dt = now - self._prev_drag_time if self._prev_drag_time else self.TOSS_FRAME_TIME
+        if dt > 0:
+            self._toss_velocity_x = (event.x_root - self._prev_drag_x) / max(dt, 0.001) * self.TOSS_FRAME_TIME
+            self._toss_velocity_y = (event.y_root - self._prev_drag_y) / max(dt, 0.001) * self.TOSS_FRAME_TIME
+        self._prev_drag_x = event.x_root
+        self._prev_drag_y = event.y_root
+        self._prev_drag_time = now
         
         # Detect drag patterns
         self._detect_drag_patterns()
@@ -963,7 +1004,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Always use relx/rely with anchor="se" to stay consistent
             parent.place(relx=rel_x, rely=rel_y, anchor="se")
             
-            if hit_wall:
+            if hit_wall and now - self._last_wall_hit_time > self.WALL_HIT_COOLDOWN_SECONDS:
+                self._last_wall_hit_time = now
                 self._set_animation_no_cancel('wall_hit')
                 if self.panda:
                     response = self.panda.on_wall_hit() if hasattr(self.panda, 'on_wall_hit') else "🐼 Ouch!"
@@ -1036,30 +1078,6 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # It was just a click (minimal movement)
             self._on_click(event)
         else:
-            # Save new position in config
-            parent = self.master
-            if parent:
-                root = self.winfo_toplevel()
-                root_w = max(1, root.winfo_width())
-                root_h = max(1, root.winfo_height())
-                parent_w = max(1, parent.winfo_width())
-                parent_h = max(1, parent.winfo_height())
-                
-                # Calculate relative position consistently with anchor="se"
-                rel_x = (parent.winfo_x() + parent_w) / root_w
-                rel_y = (parent.winfo_y() + parent_h) / root_h
-                rel_x = max(0.05, min(1.0, rel_x))
-                rel_y = max(0.05, min(1.0, rel_y))
-                
-                try:
-                    from src.config import config
-                    config.set('panda', 'position_x', value=rel_x)
-                    config.set('panda', 'position_y', value=rel_y)
-                    config.save()
-                    logger.info(f"Saved panda position: ({rel_x:.2f}, {rel_y:.2f})")
-                except Exception as e:
-                    logger.warning(f"Failed to save panda position: {e}")
-            
             if self.panda:
                 response = self.panda.on_toss() if hasattr(self.panda, 'on_toss') else "🐼 Home sweet home!"
                 self.info_label.configure(text=response)
@@ -1071,8 +1089,140 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         xp = 5
                     self.panda_level_system.add_xp(xp, 'Moved panda')
             
-            # Play tossed animation briefly then return to idle
-            self.play_animation_once('tossed')
+            # Start toss physics if there's enough velocity
+            speed = (self._toss_velocity_x ** 2 + self._toss_velocity_y ** 2) ** 0.5
+            if speed > self.TOSS_MIN_VELOCITY:
+                self._start_toss_physics()
+            else:
+                # Just save position and return to idle
+                self._save_panda_position()
+                self.play_animation_once('tossed')
+    
+    def _start_toss_physics(self):
+        """Start toss physics simulation - panda bounces off walls and floor."""
+        self._is_tossing = True
+        self._set_animation_no_cancel('tossed')
+        self._toss_bounce_count = 0
+        self._toss_physics_tick()
+    
+    def _toss_physics_tick(self):
+        """Run one frame of toss physics."""
+        if self._destroyed or not self._is_tossing:
+            return
+        
+        parent = self.master
+        if not parent or not hasattr(parent, 'place'):
+            self._stop_toss_physics()
+            return
+        
+        try:
+            root = self.winfo_toplevel()
+            root_w = max(1, root.winfo_width())
+            root_h = max(1, root.winfo_height())
+            parent_w = max(1, parent.winfo_width())
+            parent_h = max(1, parent.winfo_height())
+            
+            # Current position
+            x = float(parent.winfo_x())
+            y = float(parent.winfo_y())
+            
+            # Apply gravity
+            self._toss_velocity_y += self.TOSS_GRAVITY
+            
+            # Apply friction
+            self._toss_velocity_x *= self.TOSS_FRICTION
+            self._toss_velocity_y *= self.TOSS_FRICTION
+            
+            # Move
+            x += self._toss_velocity_x
+            y += self._toss_velocity_y
+            
+            # Bounce off walls
+            max_x = max(0, root_w - parent_w)
+            max_y = max(0, root_h - parent_h)
+            
+            bounced = False
+            if x <= 0:
+                x = 0
+                self._toss_velocity_x = abs(self._toss_velocity_x) * self.TOSS_BOUNCE_DAMPING
+                bounced = True
+            elif x >= max_x:
+                x = max_x
+                self._toss_velocity_x = -abs(self._toss_velocity_x) * self.TOSS_BOUNCE_DAMPING
+                bounced = True
+            
+            if y <= 0:
+                y = 0
+                self._toss_velocity_y = abs(self._toss_velocity_y) * self.TOSS_BOUNCE_DAMPING
+                bounced = True
+            elif y >= max_y:
+                y = max_y
+                self._toss_velocity_y = -abs(self._toss_velocity_y) * self.TOSS_BOUNCE_DAMPING
+                bounced = True
+            
+            if bounced:
+                self._toss_bounce_count += 1
+                # Cycle through bounce animations
+                bounce_anims = ['tossed', 'wall_hit', 'rolling', 'spinning']
+                anim = bounce_anims[self._toss_bounce_count % len(bounce_anims)]
+                self._set_animation_no_cancel(anim)
+            
+            # Place at new position
+            rel_x = (x + parent_w) / max(1, root_w)
+            rel_y = (y + parent_h) / max(1, root_h)
+            rel_x = max(0.0, min(1.0, rel_x))
+            rel_y = max(0.0, min(1.0, rel_y))
+            parent.place(relx=rel_x, rely=rel_y, anchor="se")
+            
+            # Check if velocity is low enough to stop
+            speed = (self._toss_velocity_x ** 2 + self._toss_velocity_y ** 2) ** 0.5
+            if speed < self.TOSS_MIN_VELOCITY:
+                self._stop_toss_physics()
+                return
+            
+            # Schedule next tick
+            self._toss_timer = self.after(self.TOSS_FRAME_INTERVAL, self._toss_physics_tick)
+        except Exception as e:
+            logger.debug(f"Toss physics error: {e}")
+            self._stop_toss_physics()
+    
+    def _stop_toss_physics(self):
+        """Stop toss physics and save final position."""
+        self._is_tossing = False
+        if self._toss_timer:
+            try:
+                self.after_cancel(self._toss_timer)
+            except Exception:
+                pass
+            self._toss_timer = None
+        self._toss_velocity_x = 0.0
+        self._toss_velocity_y = 0.0
+        self._save_panda_position()
+        self.start_animation('idle')
+    
+    def _save_panda_position(self):
+        """Save the current panda position to config."""
+        parent = self.master
+        if parent:
+            try:
+                root = self.winfo_toplevel()
+                root_w = max(1, root.winfo_width())
+                root_h = max(1, root.winfo_height())
+                parent_w = max(1, parent.winfo_width())
+                parent_h = max(1, parent.winfo_height())
+                
+                rel_x = (parent.winfo_x() + parent_w) / root_w
+                rel_y = (parent.winfo_y() + parent_h) / root_h
+                rel_x = max(0.05, min(1.0, rel_x))
+                rel_y = max(0.05, min(1.0, rel_y))
+                
+                from src.config import config
+                config.set('panda', 'position_x', value=rel_x)
+                config.set('panda', 'position_y', value=rel_y)
+                config.save()
+                logger.info(f"Saved panda position: ({rel_x:.2f}, {rel_y:.2f})")
+            except Exception as e:
+                logger.warning(f"Failed to save panda position: {e}")
     
     def _on_click(self, event=None):
         """Handle left click on panda with body part detection."""
@@ -1549,7 +1699,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     def destroy(self):
         """Clean up widget."""
         self._destroyed = True
+        self._is_tossing = False
         self._cancel_animation_timer()
+        if self._toss_timer:
+            try:
+                self.after_cancel(self._toss_timer)
+            except Exception:
+                pass
+            self._toss_timer = None
         if self._speech_timer:
             try:
                 self.after_cancel(self._speech_timer)
