@@ -89,6 +89,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     TOSS_BOUNCE_DAMPING = 0.6       # Velocity retained after bounce
     TOSS_MIN_VELOCITY = 1.5         # Minimum velocity to keep bouncing
     TOSS_FRAME_INTERVAL = 20        # Physics tick interval (ms)
+    TOSS_FRAME_TIME = 0.016         # Approximate frame time in seconds (~60fps)
     
     # Emoji decorations shown next to the panda for each animation type
     ANIMATION_EMOJIS = {
@@ -943,10 +944,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._drag_positions = [(x, y, t) for x, y, t in self._drag_positions if now - t < self.DRAG_HISTORY_SECONDS]
         
         # Track velocity for toss
-        dt = now - self._prev_drag_time if self._prev_drag_time else 0.016
+        dt = now - self._prev_drag_time if self._prev_drag_time else self.TOSS_FRAME_TIME
         if dt > 0:
-            self._toss_velocity_x = (event.x_root - self._prev_drag_x) / max(dt, 0.001) * 0.016
-            self._toss_velocity_y = (event.y_root - self._prev_drag_y) / max(dt, 0.001) * 0.016
+            self._toss_velocity_x = (event.x_root - self._prev_drag_x) / max(dt, 0.001) * self.TOSS_FRAME_TIME
+            self._toss_velocity_y = (event.y_root - self._prev_drag_y) / max(dt, 0.001) * self.TOSS_FRAME_TIME
         self._prev_drag_x = event.x_root
         self._prev_drag_y = event.y_root
         self._prev_drag_time = now

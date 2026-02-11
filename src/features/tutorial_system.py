@@ -1001,8 +1001,8 @@ class WidgetTooltip:
                 dynamic = self.tooltip_manager.get_tooltip(self.widget_id)
                 if dynamic:
                     return dynamic
-            except Exception:
-                pass
+            except (AttributeError, KeyError, TypeError) as e:
+                logger.debug(f"Dynamic tooltip resolution failed for {self.widget_id}: {e}")
         return self.text
     
     def _on_enter(self, event=None):

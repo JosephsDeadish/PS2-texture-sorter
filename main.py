@@ -824,7 +824,6 @@ class PS2TextureSorter(ctk.CTk):
                     # Reparent to popout container
                     child.pack_forget()
                     child.master = content
-                    child.configure(master=content) if hasattr(child, 'configure') else None
                     # Reparent via internal tk call
                     child.tk.call(child._w, 'configure', '-master', str(content))
                     # Repack with original settings or sensible defaults
@@ -1880,11 +1879,14 @@ class PS2TextureSorter(ctk.CTk):
                 return label
             
             # Load and resize image
-            with Image.open(file_path) as img:
+            img = Image.open(file_path)
+            try:
                 # Convert DDS if needed
                 if file_path.suffix.lower() == '.dds':
                     if img.mode not in ('RGB', 'RGBA'):
-                        img = img.convert('RGBA')
+                        converted = img.convert('RGBA')
+                        img.close()
+                        img = converted
                 
                 # Force load pixel data before creating CTkImage
                 img.load()
@@ -1894,6 +1896,8 @@ class PS2TextureSorter(ctk.CTk):
                 
                 # Make a copy so the file handle can be released
                 thumb_img = img.copy()
+            finally:
+                img.close()
             
             # Use CTkImage for proper display in customtkinter
             photo = ctk.CTkImage(light_image=thumb_img, dark_image=thumb_img, size=(thumb_size, thumb_size))
