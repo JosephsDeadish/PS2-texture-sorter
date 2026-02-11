@@ -3744,10 +3744,34 @@ class PS2TextureSorter(ctk.CTk):
             claimed = 0
             for a in achievements:
                 if (a.unlocked or a.is_complete()) and a.reward and not getattr(a, '_reward_claimed', False):
-                    self._claim_achievement_reward(a)
+                    # Inline reward granting to avoid per-claim UI refresh
+                    reward = a.reward
+                    reward_type = reward.get('type', '')
+                    desc = reward.get('description', '')
+                    if reward_type == 'currency' and self.currency_system:
+                        amount = reward.get('amount', 0)
+                        if amount > 0:
+                            self.currency_system.add_money(amount, f"Achievement reward: {a.name}")
+                    elif reward_type == 'exclusive_item' and self.panda_closet:
+                        item_id = reward.get('item', '')
+                        if item_id:
+                            closet_item = self.panda_closet.get_item(item_id)
+                            if closet_item and not closet_item.unlocked:
+                                closet_item.unlocked = True
+                    a._reward_claimed = True
+                    self.log(f"🎁 Claimed reward for '{a.name}': {desc}")
                     claimed += 1
+            # Single UI refresh after all claims
             if claimed > 0:
+                if hasattr(self, 'shop_money_label') and self.currency_system:
+                    self.shop_money_label.configure(text=f"💰 Money: ${self.currency_system.get_balance()}")
+                if self.panda_closet:
+                    try:
+                        self.panda_closet.save_to_file(str(CONFIG_DIR / 'closet.json'))
+                    except Exception:
+                        pass
                 self.log(f"🎁 Claimed {claimed} achievement reward(s)!")
+                self._display_achievements(self._achievement_category_filter)
                 messagebox.showinfo("Rewards Claimed", f"Successfully claimed {claimed} reward(s)!")
             else:
                 messagebox.showinfo("No Rewards", "No unclaimed rewards available.")
@@ -4966,7 +4990,7 @@ Built with:
     def _draw_static_panda(self, canvas, w, h):
         """Draw a simplified static panda on a preview canvas."""
         cx = w // 2
-        # Scale factor for fitting into preview
+        # Reference dimensions for the panda drawing (original design space)
         sx = w / 220.0
         sy = h / 270.0
         s = min(sx, sy)
