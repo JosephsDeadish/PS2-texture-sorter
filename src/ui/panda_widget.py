@@ -208,9 +208,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         Uses CustomTkinter's built-in colour detection so the canvas
         blends seamlessly (no visible box) in both light and dark modes.
         """
-        # Use CTk's own detection for the most accurate parent colour
+        # Use CTk's own detection for the most accurate parent color
         try:
-            if ctk and isinstance(self, ctk.CTkBaseClass):
+            if ctk and hasattr(self, '_detect_color_of_master'):
                 color = self._detect_color_of_master()
                 return self._apply_appearance_mode(color)
         except Exception:
@@ -223,7 +223,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     if ctk and isinstance(widget, ctk.CTkBaseClass):
                         fg = widget.cget("fg_color")
                         if fg and fg != "transparent":
-                            return self._apply_appearance_mode(fg) if isinstance(fg, (tuple, list)) else fg
+                            return self._apply_appearance_mode(fg)
                     bg = widget.cget("bg")
                     if bg and bg != "SystemButtonFace":
                         return bg
