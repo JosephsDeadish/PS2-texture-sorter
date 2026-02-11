@@ -301,6 +301,54 @@ class PandaCloset:
             'rain_boots', 'Rain Boots', CustomizationCategory.SHOES,
             '🥾', 'Splash through puddles', ItemRarity.UNCOMMON, 70, False, False
         ),
+
+        # Shop-synced Accessories
+        'bow_tie': CustomizationItem(
+            'bow_tie', 'Bow Tie', CustomizationCategory.ACCESSORY,
+            '🎀', 'A classic bow tie', ItemRarity.COMMON, 35, False, False
+        ),
+        'cape': CustomizationItem(
+            'cape', 'Cape', CustomizationCategory.ACCESSORY,
+            '🦸', 'Swish and swoosh', ItemRarity.UNCOMMON, 100, False, False
+        ),
+        'watch': CustomizationItem(
+            'watch', 'Wrist Watch', CustomizationCategory.ACCESSORY,
+            '⌚', 'Always on time', ItemRarity.UNCOMMON, 90, False, False
+        ),
+
+        # Shop-synced Clothing
+        'dress': CustomizationItem(
+            'dress', 'Elegant Dress', CustomizationCategory.CLOTHING,
+            '👗', 'Dressed to impress', ItemRarity.RARE, 200, False, False
+        ),
+        'lab_coat': CustomizationItem(
+            'lab_coat', 'Lab Coat', CustomizationCategory.CLOTHING,
+            '🥼', 'Science panda reporting', ItemRarity.UNCOMMON, 120, False, False
+        ),
+        'leather_jacket': CustomizationItem(
+            'leather_jacket', 'Leather Jacket', CustomizationCategory.CLOTHING,
+            '🧥', 'Cool and rebellious', ItemRarity.RARE, 250, False, False
+        ),
+        'pajamas': CustomizationItem(
+            'pajamas', 'Cozy Pajamas', CustomizationCategory.CLOTHING,
+            '🩳', 'Sleepy panda vibes', ItemRarity.COMMON, 50, False, False
+        ),
+        'sports_jersey': CustomizationItem(
+            'sports_jersey', 'Sports Jersey', CustomizationCategory.CLOTHING,
+            '🏀', 'Game day ready', ItemRarity.UNCOMMON, 150, False, False
+        ),
+        'superhero_cape': CustomizationItem(
+            'superhero_cape', 'Superhero Cape', CustomizationCategory.CLOTHING,
+            '🦸‍♂️', 'Up, up, and away!', ItemRarity.EPIC, 500, False, False
+        ),
+        'tuxedo': CustomizationItem(
+            'tuxedo', 'Tuxedo', CustomizationCategory.CLOTHING,
+            '🤵', 'Black tie affair', ItemRarity.RARE, 300, False, False
+        ),
+        'vest': CustomizationItem(
+            'vest', 'Stylish Vest', CustomizationCategory.CLOTHING,
+            '🦺', 'Layered look', ItemRarity.COMMON, 60, False, False
+        ),
     }
     
     def __init__(self, currency_manager: Optional[object] = None):

@@ -1038,7 +1038,7 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(container, text="📊 Panda Stats & Mood (Undocked)",
                     font=("Arial Bold", 16)).pack(pady=20)
         if self.panda:
-            stats_text = f"Mood: {self.panda.mood}\nHunger: {self.panda.hunger}\nEnergy: {self.panda.energy}"
+            stats_text = f"Mood: {self.panda.current_mood.value.title()}\nClicks: {self.panda.click_count}\nFeedings: {self.panda.feed_count}"
             ctk.CTkLabel(container, text=stats_text,
                         font=("Arial", 12)).pack(pady=10)
     
