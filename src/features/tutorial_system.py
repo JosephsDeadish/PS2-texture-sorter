@@ -588,6 +588,26 @@ class TooltipVerbosityManager:
             'keyboard_controls': "View and customize keyboard shortcuts",
             'tooltip_mode': "Choose how tooltips are displayed: normal, beginner, or panda mode",
             'theme_selector': "Choose a visual theme for the application",
+            # Inventory tooltips
+            'inventory_purchased': "Items purchased from the shop",
+            'inventory_give_button': "Give this item to your panda for interaction",
+            'inventory_toy': "Your toy collection — use toys to play with your panda",
+            'inventory_food': "Your food collection — feed your panda to increase happiness",
+            'inventory_accessory': "Your accessory collection — equip via the closet",
+            'inventory_unlocked': "Summary of rewards you have unlocked so far",
+            # Closet tooltips
+            'closet_header': "Dress up your panda with outfits and accessories you own",
+            'closet_equip': "Equip this item on your panda",
+            'closet_unequip': "Remove this item from your panda",
+            'closet_appearance': "Your panda's current outfit summary",
+            # Achievement tooltips
+            'achievement_claim': "Claim the reward for this completed achievement",
+            'achievement_claim_all': "Claim all available achievement rewards at once",
+            'achievement_progress': "Track your progress toward completing this achievement",
+            # Shop-specific tooltips
+            'shop_price': "The cost in Bamboo Bucks to purchase this item",
+            'shop_level_req': "The user level required to unlock this item for purchase",
+            'shop_item_name': "Click for more details about this item",
         }
         
         # Pull from PandaMode TOOLTIPS if available
@@ -785,10 +805,150 @@ class TooltipVerbosityManager:
             'inventory_tab': [
                 "Your collection of toys and food items! Use them to interact with "
                 "your panda and make it happy.",
+                "Everything you own is here — toys, food, and accessories. "
+                "Click 'Give to Panda' to use any unlocked item.",
+                "Your item collection! Organized by category and rarity. "
+                "Locked items need to be purchased from the Shop first.",
+                "All your stuff in one place. Use toys to play, food to feed, "
+                "and accessories to decorate your panda!",
+                "The inventory shows everything you've collected. Items are sorted "
+                "by type and rarity for easy browsing.",
+            ],
+            'inventory_purchased': [
+                "These are items you've bought from the shop. They're yours to keep!",
+                "Your purchased items from the shop are listed here.",
+                "Everything you've spent Bamboo Bucks on shows up here.",
+                "Shop purchases appear in this section. One-time items stay forever!",
+                "Your shopping history — all purchased items are shown here.",
+            ],
+            'inventory_give_button': [
+                "Give this item to your panda! They'll react with an animation.",
+                "Click to use this item with your panda companion.",
+                "Share this with your panda — watch them play or eat!",
+                "Hand this over to your panda and see what happens!",
+                "Your panda would love this! Click to give it to them.",
+                "Use this item on your panda for a fun interaction.",
             ],
             'panda_stats_tab': [
                 "See how your panda is doing! Check its mood, how many times "
                 "you've petted or fed it, and other fun stats.",
+                "Your panda's dashboard — mood, interaction history, level, "
+                "and a live preview all in one place.",
+                "Everything about your panda at a glance. Stats update "
+                "automatically every few seconds!",
+                "Check on your panda friend — see their mood, stats, level, "
+                "and even discovered easter eggs.",
+                "The panda stats page shows live data about your companion. "
+                "No refresh needed — it updates on its own!",
+            ],
+            # Closet tooltips
+            'closet_tab': [
+                "This is where you dress up your panda companion! Choose from outfits "
+                "and accessories you've unlocked to make your panda look unique.",
+                "Dress up your panda! Pick outfits, hats, and accessories "
+                "from your unlocked collection.",
+                "Your panda's wardrobe — equip or unequip items you own. "
+                "Buy new items in the Shop to expand your collection!",
+                "Mix and match fur styles, clothes, hats, shoes, and accessories "
+                "to create your perfect panda look!",
+                "The closet only shows items you own. Visit the Shop to "
+                "buy new outfits and accessories!",
+            ],
+            'closet_equip': [
+                "Click to put this item on your panda.",
+                "Equip this item — your panda will wear it right away!",
+                "Dress your panda with this item. Click to equip!",
+                "Add this to your panda's outfit. Click to equip.",
+                "Your panda would look great in this! Click to try it on.",
+            ],
+            'closet_unequip': [
+                "Click to take this item off your panda.",
+                "Remove this item from your panda's outfit.",
+                "Unequip this item — it'll go back to your collection.",
+                "Take this off your panda. You can re-equip it anytime!",
+                "Remove from outfit. The item stays in your closet.",
+            ],
+            # Achievement tooltips
+            'achievements_tab': [
+                "This tab shows all the achievements you can earn by using the app. "
+                "Each achievement tracks your progress and unlocks rewards when completed!",
+                "View your achievements! Complete challenges to earn rewards and "
+                "unlock new features.",
+                "Track your progress across different challenges. Completed achievements "
+                "can be claimed for Bamboo Bucks and exclusive items!",
+                "Your achievement collection — from beginner tasks to legendary challenges. "
+                "Each one rewards you with points, currency, or exclusive items.",
+                "Achievements are earned automatically as you use the app. "
+                "Check back often to see your progress and claim rewards!",
+            ],
+            'achievement_claim': [
+                "Click to collect your reward for completing this achievement!",
+                "You've earned this! Click Claim to get your reward.",
+                "Reward ready! Click to add it to your collection.",
+                "Congratulations! Claim your well-deserved reward here.",
+                "This achievement is complete — click to claim your prize!",
+            ],
+            'achievement_claim_all': [
+                "Claim all available rewards at once — quick and easy!",
+                "Got multiple completed achievements? Claim everything in one click!",
+                "Batch claim all your pending rewards. No reward left behind!",
+                "Collect all your achievement rewards with a single click.",
+                "Why claim one at a time? Get all your rewards here!",
+            ],
+            # Shop tooltips
+            'shop_tab': [
+                "This is where you trade points for cool stuff. You earn points by "
+                "sorting textures and completing achievements, then spend them here!",
+                "The shop! Spend your earned Bamboo Bucks on themes, cursors, "
+                "outfits, and other fun items.",
+                "Browse items for sale — outfits, themes, cursors, food, and more! "
+                "Earn Bamboo Bucks through achievements and interactions.",
+                "Your one-stop shop for panda accessories, app themes, cursors, "
+                "and special upgrades. New items unlock as you level up!",
+                "Spend your hard-earned Bamboo Bucks here. Higher-level items "
+                "become available as you gain experience.",
+            ],
+            'shop_buy_button': [
+                "Click this button to buy the item. Make sure you have enough points "
+                "first! The price is shown next to the item.",
+                "Purchase this item with your Bamboo Bucks. The price is deducted "
+                "from your balance immediately.",
+                "Buy this item! You'll be asked to confirm before the purchase "
+                "goes through.",
+                "Ready to buy? Click here! You'll get a confirmation dialog first.",
+                "Add this to your collection! Requires enough Bamboo Bucks.",
+            ],
+            'shop_category_button': [
+                "Click one of these buttons to show only items from that category. "
+                "This helps you find what you're looking for faster.",
+                "Filter the shop by category to find items faster.",
+                "Browse a specific type of item. Click any category to filter.",
+                "Narrow down the shop to just this category of items.",
+                "Show only items in this category. Click another to switch.",
+            ],
+            'shop_price': [
+                "The cost in Bamboo Bucks. Earn more by sorting textures and "
+                "completing achievements!",
+                "This is how many Bamboo Bucks you need. Check your balance "
+                "in the top-right corner.",
+                "Item price in Bamboo Bucks. You earn currency by using "
+                "the app and completing challenges.",
+                "Cost of this item. Not enough? Sort more textures or "
+                "complete achievements to earn Bamboo Bucks!",
+                "The price tag! Bamboo Bucks are earned through app usage, "
+                "achievements, and panda interactions.",
+            ],
+            'shop_level_req': [
+                "Some items require a higher user level. Keep using the app "
+                "to level up and unlock more items!",
+                "This item has a level requirement. Gain XP by sorting "
+                "textures to reach the needed level.",
+                "Level locked! Use the app more to gain experience and "
+                "unlock this item.",
+                "Your level isn't high enough yet. Keep sorting and "
+                "interacting to level up!",
+                "Reach the required level to purchase this. XP is earned "
+                "through sorting and achievements.",
             ],
             'keyboard_controls': [
                 "View all keyboard shortcuts and change them to whatever keys "
@@ -927,10 +1087,116 @@ class TooltipVerbosityManager:
             'inventory_tab': [
                 "Your hoard of toys and snacks. Use 'em or lose 'em.",
                 "All your stuff. Feed the panda or play with toys.",
+                "Your loot stash. Every item you've hoarded is here.",
+                "The toybox and snack drawer. Go wild.",
+                "Your collection of random crap. Some of it's useful!",
+                "Items galore. Give stuff to the panda or just admire it.",
+            ],
+            'inventory_purchased': [
+                "Your shopping spree results. No refunds.",
+                "Everything you blew your Bamboo Bucks on. Worth it? Maybe.",
+                "Purchased goods. Your wallet cried, but here they are.",
+                "All your impulse purchases in one convenient place.",
+                "The evidence of your spending habits. No judgment. Much.",
+            ],
+            'inventory_give_button': [
+                "Yeet this at the panda. They'll love it. Probably.",
+                "Share with the panda. They're always hungry anyway.",
+                "Give it to the bear. What's the worst that could happen?",
+                "Hand it over to your fluffy roommate.",
+                "Panda wants it. Panda gets it. Click the button.",
+                "Bribe the panda with gifts. Classic strategy.",
             ],
             'panda_stats_tab': [
                 "Stalk your panda's mood and life choices.",
                 "Check on your panda. Is it happy? Who cares. Check anyway.",
+                "Your panda's FBI file. All the stats, all the time.",
+                "Mood check! See if your panda still likes you.",
+                "Stats nerd paradise. Every click, pet, and feed tracked.",
+                "The panda dashboard. Everything updates live. Fancy, right?",
+            ],
+            # Closet tooltips
+            'closet_tab': [
+                "Dress up your panda. Fashion show time.",
+                "Panda makeover! Because even virtual bears need style.",
+                "The panda wardrobe. Project Runway: Panda Edition.",
+                "Fashion police? Never heard of 'em. Dress your panda however you want.",
+                "Outfit central. Make your panda look fabulous. Or ridiculous.",
+                "Closet raid! Equip outfits, hats, and accessories.",
+            ],
+            'closet_equip': [
+                "Slap this on your panda. Fashion awaits.",
+                "Dress up time! Put this on the bear.",
+                "Equip it. Your panda's been waiting for this look.",
+                "Add this to the outfit. Style points incoming.",
+                "Your panda would rock this. Equip it already!",
+            ],
+            'closet_unequip': [
+                "Strip it off. The panda doesn't mind. Probably.",
+                "Remove this item. Back to the closet it goes.",
+                "Take it off. Minimalism is a valid aesthetic.",
+                "Unequip. Sometimes less is more. Or just more naked.",
+                "Remove from outfit. Don't worry, it's still yours.",
+            ],
+            # Achievement tooltips
+            'achievements_tab': [
+                "Check your trophies, you overachiever.",
+                "See how many fake awards you've collected. Congrats, I guess.",
+                "Achievement unlocked: Opening the achievements tab. Just kidding.",
+                "Your trophy case. Some earned, some... not so much.",
+                "All your bragging rights in one place. You're welcome.",
+                "Achievements! Because validation through virtual badges is totally normal.",
+            ],
+            'achievement_claim': [
+                "Gimme gimme! Claim your reward, you earned it.",
+                "Click to cash in. Cha-ching!",
+                "Reward time! Claim it before the panda does.",
+                "You did the thing! Now get the stuff!",
+                "Free loot! Well, you did earn it. Technically.",
+            ],
+            'achievement_claim_all': [
+                "CLAIM EVERYTHING. Maximum efficiency!",
+                "Bulk claim. Because who has time for one-by-one?",
+                "All the rewards. All at once. Living the dream.",
+                "Speed run: Claim all rewards edition.",
+                "One click to rule them all. Claim everything!",
+            ],
+            # Shop tooltips
+            'shop_tab': [
+                "This is the loot cave. Spend your shiny points, idiot.",
+                "The shop. Where your hard-earned points go to die.",
+                "Retail therapy, but make it virtual. And with a panda.",
+                "Your Bamboo Bucks burning a hole in your pocket? Spend 'em here.",
+                "The marketplace. Window shopping is free, buying costs bucks.",
+                "Shop 'til you drop. Or until you're broke. Same thing.",
+            ],
+            'shop_buy_button': [
+                "Yeet your money at this item. Do it.",
+                "Buy it. You know you want to. Impulse control is overrated.",
+                "Click buy. Regret later. That's the spirit!",
+                "Purchase! Your wallet says no, but your heart says yes.",
+                "Money is temporary. This item is... also temporary. But fun!",
+            ],
+            'shop_category_button': [
+                "Filter the shop. Because scrolling is for peasants.",
+                "Narrow it down. Too many choices hurting your brain?",
+                "Category filter. For the organized shopper in you.",
+                "Browse by type. Window shopping just got easier.",
+                "Pick a lane. What are you shopping for today?",
+            ],
+            'shop_price': [
+                "That's the price tag. No haggling allowed.",
+                "The damage. Can you afford it? Only one way to find out.",
+                "Cost in Bamboo Bucks. Earn more by actually using the app.",
+                "The price. Not negotiable. I don't make the rules.",
+                "How much this costs. Start sorting more textures if you're broke.",
+            ],
+            'shop_level_req': [
+                "Level locked, noob. Keep grinding.",
+                "Your level isn't high enough. Git gud.",
+                "Need more XP to unlock this. Back to the texture mines!",
+                "Level requirement. AKA 'you need to use the app more.'",
+                "Locked behind a level gate. Time to grind, baby!",
             ],
             'keyboard_controls': [
                 "Keyboard shortcuts. Customize 'em if you dare.",

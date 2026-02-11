@@ -5,13 +5,19 @@ Author: Dead On The Inside / JosephsDeadish
 
 import logging
 import tkinter as tk
-from typing import Optional
+from typing import Optional, List
 try:
     import customtkinter as ctk
 except ImportError:
     ctk = None
 
 from src.features.panda_closet import PandaCloset, CustomizationCategory, CustomizationItem
+
+# Try to import tooltip support
+try:
+    from src.features.tutorial_system import WidgetTooltip
+except ImportError:
+    WidgetTooltip = None
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +44,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         self.panda_character = panda_character
         self.panda_preview = panda_preview_callback
         self.current_category = CustomizationCategory.FUR_STYLE
+        self._tooltips: List = []  # Prevent tooltip garbage collection
         
         # Configure grid
         self.grid_columnconfigure(1, weight=1)
@@ -60,6 +67,8 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             font=("Arial", 20, "bold")
         )
         header.grid(row=0, column=0, columnspan=2, padx=20, pady=10)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(header, "Dress up your panda with outfits and accessories you own"))
         
         # Note: Panda name/gender settings are now under Panda Stats (right-click panda)
         
@@ -77,6 +86,15 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             (CustomizationCategory.ACCESSORY, "✨ Accessories"),
         ]
         
+        category_tips = {
+            CustomizationCategory.FUR_STYLE: "Change your panda's fur pattern and style",
+            CustomizationCategory.FUR_COLOR: "Pick a fur color for your panda",
+            CustomizationCategory.CLOTHING: "Browse owned clothing items to equip",
+            CustomizationCategory.HAT: "Try on hats — equip or unequip from here",
+            CustomizationCategory.SHOES: "Choose shoes for your panda to wear",
+            CustomizationCategory.ACCESSORY: "Accessorize your panda with fun items",
+        }
+        
         for category, label in categories:
             btn = ctk.CTkButton(
                 category_frame,
@@ -88,6 +106,8 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
                 command=lambda c=category: self._select_category(c)
             )
             btn.pack(pady=5, fill="x")
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(btn, category_tips.get(category, f"Browse {label} items")))
         
         # Scrollable content frame
         if ctk:
@@ -137,6 +157,9 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             font=("Arial", 10)
         )
         appearance_text.pack(side="left", padx=5)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(appearance_label, "Shows what your panda is currently wearing"))
+            self._tooltips.append(WidgetTooltip(appearance_text, "Your panda's current outfit summary"))
     
     def refresh(self):
         """Refresh the closet display to show newly purchased items."""
@@ -215,6 +238,8 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             font=("Arial", 14, "bold")
         )
         name_label.pack(side="left", padx=5)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(name_label, f"{item.name} — {item.description}"))
         
         # Description
         desc_label = ctk.CTkLabel(
@@ -249,6 +274,8 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             font=("Arial", 10, "bold")
         )
         rarity_label.pack(side="left", padx=5)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(rarity_label, f"{item.rarity.value.title()} rarity item"))
         
         # Buttons frame — only equip/unequip for owned items
         btn_frame = ctk.CTkFrame(card) if ctk else tk.Frame(card)
@@ -270,6 +297,8 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
                 command=lambda: self._unequip_item(item.id)
             )
             unequip_btn.pack(side="left", padx=2)
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(unequip_btn, f"Click to unequip {item.name}"))
         else:
             # Equip button
             equip_btn = ctk.CTkButton(
@@ -283,6 +312,8 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
                 command=lambda: self._equip_item(item.id)
             )
             equip_btn.pack(side="left", padx=2)
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(equip_btn, f"Equip {item.name} on your panda"))
     
     def _equip_item(self, item_id: str):
         """Equip an item."""

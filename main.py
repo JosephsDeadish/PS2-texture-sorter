@@ -3451,8 +3451,11 @@ class PS2TextureSorter(ctk.CTk):
     
     def create_achievements_tab(self):
         """Create achievements tab"""
-        ctk.CTkLabel(self.tab_achievements, text="🏆 Achievements 🏆",
-                     font=("Arial Bold", 18)).pack(pady=15)
+        ach_header = ctk.CTkLabel(self.tab_achievements, text="🏆 Achievements 🏆",
+                     font=("Arial Bold", 18))
+        ach_header.pack(pady=15)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(ach_header, self._get_tooltip_text('achievements_tab') or "Track your progress and earn rewards by completing challenges"))
         
         if not self.achievement_manager:
             # No achievement manager
@@ -3484,6 +3487,19 @@ class PS2TextureSorter(ctk.CTk):
             "easter_egg": "🥚 Easter Eggs",
         }
         
+        category_tips = {
+            "all": "Show all achievements across every category",
+            "beginner": "Introductory achievements for new users",
+            "progress": "Achievements earned by sorting more textures",
+            "speed": "Achievements for fast sorting performance",
+            "session": "Achievements for time spent using the app",
+            "features": "Achievements for exploring app features",
+            "quality": "Achievements for high-quality sorting results",
+            "special": "Special and hidden achievements",
+            "meta": "Achievements about earning other achievements",
+            "easter_egg": "Secret achievements hidden throughout the app",
+        }
+        
         for cat_id, cat_label in category_labels.items():
             btn = ctk.CTkButton(
                 categories_frame, text=cat_label, width=80, height=28,
@@ -3491,6 +3507,8 @@ class PS2TextureSorter(ctk.CTk):
                 command=lambda c=cat_id: self._filter_achievements(c)
             )
             btn.pack(side="left", padx=2, pady=3)
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(btn, category_tips.get(cat_id, f"Filter to {cat_label} achievements")))
         
         # Achievement scroll frame
         self.achieve_scroll = ctk.CTkScrollableFrame(self.tab_achievements, width=1000, height=600)
@@ -3785,8 +3803,11 @@ class PS2TextureSorter(ctk.CTk):
         header_frame = ctk.CTkFrame(self.tab_shop)
         header_frame.pack(fill="x", pady=10, padx=10)
         
-        ctk.CTkLabel(header_frame, text="🛒 Shop 🛒",
-                     font=("Arial Bold", 18)).pack(side="left", padx=10)
+        shop_title = ctk.CTkLabel(header_frame, text="🛒 Shop 🛒",
+                     font=("Arial Bold", 18))
+        shop_title.pack(side="left", padx=10)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(shop_title, self._get_tooltip_text('shop_tab') or "Spend your Bamboo Bucks on items, outfits, themes, and more"))
         
         # Money display
         if self.currency_system:
@@ -3794,12 +3815,17 @@ class PS2TextureSorter(ctk.CTk):
             self.shop_money_label = ctk.CTkLabel(header_frame, text=money_text,
                          font=("Arial Bold", 14), text_color="#00cc00")
             self.shop_money_label.pack(side="right", padx=20)
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(self.shop_money_label, "Your current Bamboo Bucks balance — earn more through achievements and interactions"))
         
         # User level display
         if self.user_level_system:
             level_text = f"⭐ Level {self.user_level_system.level}"
-            ctk.CTkLabel(header_frame, text=level_text,
-                        font=("Arial Bold", 14), text_color="#ffaa00").pack(side="right", padx=10)
+            level_label = ctk.CTkLabel(header_frame, text=level_text,
+                        font=("Arial Bold", 14), text_color="#ffaa00")
+            level_label.pack(side="right", padx=10)
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(level_label, "Your current level — higher levels unlock more shop items"))
         
         if not self.shop_system or not self.currency_system:
             info_frame = ctk.CTkFrame(self.tab_shop)
@@ -3832,6 +3858,21 @@ class PS2TextureSorter(ctk.CTk):
             ShopCategory.TOYS: "🎾",
         }
         
+        # Specific tips for each shop category
+        category_shop_tips = {
+            ShopCategory.PANDA_OUTFITS: "Browse full outfit sets for your panda companion",
+            ShopCategory.CURSORS: "Custom mouse cursor styles — click to equip after purchase",
+            ShopCategory.CURSOR_TRAILS: "Visual trails that follow your cursor around the app",
+            ShopCategory.THEMES: "Color themes to change the look of the entire application",
+            ShopCategory.ANIMATIONS: "New animations for your panda to perform",
+            ShopCategory.CLOTHES: "Individual clothing items — shirts, pants, dresses for your panda",
+            ShopCategory.ACCESSORIES: "Accessories like glasses, bags, and jewelry for your panda",
+            ShopCategory.UPGRADES: "App upgrades and performance boosts",
+            ShopCategory.SPECIAL: "Limited and exclusive items — get them before they're gone!",
+            ShopCategory.FOOD: "Feed your panda — food items boost happiness instantly",
+            ShopCategory.TOYS: "Toys to play with your panda and increase interaction stats",
+        }
+        
         max_cols = 6  # wrap after 6 columns
         for idx, category in enumerate(ShopCategory):
             row = idx // max_cols
@@ -3845,7 +3886,8 @@ class PS2TextureSorter(ctk.CTk):
             btn.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
             category_buttons[category] = btn
             if WidgetTooltip:
-                self._tooltips.append(WidgetTooltip(btn, self._get_tooltip_text('shop_category_button') or "Filter shop items by this category"))
+                tip = category_shop_tips.get(category, "Filter shop items by this category")
+                self._tooltips.append(WidgetTooltip(btn, tip))
         
         # Make columns expand equally
         for col in range(max_cols):
@@ -3890,8 +3932,11 @@ class PS2TextureSorter(ctk.CTk):
             name_frame = ctk.CTkFrame(item_frame)
             name_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
             
-            ctk.CTkLabel(name_frame, text=f"{item.icon} {item.name}",
-                        font=("Arial Bold", 14)).pack(anchor="w")
+            item_name_lbl = ctk.CTkLabel(name_frame, text=f"{item.icon} {item.name}",
+                        font=("Arial Bold", 14))
+            item_name_lbl.pack(anchor="w")
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(item_name_lbl, f"{item.name}: {item.description}"))
             
             ctk.CTkLabel(name_frame, text=item.description,
                         font=("Arial", 11), text_color="gray").pack(anchor="w")
@@ -3902,15 +3947,24 @@ class PS2TextureSorter(ctk.CTk):
             
             # Price
             price_text = f"💰 ${item.price}"
-            ctk.CTkLabel(info_frame, text=price_text,
-                        font=("Arial Bold", 12), text_color="#00cc00").pack(side="left", padx=10)
+            price_lbl = ctk.CTkLabel(info_frame, text=price_text,
+                        font=("Arial Bold", 12), text_color="#00cc00")
+            price_lbl.pack(side="left", padx=10)
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(price_lbl, f"Costs {item.price} Bamboo Bucks to purchase"))
             
             # Level requirement
             if item.level_required > 1:
                 level_text = f"⭐ Lvl {item.level_required}"
                 color = "gray" if user_level >= item.level_required else "red"
-                ctk.CTkLabel(info_frame, text=level_text,
-                            font=("Arial", 10), text_color=color).pack(side="left", padx=5)
+                lvl_lbl = ctk.CTkLabel(info_frame, text=level_text,
+                            font=("Arial", 10), text_color=color)
+                lvl_lbl.pack(side="left", padx=5)
+                if WidgetTooltip:
+                    if user_level >= item.level_required:
+                        self._tooltips.append(WidgetTooltip(lvl_lbl, f"You meet the level requirement (Lvl {item.level_required})"))
+                    else:
+                        self._tooltips.append(WidgetTooltip(lvl_lbl, f"Reach Level {item.level_required} to unlock this item (you are Lvl {user_level})"))
             
             # Purchase button
             is_purchased = self.shop_system.is_purchased(item.id)
@@ -3938,7 +3992,15 @@ class PS2TextureSorter(ctk.CTk):
             )
             buy_btn.pack(side="left", padx=5)
             if WidgetTooltip:
-                self._tooltips.append(WidgetTooltip(buy_btn, self._get_tooltip_text('shop_buy_button') or "Purchase this item"))
+                if is_purchased and item.one_time_purchase:
+                    tip = f"You already own {item.name}"
+                elif user_level < item.level_required:
+                    tip = f"Reach Level {item.level_required} to purchase {item.name}"
+                elif not can_buy:
+                    tip = f"You need ${item.price} to buy {item.name} — earn more through achievements and sorting"
+                else:
+                    tip = self._get_tooltip_text('shop_buy_button') or f"Buy {item.name} for ${item.price}"
+                self._tooltips.append(WidgetTooltip(buy_btn, tip))
     
     def _purchase_item(self, item):
         """Purchase an item from the shop"""
