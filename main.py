@@ -2240,7 +2240,10 @@ class PS2TextureSorter(ctk.CTk):
             # Apply colors to CTkFrame widgets (must be last since some widgets inherit from it)
             elif isinstance(widget, ctk.CTkFrame):
                 if 'secondary' in colors:
-                    widget.configure(fg_color=colors['secondary'])
+                    try:
+                        widget.configure(fg_color=colors['secondary'])
+                    except Exception:
+                        pass
                 if 'border' in colors:
                     try:
                         widget.configure(border_color=colors['border'])
