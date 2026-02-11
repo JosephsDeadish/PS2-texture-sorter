@@ -3462,20 +3462,43 @@ class PS2TextureSorter(ctk.CTk):
         categories_frame = ctk.CTkFrame(self.tab_shop)
         categories_frame.pack(fill="x", pady=10, padx=10)
         
-        # Category buttons
+        # Category buttons - use grid layout to wrap instead of overflowing
         self.selected_category = ShopCategory.PANDA_OUTFITS
         category_buttons = {}
         
-        for category in ShopCategory:
+        # Map categories to icons for readability
+        category_icons = {
+            ShopCategory.PANDA_OUTFITS: "🐼",
+            ShopCategory.CURSORS: "🖱️",
+            ShopCategory.CURSOR_TRAILS: "✨",
+            ShopCategory.THEMES: "🎨",
+            ShopCategory.ANIMATIONS: "💃",
+            ShopCategory.CLOTHES: "👕",
+            ShopCategory.ACCESSORIES: "💎",
+            ShopCategory.UPGRADES: "⚡",
+            ShopCategory.SPECIAL: "🌟",
+            ShopCategory.FOOD: "🍱",
+            ShopCategory.TOYS: "🎾",
+        }
+        
+        max_cols = 6  # wrap after 6 columns
+        for idx, category in enumerate(ShopCategory):
+            row = idx // max_cols
+            col = idx % max_cols
+            icon = category_icons.get(category, "🛒")
             btn = ctk.CTkButton(
                 categories_frame,
-                text=category.value.replace('_', ' ').title(),
+                text=f"{icon} {category.value.replace('_', ' ').title()}",
                 command=lambda c=category: self._select_shop_category(c)
             )
-            btn.pack(side="left", padx=5, pady=5)
+            btn.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
             category_buttons[category] = btn
             if WidgetTooltip:
                 self._tooltips.append(WidgetTooltip(btn, self._get_tooltip_text('shop_category_button') or "Filter shop items by this category"))
+        
+        # Make columns expand equally
+        for col in range(max_cols):
+            categories_frame.grid_columnconfigure(col, weight=1)
         
         # Shop items scroll frame
         self.shop_scroll = ctk.CTkScrollableFrame(self.tab_shop, width=1000, height=500)

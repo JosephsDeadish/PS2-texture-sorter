@@ -56,8 +56,9 @@ class PandaCharacter:
     RAGE_CLICK_THRESHOLD = 10  # Number of clicks to trigger rage mode
     
     # Body part region boundaries (relative Y position 0.0-1.0)
-    HEAD_BOUNDARY = 0.25
-    BODY_BOUNDARY = 0.50
+    # Adjusted to match actual canvas drawing proportions
+    HEAD_BOUNDARY = 0.32
+    BODY_BOUNDARY = 0.55
     BUTT_BOUNDARY = 0.75
     
     # ASCII art animations for different states
@@ -2079,6 +2080,48 @@ class PandaCharacter:
         ],
     }
     
+    # Clothing/outfit change responses
+    CLOTHING_RESPONSES = [
+        "👔 Ooh, looking fancy! Do I look good?",
+        "👕 *twirls* Fashion panda on the runway!",
+        "🎀 This outfit is SO me!",
+        "👗 I feel like a whole new panda!",
+        "🧥 Cozy AND stylish, perfect combo!",
+        "👘 *struts* I was born for fashion!",
+        "🤵 Professional panda, at your service!",
+        "👑 Dress for the job you want, right?",
+        "✨ Mirror mirror on the wall... I look amazing!",
+        "🪞 *checks reflection* Not bad, not bad at all!",
+    ]
+
+    # Toy interaction responses
+    TOY_RESPONSES = [
+        "🎾 Yay, playtime! *bounces excitedly*",
+        "🎮 Best. Toy. Ever!",
+        "🧸 *hugs toy* This is my new favorite!",
+        "🎯 Watch this trick! *fumbles*  ...Almost had it!",
+        "🪀 I could play with this all day!",
+        "🏀 *tosses in air* Wheee!",
+        "🎲 Let's play, let's play, let's play!",
+        "🧩 Ooh, a challenge! I love puzzles!",
+        "🪁 *runs around with toy* This is the best!",
+        "🤖 A new friend! Hi there, little buddy!",
+    ]
+
+    # Food-specific context responses (more specific than FEED_RESPONSES)
+    FOOD_CONTEXT_RESPONSES = [
+        "🍱 *eyes light up* Is that for me?!",
+        "🍜 *slurp slurp* So tasty!",
+        "🍪 Cookies?! You know me so well!",
+        "🍰 *does happy food dance* 💃",
+        "🌱 Fresh and delicious! *crunch crunch*",
+        "😋 My tummy says thank you!",
+        "🍃 *carefully picks up food* Ooh, fancy!",
+        "🎋 Nothing beats a good meal!",
+        "✨ *golden bamboo sparkle* This is legendary!",
+        "🐼 *pats belly* Room for one more bite!",
+    ]
+    
     # Easter egg triggers
     EASTER_EGGS = {
         'konami': '🎮 Up, Up, Down, Down, Left, Right, Left, Right, B, A, Start!',
@@ -2363,11 +2406,23 @@ class PandaCharacter:
     def on_wall_hit(self) -> str:
         """Handle panda hitting a wall."""
         return random.choice(self.WALL_HIT_RESPONSES)
+
+    def on_clothing_change(self) -> str:
+        """Handle panda changing clothes."""
+        return random.choice(self.CLOTHING_RESPONSES)
+
+    def on_toy_received(self) -> str:
+        """Handle panda receiving a toy."""
+        return random.choice(self.TOY_RESPONSES)
+
+    def on_food_received(self) -> str:
+        """Handle panda receiving food."""
+        return random.choice(self.FOOD_CONTEXT_RESPONSES)
     
     def get_context_menu(self) -> Dict[str, str]:
         """Get right-click context menu options."""
         return {
-            'pet_panda': '🐼 Pet the panda',
+            'pet_panda': '🐾 Pet the panda',
             'feed_bamboo': '🎋 Feed bamboo',
             'check_mood': f'{self.get_mood_indicator()} Check mood',
         }
