@@ -74,6 +74,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     # Reset frame counter at this value to prevent unbounded growth
     MAX_ANIMATION_FRAME = 10000
     
+    # Drag pattern detection thresholds
+    DRAG_HISTORY_SECONDS = 1.5      # How long to retain drag positions
+    SHAKE_DIRECTION_CHANGES = 6     # X direction changes needed for shaking
+    MIN_SHAKE_MOVEMENT = 2          # Min px movement for a direction change
+    MIN_ROTATION_ANGLE = 0.05       # Min angle diff (radians) for spin detection
+    SPIN_CONSISTENCY_THRESHOLD = 0.7  # Required ratio of consistent rotations
+    
     # Emoji decorations shown next to the panda for each animation type
     ANIMATION_EMOJIS = {
         'working': ['💼', '⚙️', '📊', '💻', '☕'],
@@ -901,8 +908,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # Track position for drag pattern detection
         self._drag_positions.append((event.x_root, event.y_root, now))
-        # Keep only last 1.5 seconds of positions
-        self._drag_positions = [(x, y, t) for x, y, t in self._drag_positions if now - t < 1.5]
+        # Keep only recent positions
+        self._drag_positions = [(x, y, t) for x, y, t in self._drag_positions if now - t < self.DRAG_HISTORY_SECONDS]
         
         # Detect drag patterns
         self._detect_drag_patterns()
@@ -974,10 +981,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         for i in range(2, len(positions)):
             dx_prev = positions[i-1][0] - positions[i-2][0]
             dx_curr = positions[i][0] - positions[i-1][0]
-            if dx_prev * dx_curr < 0 and abs(dx_curr) > 2:
+            if dx_prev * dx_curr < 0 and abs(dx_curr) > self.MIN_SHAKE_MOVEMENT:
                 x_direction_changes += 1
         
-        if x_direction_changes >= 6:
+        if x_direction_changes >= self.SHAKE_DIRECTION_CHANGES:
             self._set_animation_no_cancel('shaking')
             if self.panda:
                 response = self.panda.on_shake() if hasattr(self.panda, 'on_shake') else "🐼 S-s-stop shaking me!"
@@ -1004,13 +1011,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     diff -= 2 * math.pi
                 while diff < -math.pi:
                     diff += 2 * math.pi
-                if diff > 0.05:
+                if diff > self.MIN_ROTATION_ANGLE:
                     positive_diffs += 1
-                elif diff < -0.05:
+                elif diff < -self.MIN_ROTATION_ANGLE:
                     negative_diffs += 1
             
             total = positive_diffs + negative_diffs
-            if total > 0 and (positive_diffs / total > 0.7 or negative_diffs / total > 0.7):
+            if total > 0 and (positive_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD or negative_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD):
                 self._set_animation_no_cancel('spinning')
                 if self.panda:
                     response = self.panda.on_spin() if hasattr(self.panda, 'on_spin') else "🐼 I'm getting dizzy! 🌀"
