@@ -100,7 +100,7 @@ class TutorialManager:
             if self.overlay:
                 try:
                     self.overlay.destroy()
-                except:
+                except Exception:
                     pass
                 self.overlay = None
     
@@ -1127,7 +1127,7 @@ class ContextHelp:
                     return 'settings'
                 elif 'notepad' in widget_name.lower():
                     return 'notepad'
-        except:
+        except Exception:
             pass
         
         return 'general'
