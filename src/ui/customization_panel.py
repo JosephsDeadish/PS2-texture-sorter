@@ -1486,7 +1486,9 @@ class SoundSettingsPanel(ctk.CTkFrame):
         """Play a test sound for the given event."""
         try:
             from src.features.sound_manager import SoundManager, SoundEvent
-            sm = SoundManager()
+            if not hasattr(self, '_test_sound_manager'):
+                self._test_sound_manager = SoundManager()
+            sm = self._test_sound_manager
             sm.enabled = True
             sm.muted = False
             try:
@@ -1494,8 +1496,8 @@ class SoundSettingsPanel(ctk.CTkFrame):
             except ValueError:
                 return
             sm.play_sound(event, async_play=True, force=True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Could not play test sound for {event_id}: {e}")
     
     def _on_sound_toggle(self):
         enabled = self.sound_enabled_var.get()
