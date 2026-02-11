@@ -736,9 +736,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="#222222", tags="pupil")
         elif style == 'rolling':
             # Eyes rolling around
-            import math as _m
-            offset = int(4 * sx * _m.sin(self.animation_frame * 0.5))
-            v_offset = int(3 * sy * _m.cos(self.animation_frame * 0.5))
+            offset = int(4 * sx * math.sin(self.animation_frame * 0.5))
+            v_offset = int(3 * sy * math.cos(self.animation_frame * 0.5))
             for ex_pos in [left_ex, right_ex]:
                 c.create_oval(ex_pos - es, ey - es, ex_pos + es, ey + es,
                               fill="white", outline="", tags="eye")
