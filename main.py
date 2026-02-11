@@ -2565,8 +2565,13 @@ class PS2TextureSorter(ctk.CTk):
                 x = event.x_root - self.winfo_rootx()
                 y = event.y_root - self.winfo_rooty()
                 
-                # Only draw within the window bounds
-                if x < 0 or y < 0 or x > self.winfo_width() or y > self.winfo_height():
+                # Draw trail even outside window bounds, but clip to visible area
+                # This allows trail to extend to full window including decorations
+                window_width = self.winfo_width()
+                window_height = self.winfo_height()
+                
+                # Only skip if way outside reasonable bounds (prevents excessive dots)
+                if x < -50 or y < -50 or x > window_width + 50 or y > window_height + 50:
                     return
                 
                 color_idx = len(self._trail_dots_widgets) % len(trail_colors)
