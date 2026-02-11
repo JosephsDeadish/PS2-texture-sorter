@@ -4686,17 +4686,19 @@ Built with:
             font=("Arial Bold", 18))
         self.panda_mood_label.pack(anchor="w", padx=20, pady=5)
 
-        # Panda animation preview
+        # Panda preview info
         anim_frame = ctk.CTkFrame(scrollable_frame)
         anim_frame.pack(fill="x", padx=10, pady=10)
         ctk.CTkLabel(anim_frame, text="🐼 Panda Preview",
                      font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
 
-        current_anim = self.panda.get_animation_frame('idle')
-        self.panda_preview_label = ctk.CTkLabel(
-            anim_frame, text=current_anim,
-            font=("Courier", 10), justify="left")
-        self.panda_preview_label.pack(anchor="w", padx=20, pady=5)
+        # Reference to the interactive canvas panda
+        preview_text = "Your panda is visible in the bottom-right corner of the application.\n" \
+                       "You can drag, click, and interact with them directly!\n" \
+                       f"Current animation: {self.panda_widget.current_animation if hasattr(self, 'panda_widget') and self.panda_widget else 'idle'}"
+        ctk.CTkLabel(
+            anim_frame, text=preview_text,
+            font=("Arial", 11), justify="left", text_color="#888888").pack(anchor="w", padx=20, pady=5)
 
         # Statistics
         stats = self.panda.get_statistics()
@@ -4788,9 +4790,6 @@ Built with:
                 mood_indicator = self.panda.get_mood_indicator()
                 mood_name = self.panda.current_mood.value.title()
                 self.panda_mood_label.configure(text=f"{mood_indicator} {mood_name}")
-            if hasattr(self, 'panda_preview_label') and self.panda:
-                current_anim = self.panda.get_animation_frame('idle')
-                self.panda_preview_label.configure(text=current_anim)
 
     def _start_stats_auto_refresh(self):
         """Auto-refresh panda stats every 5 seconds when the stats tab is visible.
@@ -4807,12 +4806,6 @@ Built with:
                     mood_indicator = self.panda.get_mood_indicator()
                     mood_name = self.panda.current_mood.value.title()
                     self.panda_mood_label.configure(text=f"{mood_indicator} {mood_name}")
-                except Exception:
-                    pass
-            if hasattr(self, 'panda_preview_label') and self.panda:
-                try:
-                    current_anim = self.panda.get_animation_frame('idle')
-                    self.panda_preview_label.configure(text=current_anim)
                 except Exception:
                     pass
             # Schedule next refresh
