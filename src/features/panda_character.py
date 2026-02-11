@@ -558,6 +558,13 @@ class PandaCharacter:
         self.pet_count = 0
         self.feed_count = 0
         self.hover_count = 0
+        self.drag_count = 0
+        self.toss_count = 0
+        self.shake_count = 0
+        self.spin_count = 0
+        self.toy_interact_count = 0
+        self.clothing_change_count = 0
+        self.items_thrown_at_count = 0
         self.easter_eggs_triggered: Set[str] = set()
         self.start_time = time.time()
         self.files_processed_count = 0
@@ -710,10 +717,12 @@ class PandaCharacter:
 
     def on_drag(self) -> str:
         """Handle panda being dragged."""
+        self.drag_count += 1
         return random.choice(self.DRAG_RESPONSES)
 
     def on_toss(self) -> str:
         """Handle panda being tossed."""
+        self.toss_count += 1
         return random.choice(self.TOSS_RESPONSES)
 
     def on_wall_hit(self) -> str:
@@ -722,15 +731,54 @@ class PandaCharacter:
 
     def on_shake(self) -> str:
         """Handle panda being shaken side to side."""
+        self.shake_count += 1
         return random.choice(self.SHAKE_RESPONSES)
 
     def on_spin(self) -> str:
         """Handle panda being spun in circles."""
+        self.spin_count += 1
         return random.choice(self.SPIN_RESPONSES)
 
     def on_clothing_change(self) -> str:
         """Handle panda changing clothes."""
+        self.clothing_change_count += 1
         return random.choice(self.CLOTHING_RESPONSES)
+
+    def on_item_thrown_at(self, item_name: str, body_part: str) -> str:
+        """Handle an item being thrown at the panda.
+        
+        Args:
+            item_name: Name of the item thrown
+            body_part: Where the item hit ('head', 'body', 'belly', 'legs')
+            
+        Returns:
+            Reaction string
+        """
+        self.items_thrown_at_count += 1
+        if body_part == 'head':
+            responses = [
+                f"🐼 OW! {item_name} hit me on the head! 💥🤕",
+                f"🐼 *BONK* Hey! Who threw {item_name} at my head?! 😠",
+                f"🐼 *rubs head* That {item_name} really hurt! 😣",
+                f"🐼 *ducks too late* Ow ow ow! My head! 🌟",
+                f"🐼 *sees stars* Was that a {item_name}?! 💫",
+            ]
+        elif body_part in ('body', 'belly'):
+            responses = [
+                f"🐼 *belly wobbles* Oof! {item_name} got me right in the tummy! 🫃",
+                f"🐼 *jiggles* My belly! That {item_name} made it wobble! 😂",
+                f"🐼 *catches {item_name} with belly* Look, I'm a goalkeeper! ⚽",
+                f"🐼 *belly bounce* Boing! {item_name} bounced off my tummy! 🤣",
+                f"🐼 *oof* Right in the belly... at least it's padded! 😅",
+            ]
+        else:
+            responses = [
+                f"🐼 *stumbles* {item_name} tripped me up! 😵",
+                f"🐼 Hey! Don't throw {item_name} at my feet! 🦶",
+                f"🐼 *kicks {item_name} back* Take that! ⚡",
+                f"🐼 *dodges... poorly* {item_name} got me! 😆",
+            ]
+        return random.choice(responses)
 
     def on_toy_received(self) -> str:
         """Handle panda receiving a toy."""
@@ -768,7 +816,7 @@ class PandaCharacter:
                 f"🐼 *waddles to {item_name}* Let's play! *pounces*",
                 f"🐼 *picks up {item_name}* Watch this trick! *tosses in air*",
             ]
-            self.click_count += 1
+            self.toy_interact_count += 1
             return random.choice(toy_actions)
     
     def get_context_menu(self) -> Dict[str, str]:
@@ -836,6 +884,13 @@ class PandaCharacter:
             'pet_count': self.pet_count,
             'feed_count': self.feed_count,
             'hover_count': self.hover_count,
+            'drag_count': self.drag_count,
+            'toss_count': self.toss_count,
+            'shake_count': self.shake_count,
+            'spin_count': self.spin_count,
+            'toy_interact_count': self.toy_interact_count,
+            'clothing_change_count': self.clothing_change_count,
+            'items_thrown_at_count': self.items_thrown_at_count,
             'files_processed': self.files_processed_count,
             'failed_operations': self.failed_operations,
             'easter_eggs_found': len(self.easter_eggs_triggered),
