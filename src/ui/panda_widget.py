@@ -23,6 +23,16 @@ logger = logging.getLogger(__name__)
 PANDA_CANVAS_W = 160
 PANDA_CANVAS_H = 200
 
+# Speech bubble layout constants
+BUBBLE_MAX_CHARS_PER_LINE = 25
+BUBBLE_PAD_X = 12
+BUBBLE_PAD_Y = 8
+BUBBLE_CHAR_WIDTH = 7   # approximate px per character at font size 10
+BUBBLE_LINE_HEIGHT = 16  # px per line of text
+BUBBLE_MAX_WIDTH = 200
+BUBBLE_CORNER_RADIUS = 10
+BUBBLE_TAIL_HEIGHT = 8
+
 
 class _SpeechProxy:
     """Proxy that mimics CTkLabel.configure(text=...) but routes to speech bubble."""
@@ -217,7 +227,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             pass
         return "#f0f0f0"
 
-    # Keep old name for compatibility
+    # Deprecated: use _get_parent_bg instead
     _get_canvas_bg = _get_parent_bg
 
     def _show_speech_bubble(self, text: str):
@@ -236,12 +246,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Measure text to determine bubble size
         font = ("Arial", 10)
         # Wrap long text
-        max_chars = 25
         words = text.split()
         lines = []
         current_line = ""
         for word in words:
-            if len(current_line) + len(word) + 1 <= max_chars:
+            if len(current_line) + len(word) + 1 <= BUBBLE_MAX_CHARS_PER_LINE:
                 current_line = (current_line + " " + word).strip()
             else:
                 if current_line:
@@ -250,30 +259,25 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         if current_line:
             lines.append(current_line)
         if not lines:
-            lines = [text[:max_chars]]
+            lines = [text[:BUBBLE_MAX_CHARS_PER_LINE]]
 
         display_text = "\n".join(lines)
         line_count = len(lines)
         max_line_len = max(len(l) for l in lines) if lines else 0
 
         # Bubble dimensions
-        pad_x = 12
-        pad_y = 8
-        char_w = 7  # approximate character width at font size 10
-        line_h = 16
-        bubble_w = min(max_line_len * char_w + pad_x * 2, 200)
-        bubble_h = line_count * line_h + pad_y * 2
-        tail_h = 8
+        bubble_w = min(max_line_len * BUBBLE_CHAR_WIDTH + BUBBLE_PAD_X * 2, BUBBLE_MAX_WIDTH)
+        bubble_h = line_count * BUBBLE_LINE_HEIGHT + BUBBLE_PAD_Y * 2
 
         canvas_w = bubble_w + 4
-        canvas_h = bubble_h + tail_h + 4
+        canvas_h = bubble_h + BUBBLE_TAIL_HEIGHT + 4
 
         bc.configure(width=canvas_w, height=canvas_h, bg=self._canvas_bg)
 
         # Draw rounded rectangle bubble
         x1, y1 = 2, 2
         x2, y2 = bubble_w + 2, bubble_h + 2
-        r = 10  # corner radius
+        r = BUBBLE_CORNER_RADIUS
         # Rounded rect via polygon
         bc.create_polygon(
             x1 + r, y1,
@@ -297,7 +301,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         bc.create_polygon(
             tail_cx - 6, y2 - 1,
             tail_cx + 6, y2 - 1,
-            tail_cx, y2 + tail_h,
+            tail_cx, y2 + BUBBLE_TAIL_HEIGHT,
             fill="white", outline="#888888", width=1,
             tags="tail"
         )
@@ -309,7 +313,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         bc.create_text(
             (x1 + x2) // 2, (y1 + y2) // 2,
             text=display_text, font=font,
-            fill="#333333", width=bubble_w - pad_x,
+            fill="#333333", width=bubble_w - BUBBLE_PAD_X,
             justify="center", tags="text"
         )
 
