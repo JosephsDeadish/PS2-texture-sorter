@@ -23,6 +23,33 @@ logger = logging.getLogger(__name__)
 PANDA_CANVAS_W = 160
 PANDA_CANVAS_H = 200
 
+# Speech bubble layout constants
+BUBBLE_MAX_CHARS_PER_LINE = 25
+BUBBLE_PAD_X = 12
+BUBBLE_PAD_Y = 8
+BUBBLE_CHAR_WIDTH = 7   # approximate px per character at font size 10
+BUBBLE_LINE_HEIGHT = 16  # px per line of text
+BUBBLE_MAX_WIDTH = 200
+BUBBLE_CORNER_RADIUS = 10
+BUBBLE_TAIL_HEIGHT = 8
+
+
+class _SpeechProxy:
+    """Proxy that mimics CTkLabel.configure(text=...) but routes to speech bubble."""
+
+    def __init__(self, widget: 'PandaWidget'):
+        self._widget = widget
+
+    def configure(self, **kwargs):
+        text = kwargs.get("text")
+        if text is not None:
+            self._widget._show_speech_bubble(str(text))
+
+    def cget(self, key):
+        if key == "text":
+            return self._widget._speech_text
+        return ""
+
 
 class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     """Interactive animated panda widget - always present and draggable.
@@ -103,9 +130,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self.configure(highlightthickness=0)
         
         # Determine canvas background color to match parent theme
-        self._canvas_bg = self._get_canvas_bg()
+        self._canvas_bg = self._get_parent_bg()
         
-        # Create canvas for panda body-shaped drawing
+        # Create canvas for panda body-shaped drawing with transparent bg
         self.panda_canvas = tk.Canvas(
             self,
             width=PANDA_CANVAS_W,
@@ -116,22 +143,26 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         )
         self.panda_canvas.pack(pady=4, padx=4)
         
-        # Create info display
-        self.info_label = ctk.CTkLabel(
+        # Speech bubble timer
+        self._speech_timer = None
+        
+        # Create floating speech bubble canvas (appears next to panda)
+        self._bubble_canvas = tk.Canvas(
             self,
-            text="Click me! 🐼",
-            font=("Arial", 11),
-            text_color="gray",
-            fg_color="transparent",
-            bg_color="transparent"
-        ) if ctk else tk.Label(
-            self,
-            text="Click me! 🐼",
-            font=("Arial", 11),
-            fg="gray",
-            highlightthickness=0
+            width=0,
+            height=0,
+            bg=self._canvas_bg,
+            highlightthickness=0,
+            bd=0,
         )
-        self.info_label.pack(pady=4)
+        
+        # Create info_label as a hidden helper to keep external API working.
+        # Speech text is rendered on _bubble_canvas instead.
+        self._speech_text = "Click me! 🐼"
+        self.info_label = _SpeechProxy(self)
+        
+        # Show initial bubble
+        self._show_speech_bubble(self._speech_text)
         
         # Keep panda_label as an alias to panda_canvas for external code compatibility
         self.panda_label = self.panda_canvas
@@ -164,8 +195,30 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     # Canvas-based panda drawing
     # ------------------------------------------------------------------
     
-    def _get_canvas_bg(self) -> str:
-        """Determine appropriate canvas background to blend with the parent."""
+    def _get_parent_bg(self) -> str:
+        """Determine appropriate canvas background to blend with the parent.
+        
+        Walks up the widget tree to find the actual rendered background colour
+        so that the canvas blends seamlessly (no visible box).
+        """
+        # Try to read the actual background from parent hierarchy
+        try:
+            widget = self.master
+            while widget is not None:
+                try:
+                    if ctk and isinstance(widget, ctk.CTkBaseClass):
+                        fg = widget.cget("fg_color")
+                        if fg and fg != "transparent":
+                            return fg if isinstance(fg, str) else fg[0]
+                    bg = widget.cget("bg")
+                    if bg and bg != "SystemButtonFace":
+                        return bg
+                except Exception:
+                    pass
+                widget = getattr(widget, 'master', None)
+        except Exception:
+            pass
+        # Fallback to theme-based colour
         try:
             if ctk:
                 mode = ctk.get_appearance_mode()
@@ -173,6 +226,117 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         except Exception:
             pass
         return "#f0f0f0"
+
+    # Deprecated: use _get_parent_bg instead
+    _get_canvas_bg = _get_parent_bg
+
+    def _show_speech_bubble(self, text: str):
+        """Draw a floating speech bubble next to the panda on _bubble_canvas."""
+        if self._destroyed:
+            return
+
+        self._speech_text = text
+        if not text or text.strip() == "":
+            self._bubble_canvas.pack_forget()
+            return
+
+        bc = self._bubble_canvas
+        bc.delete("all")
+
+        # Measure text to determine bubble size
+        font = ("Arial", 10)
+        # Wrap long text
+        words = text.split()
+        lines = []
+        current_line = ""
+        for word in words:
+            if len(current_line) + len(word) + 1 <= BUBBLE_MAX_CHARS_PER_LINE:
+                current_line = (current_line + " " + word).strip()
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+        if not lines:
+            lines = [text[:BUBBLE_MAX_CHARS_PER_LINE]]
+
+        display_text = "\n".join(lines)
+        line_count = len(lines)
+        max_line_len = max(len(l) for l in lines) if lines else 0
+
+        # Bubble dimensions
+        bubble_w = min(max_line_len * BUBBLE_CHAR_WIDTH + BUBBLE_PAD_X * 2, BUBBLE_MAX_WIDTH)
+        bubble_h = line_count * BUBBLE_LINE_HEIGHT + BUBBLE_PAD_Y * 2
+
+        canvas_w = bubble_w + 4
+        canvas_h = bubble_h + BUBBLE_TAIL_HEIGHT + 4
+
+        bc.configure(width=canvas_w, height=canvas_h, bg=self._canvas_bg)
+
+        # Draw rounded rectangle bubble
+        x1, y1 = 2, 2
+        x2, y2 = bubble_w + 2, bubble_h + 2
+        r = BUBBLE_CORNER_RADIUS
+        # Rounded rect via polygon
+        bc.create_polygon(
+            x1 + r, y1,
+            x2 - r, y1,
+            x2, y1,
+            x2, y1 + r,
+            x2, y2 - r,
+            x2, y2,
+            x2 - r, y2,
+            x1 + r, y2,
+            x1, y2,
+            x1, y2 - r,
+            x1, y1 + r,
+            x1, y1,
+            fill="white", outline="#888888", width=1,
+            smooth=True, tags="bubble"
+        )
+
+        # Draw tail (small triangle pointing down toward panda)
+        tail_cx = bubble_w // 2 + 2
+        bc.create_polygon(
+            tail_cx - 6, y2 - 1,
+            tail_cx + 6, y2 - 1,
+            tail_cx, y2 + BUBBLE_TAIL_HEIGHT,
+            fill="white", outline="#888888", width=1,
+            tags="tail"
+        )
+        # Cover the tail-bubble border
+        bc.create_line(tail_cx - 5, y2, tail_cx + 5, y2,
+                       fill="white", width=2, tags="tail_cover")
+
+        # Draw text
+        bc.create_text(
+            (x1 + x2) // 2, (y1 + y2) // 2,
+            text=display_text, font=font,
+            fill="#333333", width=bubble_w - BUBBLE_PAD_X,
+            justify="center", tags="text"
+        )
+
+        # Place bubble above panda canvas (pack before canvas)
+        bc.pack_forget()
+        self.panda_canvas.pack_forget()
+        bc.pack(pady=(0, 0))
+        self.panda_canvas.pack(pady=4, padx=4)
+
+        # Auto-hide after a delay
+        if self._speech_timer:
+            try:
+                self.after_cancel(self._speech_timer)
+            except Exception:
+                pass
+        self._speech_timer = self.after(5000, self._hide_speech_bubble)
+
+    def _hide_speech_bubble(self):
+        """Hide the speech bubble after timeout."""
+        if self._destroyed:
+            return
+        self._bubble_canvas.pack_forget()
+        self._speech_timer = None
     
     def _draw_panda(self, frame_idx: int):
         """Draw the panda on the canvas for the given animation frame.
@@ -1016,5 +1180,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         """Clean up widget."""
         self._destroyed = True
         self._cancel_animation_timer()
+        if self._speech_timer:
+            try:
+                self.after_cancel(self._speech_timer)
+            except Exception:
+                pass
+            self._speech_timer = None
         super().destroy()
 

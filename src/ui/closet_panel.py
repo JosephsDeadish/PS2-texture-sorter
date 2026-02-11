@@ -42,6 +42,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         # Configure grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
+        self.grid_rowconfigure(3, weight=0)
         
         self._create_widgets()
         self._show_items()
@@ -190,7 +191,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         
         # Current appearance display
         appearance_frame = ctk.CTkFrame(self) if ctk else tk.Frame(self)
-        appearance_frame.grid(row=2, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
+        appearance_frame.grid(row=3, column=0, columnspan=2, padx=20, pady=10, sticky="ew")
         
         appearance_label = ctk.CTkLabel(
             appearance_frame,
