@@ -1047,9 +1047,9 @@ class ThemeManager(ctk.CTkFrame):
                 elif widget_class == 'CTkSegmentedButton':
                     widget.configure(fg_color=secondary, selected_color=accent, 
                                    selected_hover_color=button_hover, text_color=text)
-            except Exception as widget_error:
+            except Exception as e:
                 # Some widgets may not support all configuration options
-                logger.debug(f"Could not apply theme to {widget_class}: {widget_error}")
+                logger.debug(f"Could not apply theme to {widget_class}: {e}")
             
             # Recursively apply to children
             try:
@@ -1058,7 +1058,7 @@ class ThemeManager(ctk.CTkFrame):
             except Exception:
                 pass
         except Exception as e:
-            logger.debug(f"Error applying theme to widget: {e}")
+            logger.debug(f"Error applying theme to widget {widget.__class__.__name__}: {e}")
     
     def _save_custom_theme(self):
         if not self.preview_theme:

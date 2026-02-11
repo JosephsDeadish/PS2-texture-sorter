@@ -718,14 +718,19 @@ class PS2TextureSorter(ctk.CTk):
     def _has_popout_button(self, tab_frame):
         """Check if tab frame already has a pop-out button"""
         for widget in tab_frame.winfo_children():
-            if isinstance(widget, ctk.CTkButton):
-                try:
-                    text = widget.cget('text')
-                    if text and ('Pop Out' in text or text == '↗'):
-                        return True
-                except Exception:
-                    continue
+            if self._is_popout_button(widget):
+                return True
         return False
+    
+    def _is_popout_button(self, widget):
+        """Check if widget is a popout button"""
+        if not isinstance(widget, ctk.CTkButton):
+            return False
+        try:
+            text = widget.cget('text')
+            return text and ('Pop Out' in text or text == '↗')
+        except (Exception, AttributeError):
+            return False
     
     def _add_popout_buttons(self):
         """Add pop-out/undock buttons to secondary tabs"""
@@ -789,13 +794,8 @@ class PS2TextureSorter(ctk.CTk):
         # Hide original tab content (don't destroy or reparent)
         for child in tab_frame.winfo_children():
             # Skip the popout button
-            if isinstance(child, ctk.CTkButton):
-                try:
-                    text = child.cget('text')
-                    if text and ('Pop Out' in text or text == '↗'):
-                        continue
-                except Exception:
-                    pass
+            if self._is_popout_button(child):
+                continue
             child.pack_forget()
         
         # Create tab content based on tab type
@@ -816,7 +816,8 @@ class PS2TextureSorter(ctk.CTk):
         elif tab_name == "📊 Panda Stats & Mood":
             self._create_popout_panda_stats(popout, container)
         else:
-            # Generic handler - just show a label
+            # Generic handler - log warning for unimplemented popouts
+            logger.warning(f"No specific popout handler for tab '{tab_name}', using generic display")
             ctk.CTkLabel(container, text=f"{tab_name} (Undocked)", 
                         font=("Arial Bold", 16)).pack(pady=20)
         
@@ -937,13 +938,8 @@ class PS2TextureSorter(ctk.CTk):
                 if tab_frame and tab_frame.winfo_exists():
                     for child in tab_frame.winfo_children():
                         # Skip the popout button
-                        if isinstance(child, ctk.CTkButton):
-                            try:
-                                text = child.cget('text')
-                                if text and ('Pop Out' in text or text == '↗'):
-                                    continue
-                            except Exception:
-                                pass
+                        if self._is_popout_button(child):
+                            continue
                         # Repack hidden children
                         try:
                             # Check if widget needs repacking (not currently visible)
