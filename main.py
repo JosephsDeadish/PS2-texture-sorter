@@ -3509,78 +3509,119 @@ class PS2TextureSorter(ctk.CTk):
         # Clear current items
         for widget in self.achieve_scroll.winfo_children():
             widget.destroy()
-        
-        # Get all achievements
+
         try:
             achievements = self.achievement_manager.get_all_achievements(include_hidden=True)
-            
+
             if category != "all":
                 achievements = [a for a in achievements if a.category == category]
-            
+
             if not achievements:
                 ctk.CTkLabel(self.achieve_scroll,
                             text="No achievements in this category",
                             font=("Arial", 14)).pack(pady=50)
                 return
-            
+
+            # Summary bar
+            total = len(achievements)
+            completed = sum(1 for a in achievements if a.unlocked or a.is_complete())
+            claimable = sum(1 for a in achievements
+                           if (a.unlocked or a.is_complete())
+                           and a.reward
+                           and not getattr(a, '_reward_claimed', False))
+            summary_frame = ctk.CTkFrame(self.achieve_scroll)
+            summary_frame.pack(fill="x", padx=10, pady=(5, 10))
+            ctk.CTkLabel(summary_frame,
+                        text=f"✅ {completed}/{total} completed  •  🎁 {claimable} rewards available",
+                        font=("Arial Bold", 12)).pack(side="left", padx=10, pady=8)
+
+            if claimable > 0:
+                ctk.CTkButton(summary_frame, text="🎁 Claim All Rewards",
+                             width=160, fg_color="#2fa572", hover_color="#248a5c",
+                             command=self._claim_all_achievement_rewards
+                             ).pack(side="right", padx=10, pady=8)
+
+            # Tier colors for badges
+            tier_colors = {
+                'bronze': '#cd7f32', 'silver': '#c0c0c0',
+                'gold': '#ffd700', 'platinum': '#e5e4e2',
+                'legendary': '#ff6600',
+            }
+
             for achievement in achievements:
-                # Achievement frame
                 is_completed = achievement.unlocked or achievement.is_complete()
+                # Auto-mark as completed if progress meets max
+                if achievement.is_complete() and not achievement.unlocked:
+                    self.achievement_manager.update_progress(
+                        achievement.id, achievement.progress_max)
+
                 achieve_frame = ctk.CTkFrame(self.achieve_scroll)
-                achieve_frame.pack(fill="x", padx=10, pady=5)
-                
-                # Lock/unlock status
-                if is_completed:
-                    status = "✅"
-                else:
-                    status = "🔒"
-                
-                # Title and description
+                achieve_frame.pack(fill="x", padx=10, pady=4)
+
+                # Top row: status + title + tier badge
+                top_row = ctk.CTkFrame(achieve_frame)
+                top_row.pack(fill="x", padx=10, pady=(8, 2))
+
+                status = "✅" if is_completed else "🔒"
                 title_text = f"{status} {achievement.icon} {achievement.name}"
                 title_color = "#2fa572" if is_completed else None
-                title_label = ctk.CTkLabel(achieve_frame, text=title_text,
+                title_label = ctk.CTkLabel(top_row, text=title_text,
                             font=("Arial Bold", 14))
                 if title_color:
                     title_label.configure(text_color=title_color)
-                title_label.pack(anchor="w", padx=10, pady=5)
-                
+                title_label.pack(side="left")
+
+                # Tier badge
+                tier_val = achievement.tier.value if hasattr(achievement.tier, 'value') else str(achievement.tier)
+                badge_color = tier_colors.get(tier_val, '#888888')
+                ctk.CTkLabel(top_row, text=f" {tier_val.upper()} ",
+                            font=("Arial Bold", 10), text_color=badge_color
+                            ).pack(side="left", padx=8)
+
+                # Points
+                ctk.CTkLabel(top_row, text=f"🏅 {achievement.points} pts",
+                            font=("Arial", 10), text_color="#888888"
+                            ).pack(side="right", padx=5)
+
+                # Description
                 desc_text = achievement.description
-                if is_completed:
-                    desc_text += "  — Completed!"
+                if is_completed and achievement.unlock_date:
+                    desc_text += f"  — Completed!"
                 ctk.CTkLabel(achieve_frame, text=desc_text,
-                            font=("Arial", 11), text_color="gray").pack(anchor="w", padx=20, pady=2)
-                
-                # Show reward information - what this achievement unlocks
+                            font=("Arial", 11), text_color="gray"
+                            ).pack(anchor="w", padx=20, pady=2)
+
+                # Reward info
                 reward_text = self._get_achievement_rewards(achievement)
                 if reward_text:
                     ctk.CTkLabel(achieve_frame, text=f"🎁 Reward: {reward_text}",
-                                font=("Arial", 10), text_color="#2fa572").pack(anchor="w", padx=20, pady=2)
-                
-                # Progress bar
+                                font=("Arial", 10), text_color="#2fa572"
+                                ).pack(anchor="w", padx=20, pady=2)
+
+                # Progress bar row
+                progress_frame = ctk.CTkFrame(achieve_frame)
+                progress_frame.pack(fill="x", padx=20, pady=(2, 4))
+
                 progress = achievement.progress
                 required = achievement.progress_max
-                
-                progress_frame = ctk.CTkFrame(achieve_frame)
-                progress_frame.pack(fill="x", padx=20, pady=5)
-                
                 progress_bar = ctk.CTkProgressBar(progress_frame, width=400)
                 progress_bar.pack(side="left", padx=5)
-                
-                if is_completed:
-                    progress_value = 1.0
-                elif required > 0:
-                    progress_value = min(progress / required, 1.0)
-                else:
-                    progress_value = 0.0
-                
+                progress_value = 1.0 if is_completed else (min(progress / max(1, required), 1.0))
                 progress_bar.set(progress_value)
-                
-                progress_text = f"{progress:g}/{required:g}"
-                progress_label = ctk.CTkLabel(progress_frame, 
-                                              text=progress_text,
+
+                progress_label = ctk.CTkLabel(progress_frame,
+                                              text=f"{progress:g}/{required:g}",
                                               font=("Arial", 10))
                 progress_label.pack(side="left", padx=5)
-                
+
+                # Claim reward button (only if completed and has reward)
+                if is_completed and achievement.reward and not getattr(achievement, '_reward_claimed', False):
+                    ctk.CTkButton(
+                        progress_frame, text="🎁 Claim", width=80, height=26,
+                        fg_color="#2fa572", hover_color="#248a5c",
+                        command=lambda a=achievement: self._claim_achievement_reward(a)
+                    ).pack(side="right", padx=5)
+
         except Exception as e:
             ctk.CTkLabel(self.achieve_scroll,
                         text=f"Error loading achievements: {e}",
@@ -3657,7 +3698,62 @@ class PS2TextureSorter(ctk.CTk):
                 self.log(f"🏆 Achievement '{achievement.name}' unlocked!")
         except Exception as e:
             logger.error(f"Error granting achievement reward: {e}")
-    
+
+    def _claim_achievement_reward(self, achievement):
+        """Claim reward for a single completed achievement."""
+        try:
+            if not achievement.reward:
+                return
+            reward = achievement.reward
+            reward_type = reward.get('type', '')
+            desc = reward.get('description', '')
+
+            if reward_type == 'currency' and self.currency_system:
+                amount = reward.get('amount', 0)
+                if amount > 0:
+                    self.currency_system.add_money(amount, f"Achievement reward: {achievement.name}")
+                    if hasattr(self, 'shop_money_label'):
+                        self.shop_money_label.configure(text=f"💰 Money: ${self.currency_system.get_balance()}")
+            elif reward_type == 'exclusive_item' and self.panda_closet:
+                item_id = reward.get('item', '')
+                if item_id:
+                    closet_item = self.panda_closet.get_item(item_id)
+                    if closet_item and not closet_item.unlocked:
+                        closet_item.unlocked = True
+                        try:
+                            self.panda_closet.save_to_file(str(CONFIG_DIR / 'closet.json'))
+                        except Exception:
+                            pass
+                        if self.closet_panel:
+                            try:
+                                self.closet_panel.refresh()
+                            except Exception:
+                                pass
+
+            achievement._reward_claimed = True
+            self.log(f"🎁 Claimed reward for '{achievement.name}': {desc}")
+            # Refresh display
+            self._display_achievements(self._achievement_category_filter)
+        except Exception as e:
+            logger.error(f"Error claiming achievement reward: {e}")
+
+    def _claim_all_achievement_rewards(self):
+        """Claim all available achievement rewards."""
+        try:
+            achievements = self.achievement_manager.get_all_achievements(include_hidden=True)
+            claimed = 0
+            for a in achievements:
+                if (a.unlocked or a.is_complete()) and a.reward and not getattr(a, '_reward_claimed', False):
+                    self._claim_achievement_reward(a)
+                    claimed += 1
+            if claimed > 0:
+                self.log(f"🎁 Claimed {claimed} achievement reward(s)!")
+                messagebox.showinfo("Rewards Claimed", f"Successfully claimed {claimed} reward(s)!")
+            else:
+                messagebox.showinfo("No Rewards", "No unclaimed rewards available.")
+        except Exception as e:
+            logger.error(f"Error claiming all rewards: {e}")
+
     
     def create_shop_tab(self):
         """Create shop tab for purchasing items with money"""
@@ -4486,15 +4582,21 @@ Built with:
         scrollable_frame = ctk.CTkScrollableFrame(self.tab_inventory)
         scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        ctk.CTkLabel(scrollable_frame, text="📦 Inventory",
-                     font=("Arial Bold", 22)).pack(pady=15)
+        header = ctk.CTkLabel(scrollable_frame, text="📦 Inventory",
+                     font=("Arial Bold", 22))
+        header.pack(pady=(15, 5))
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(header, self._get_tooltip_text('inventory_tab') or "Your collection of items — toys, food, and accessories"))
 
         # Show purchased shop items
         if self.shop_system:
             shop_frame = ctk.CTkFrame(scrollable_frame)
             shop_frame.pack(fill="x", padx=10, pady=10)
-            ctk.CTkLabel(shop_frame, text="🛒 Purchased Items",
-                         font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+            shop_header = ctk.CTkLabel(shop_frame, text="🛒 Purchased Items",
+                         font=("Arial Bold", 16))
+            shop_header.pack(anchor="w", padx=10, pady=(10, 5))
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(shop_header, self._get_tooltip_text('inventory_purchased') or "Items you've bought from the shop"))
 
             if self.shop_system.purchased_items:
                 for item_id in self.shop_system.purchased_items:
@@ -4502,15 +4604,18 @@ Built with:
                     if item:
                         item_frame = ctk.CTkFrame(shop_frame)
                         item_frame.pack(fill="x", padx=10, pady=3)
-                        ctk.CTkLabel(item_frame, text=f"{item.icon} {item.name}",
-                                     font=("Arial", 12)).pack(side="left", padx=10, pady=5)
+                        name_lbl = ctk.CTkLabel(item_frame, text=f"{item.icon} {item.name}",
+                                     font=("Arial", 12))
+                        name_lbl.pack(side="left", padx=10, pady=5)
                         ctk.CTkLabel(item_frame, text=item.description,
                                      font=("Arial", 10), text_color="gray").pack(side="left", padx=5)
+                        if WidgetTooltip:
+                            self._tooltips.append(WidgetTooltip(name_lbl, f"{item.name}: {item.description}"))
             else:
-                ctk.CTkLabel(shop_frame, text="No purchases yet. Visit the Shop to buy items!",
+                ctk.CTkLabel(shop_frame, text="No purchases yet. Visit the 🛒 Shop to buy items!",
                              font=("Arial", 11), text_color="gray").pack(anchor="w", padx=20, pady=5)
 
-        # Show widget collection (toys, food, accessories) with sub-categories and Use buttons
+        # Show widget collection (toys, food, accessories)
         if self.widget_collection:
             for type_label, widget_type, interaction_type in [
                 ("🎾 Toys", WidgetType.TOY, "play"),
@@ -4519,12 +4624,16 @@ Built with:
             ]:
                 type_frame = ctk.CTkFrame(scrollable_frame)
                 type_frame.pack(fill="x", padx=10, pady=10)
-                ctk.CTkLabel(type_frame, text=type_label,
-                             font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+                section_header = ctk.CTkLabel(type_frame, text=type_label,
+                             font=("Arial Bold", 16))
+                section_header.pack(anchor="w", padx=10, pady=(10, 5))
+                if WidgetTooltip:
+                    tip_key = f"inventory_{widget_type.value}"
+                    self._tooltips.append(WidgetTooltip(section_header,
+                        self._get_tooltip_text(tip_key) or f"Your {widget_type.value} collection"))
 
                 widgets = self.widget_collection.get_all_widgets(widget_type)
-                
-                # Sub-categorize by rarity
+
                 rarity_order = ['common', 'uncommon', 'rare', 'epic', 'legendary']
                 rarity_groups = {}
                 for widget in widgets:
@@ -4532,31 +4641,33 @@ Built with:
                     if r not in rarity_groups:
                         rarity_groups[r] = []
                     rarity_groups[r].append(widget)
-                
+
                 rarity_colors = {"common": "gray", "uncommon": "#00cc00",
                                  "rare": "#3399ff", "epic": "#cc66ff",
                                  "legendary": "#ffaa00"}
-                
+
                 for rarity in rarity_order:
                     group = rarity_groups.get(rarity, [])
                     if not group:
                         continue
-                    
-                    # Sub-category header
+
                     sub_header = ctk.CTkFrame(type_frame)
                     sub_header.pack(fill="x", padx=15, pady=(5, 2))
-                    ctk.CTkLabel(sub_header,
+                    rarity_lbl = ctk.CTkLabel(sub_header,
                                  text=f"  {rarity.title()} ({len(group)})",
                                  font=("Arial Bold", 11),
-                                 text_color=rarity_colors.get(rarity, "gray")
-                                 ).pack(anchor="w", padx=5)
-                    
+                                 text_color=rarity_colors.get(rarity, "gray"))
+                    rarity_lbl.pack(anchor="w", padx=5)
+                    if WidgetTooltip:
+                        self._tooltips.append(WidgetTooltip(rarity_lbl, f"{rarity.title()} rarity items — {len(group)} total"))
+
                     for widget in group:
                         w_frame = ctk.CTkFrame(type_frame)
                         w_frame.pack(fill="x", padx=20, pady=2)
                         status = "✅" if widget.unlocked else "🔒"
-                        ctk.CTkLabel(w_frame, text=f"{status} {widget.emoji} {widget.name}",
-                                     font=("Arial", 12)).pack(side="left", padx=10, pady=5)
+                        item_lbl = ctk.CTkLabel(w_frame, text=f"{status} {widget.emoji} {widget.name}",
+                                     font=("Arial", 12))
+                        item_lbl.pack(side="left", padx=10, pady=5)
                         ctk.CTkLabel(w_frame, text=widget.rarity.value.title(),
                                      font=("Arial", 10),
                                      text_color=rarity_colors.get(widget.rarity.value, "gray")
@@ -4564,20 +4675,33 @@ Built with:
                         if widget.stats.times_used > 0:
                             ctk.CTkLabel(w_frame, text=f"Used {widget.stats.times_used}x",
                                          font=("Arial", 10), text_color="gray").pack(side="left", padx=5)
-                        
+                        if WidgetTooltip:
+                            tip = f"{widget.name} ({widget.rarity.value.title()})"
+                            if widget.unlocked:
+                                tip += " — Click 'Give to Panda' to use!"
+                            else:
+                                tip += " — Locked. Purchase from the Shop to unlock."
+                            self._tooltips.append(WidgetTooltip(item_lbl, tip))
+
                         if widget.unlocked:
-                            # Use/Give to Panda button
-                            ctk.CTkButton(
+                            give_btn = ctk.CTkButton(
                                 w_frame, text="🐼 Give to Panda", width=120, height=28,
                                 command=lambda w=widget, it=interaction_type: self._give_inventory_item_to_panda(w, it)
-                            ).pack(side="right", padx=5, pady=3)
+                            )
+                            give_btn.pack(side="right", padx=5, pady=3)
+                            if WidgetTooltip:
+                                self._tooltips.append(WidgetTooltip(give_btn,
+                                    self._get_tooltip_text('inventory_give_button') or f"Give {widget.name} to your panda"))
 
         # Show unlockables summary
         if self.unlockables_manager:
             unlockables_frame = ctk.CTkFrame(scrollable_frame)
             unlockables_frame.pack(fill="x", padx=10, pady=10)
-            ctk.CTkLabel(unlockables_frame, text="🎁 Unlocked Rewards",
-                         font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+            unlock_header = ctk.CTkLabel(unlockables_frame, text="🎁 Unlocked Rewards",
+                         font=("Arial Bold", 16))
+            unlock_header.pack(anchor="w", padx=10, pady=(10, 5))
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(unlock_header, self._get_tooltip_text('inventory_unlocked') or "Summary of all rewards you've unlocked"))
 
             try:
                 categories = [
@@ -4640,12 +4764,12 @@ Built with:
             self.log(f"❌ Error giving item to panda: {e}")
     
     def create_panda_stats_tab(self):
-        """Create panda stats and mood tab"""
+        """Create panda stats and mood tab with live-updating displays"""
         scrollable_frame = ctk.CTkScrollableFrame(self.tab_panda_stats)
         scrollable_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         ctk.CTkLabel(scrollable_frame, text="📊 Panda Stats & Mood",
-                     font=("Arial Bold", 22)).pack(pady=15)
+                     font=("Arial Bold", 22)).pack(pady=(15, 5))
 
         if not self.panda:
             ctk.CTkLabel(scrollable_frame,
@@ -4653,11 +4777,14 @@ Built with:
                          font=("Arial", 14)).pack(pady=50)
             return
 
-        # Panda identity info (name & gender)
+        # ── Store mutable label references for live refresh ──
+        self._stats_labels = {}
+
+        # ═══════════════════ Identity ═══════════════════
         identity_frame = ctk.CTkFrame(scrollable_frame)
-        identity_frame.pack(fill="x", padx=10, pady=10)
+        identity_frame.pack(fill="x", padx=10, pady=(10, 5))
         ctk.CTkLabel(identity_frame, text="🐼 Identity",
-                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
 
         name_row = ctk.CTkFrame(identity_frame)
         name_row.pack(fill="x", padx=20, pady=3)
@@ -4709,11 +4836,11 @@ Built with:
             ctk.CTkLabel(gender_row, text=f"Gender options unavailable: {e}",
                          font=("Arial", 10), text_color="gray").pack(side="left", padx=5)
 
-        # Current mood display
+        # ═══════════════════ Current Mood ═══════════════════
         mood_frame = ctk.CTkFrame(scrollable_frame)
-        mood_frame.pack(fill="x", padx=10, pady=10)
+        mood_frame.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(mood_frame, text="🎭 Current Mood",
-                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
 
         mood_indicator = self.panda.get_mood_indicator()
         mood_name = self.panda.current_mood.value.title()
@@ -4722,82 +4849,108 @@ Built with:
             font=("Arial Bold", 18))
         self.panda_mood_label.pack(anchor="w", padx=20, pady=5)
 
-        # Panda preview info
-        anim_frame = ctk.CTkFrame(scrollable_frame)
-        anim_frame.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(anim_frame, text="🐼 Panda Preview",
-                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+        # Mood reference bar — show all moods with current highlighted
+        try:
+            from src.features.panda_character import PandaMood
+            mood_bar = ctk.CTkFrame(mood_frame)
+            mood_bar.pack(fill="x", padx=20, pady=(0, 10))
+            mood_emojis = {
+                PandaMood.HAPPY: "😊", PandaMood.ECSTATIC: "🤩",
+                PandaMood.WORKING: "💼", PandaMood.CELEBRATING: "🎉",
+                PandaMood.SARCASTIC: "😏", PandaMood.RAGE: "😡",
+                PandaMood.SLEEPING: "😴", PandaMood.DRUNK: "🥴",
+                PandaMood.EXISTENTIAL: "🤔", PandaMood.PETTING: "🥰",
+            }
+            for mood_enum, emoji in mood_emojis.items():
+                is_current = (mood_enum == self.panda.current_mood)
+                lbl = ctk.CTkLabel(
+                    mood_bar, text=emoji, font=("Arial", 16 if is_current else 12),
+                    width=30)
+                lbl.pack(side="left", padx=2)
+                if is_current:
+                    lbl.configure(fg_color="#2fa572", corner_radius=6)
+        except Exception:
+            pass
 
-        # Reference to the interactive canvas panda
-        preview_text = "Your panda is visible in the bottom-right corner of the application.\n" \
-                       "You can drag, click, and interact with them directly!\n" \
-                       f"Current animation: {self.panda_widget.current_animation if hasattr(self, 'panda_widget') and self.panda_widget else 'idle'}"
-        ctk.CTkLabel(
-            anim_frame, text=preview_text,
-            font=("Arial", 11), justify="left", text_color="#888888").pack(anchor="w", padx=20, pady=5)
+        # ═══════════════════ Panda Preview (canvas) ═══════════════════
+        preview_frame = ctk.CTkFrame(scrollable_frame)
+        preview_frame.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(preview_frame, text="🐼 Panda Preview",
+                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
 
-        # Statistics
+        import tkinter as _tk
+        preview_canvas = _tk.Canvas(preview_frame, width=180, height=220,
+                                    bg="#2b2b2b", highlightthickness=0)
+        preview_canvas.pack(pady=10)
+        self._draw_static_panda(preview_canvas, 180, 220)
+
+        anim_name = self.panda_widget.current_animation if hasattr(self, 'panda_widget') and self.panda_widget else 'idle'
+        self._stats_labels['animation'] = ctk.CTkLabel(
+            preview_frame, text=f"Current animation: {anim_name}",
+            font=("Arial", 11), text_color="#aaaaaa")
+        self._stats_labels['animation'].pack(pady=(0, 10))
+
+        # ═══════════════════ Interaction Statistics ═══════════════════
         stats = self.panda.get_statistics()
         stats_frame = ctk.CTkFrame(scrollable_frame)
-        stats_frame.pack(fill="x", padx=10, pady=10)
+        stats_frame.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(stats_frame, text="📈 Interaction Statistics",
-                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
 
         stat_items = [
-            ("🖱️ Clicks", stats.get('click_count', 0)),
-            ("🐾 Pets", stats.get('pet_count', 0)),
-            ("🎋 Feeds", stats.get('feed_count', 0)),
-            ("💭 Hovers", stats.get('hover_count', 0)),
-            ("📁 Files Processed", stats.get('files_processed', 0)),
-            ("❌ Failed Operations", stats.get('failed_operations', 0)),
-            ("🥚 Easter Eggs Found", stats.get('easter_eggs_found', 0)),
+            ("🖱️ Clicks", 'click_count', stats.get('click_count', 0)),
+            ("🐾 Pets", 'pet_count', stats.get('pet_count', 0)),
+            ("🎋 Feeds", 'feed_count', stats.get('feed_count', 0)),
+            ("💭 Hovers", 'hover_count', stats.get('hover_count', 0)),
+            ("📁 Files Processed", 'files_processed', stats.get('files_processed', 0)),
+            ("❌ Failed Operations", 'failed_operations', stats.get('failed_operations', 0)),
+            ("🥚 Easter Eggs Found", 'easter_eggs_found', stats.get('easter_eggs_found', 0)),
         ]
-        for label, value in stat_items:
+        for label, key, value in stat_items:
             row = ctk.CTkFrame(stats_frame)
             row.pack(fill="x", padx=20, pady=2)
             ctk.CTkLabel(row, text=label, font=("Arial", 12)).pack(side="left", padx=5)
-            ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12),
-                         text_color="#00cc00").pack(side="right", padx=10)
+            val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12),
+                         text_color="#00cc00")
+            val_lbl.pack(side="right", padx=10)
+            self._stats_labels[key] = val_lbl
 
-        # Level info
+        # ═══════════════════ Level Info ═══════════════════
         if self.panda_level_system:
             level_frame = ctk.CTkFrame(scrollable_frame)
-            level_frame.pack(fill="x", padx=10, pady=10)
+            level_frame.pack(fill="x", padx=10, pady=5)
             ctk.CTkLabel(level_frame, text="⭐ Panda Level",
-                         font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+                         font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
             try:
                 level = self.panda_level_system.level
                 xp = self.panda_level_system.xp
                 xp_needed = self.panda_level_system.get_xp_to_next_level()
-                ctk.CTkLabel(level_frame,
-                             text=f"Level {level}  •  XP: {xp}/{xp_needed}",
-                             font=("Arial Bold", 14), text_color="#ffaa00"
-                             ).pack(anchor="w", padx=20, pady=5)
-                # XP progress bar
+                self._stats_labels['level_text'] = ctk.CTkLabel(
+                    level_frame,
+                    text=f"Level {level}  •  XP: {xp}/{xp_needed}",
+                    font=("Arial Bold", 14), text_color="#ffaa00")
+                self._stats_labels['level_text'].pack(anchor="w", padx=20, pady=5)
                 progress = min(1.0, xp / max(1, xp_needed))
-                xp_bar = ctk.CTkProgressBar(level_frame, width=400)
-                xp_bar.pack(anchor="w", padx=20, pady=5)
-                xp_bar.set(progress)
+                self._stats_xp_bar = ctk.CTkProgressBar(level_frame, width=400)
+                self._stats_xp_bar.pack(anchor="w", padx=20, pady=5)
+                self._stats_xp_bar.set(progress)
             except Exception as e:
                 ctk.CTkLabel(level_frame, text=f"Level info unavailable: {e}",
                              font=("Arial", 11), text_color="gray").pack(anchor="w", padx=20, pady=5)
 
-        # Easter eggs found
+        # ═══════════════════ Easter Eggs ═══════════════════
         if stats.get('easter_eggs'):
             egg_frame = ctk.CTkFrame(scrollable_frame)
-            egg_frame.pack(fill="x", padx=10, pady=10)
+            egg_frame.pack(fill="x", padx=10, pady=5)
             ctk.CTkLabel(egg_frame, text="🥚 Easter Eggs Discovered",
-                         font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=10)
+                         font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
             for egg in stats['easter_eggs']:
                 ctk.CTkLabel(egg_frame, text=f"  🥚 {egg}",
                              font=("Arial", 11)).pack(anchor="w", padx=20, pady=2)
 
-        # Buttons frame
+        # ═══════════════════ Action Buttons ═══════════════════
         buttons_frame = ctk.CTkFrame(scrollable_frame)
         buttons_frame.pack(fill="x", padx=10, pady=15)
-
-        ctk.CTkButton(buttons_frame, text="🔄 Refresh Stats",
-                      command=self._refresh_panda_stats).pack(side="left", padx=10, pady=10)
 
         ctk.CTkButton(buttons_frame, text="🔁 Reset Panda Progression",
                       fg_color="#cc3333", hover_color="#aa2222",
@@ -4807,8 +4960,74 @@ Built with:
                       fg_color="#cc3333", hover_color="#aa2222",
                       command=self._reset_player_progression).pack(side="left", padx=10, pady=10)
 
-        # Start auto-refresh timer (refresh every 5 seconds if tab is visible)
+        # Start auto-refresh timer (refresh every 3 seconds)
         self._start_stats_auto_refresh()
+
+    def _draw_static_panda(self, canvas, w, h):
+        """Draw a simplified static panda on a preview canvas."""
+        cx = w // 2
+        # Scale factor for fitting into preview
+        sx = w / 220.0
+        sy = h / 270.0
+        s = min(sx, sy)
+
+        # Body (white oval)
+        bx, by = cx, int(160 * s)
+        bw, bh = int(50 * s), int(60 * s)
+        canvas.create_oval(bx - bw, by - bh, bx + bw, by + bh, fill="white", outline="")
+
+        # Head (white circle)
+        hx, hy = cx, int(85 * s)
+        hr = int(42 * s)
+        canvas.create_oval(hx - hr, hy - hr, hx + hr, hy + hr, fill="white", outline="")
+
+        # Ears (black circles)
+        er = int(18 * s)
+        for dx in [-30, 30]:
+            ex = hx + int(dx * s)
+            ey = hy - int(30 * s)
+            canvas.create_oval(ex - er, ey - er, ex + er, ey + er, fill="black", outline="")
+
+        # Eye patches (black ovals)
+        epr = int(14 * s)
+        for dx in [-16, 16]:
+            epx = hx + int(dx * s)
+            epy = hy - int(2 * s)
+            canvas.create_oval(epx - epr, epy - int(10 * s),
+                               epx + epr, epy + int(10 * s), fill="black", outline="")
+
+        # Eyes (white dots inside patches)
+        eyr = int(5 * s)
+        for dx in [-16, 16]:
+            exx = hx + int(dx * s)
+            eyy = hy - int(2 * s)
+            canvas.create_oval(exx - eyr, eyy - eyr, exx + eyr, eyy + eyr, fill="white", outline="")
+            # Pupil
+            pr = int(3 * s)
+            canvas.create_oval(exx - pr, eyy - pr, exx + pr, eyy + pr, fill="black", outline="")
+
+        # Nose (small black oval)
+        nr = int(5 * s)
+        nx, ny = hx, hy + int(12 * s)
+        canvas.create_oval(nx - nr, ny - int(3 * s), nx + nr, ny + int(3 * s), fill="black", outline="")
+
+        # Mouth (small arc)
+        canvas.create_arc(hx - int(8 * s), ny, hx + int(8 * s), ny + int(10 * s),
+                          start=200, extent=140, style="arc", outline="black", width=max(1, int(1.5 * s)))
+
+        # Arms (black ovals)
+        for dx in [-50, 50]:
+            ax = cx + int(dx * s)
+            ay = int(155 * s)
+            aw, ah = int(16 * s), int(35 * s)
+            canvas.create_oval(ax - aw, ay - ah, ax + aw, ay + ah, fill="black", outline="")
+
+        # Legs (black ovals)
+        for dx in [-22, 22]:
+            lx = cx + int(dx * s)
+            ly = int(220 * s)
+            lw, lh = int(18 * s), int(22 * s)
+            canvas.create_oval(lx - lw, ly - lh, lx + lw, ly + lh, fill="black", outline="")
 
     def _refresh_panda_stats(self):
         """Refresh panda stats display by rebuilding the tab content"""
@@ -4828,15 +5047,10 @@ Built with:
                 self.panda_mood_label.configure(text=f"{mood_indicator} {mood_name}")
 
     def _start_stats_auto_refresh(self):
-        """Auto-refresh panda stats every 5 seconds when the stats tab is visible.
-        
-        The timer ID is stored in _stats_auto_refresh_id so it can be cancelled
-        when the tab is rebuilt (via _refresh_panda_stats) or the window closes.
-        """
+        """Auto-refresh panda stats every 3 seconds, updating labels in-place."""
         try:
             if not hasattr(self, 'tab_panda_stats') or not self.tab_panda_stats.winfo_exists():
                 return
-            # Only refresh labels in-place to avoid full rebuild flicker
             if hasattr(self, 'panda_mood_label') and self.panda:
                 try:
                     mood_indicator = self.panda.get_mood_indicator()
@@ -4844,8 +5058,34 @@ Built with:
                     self.panda_mood_label.configure(text=f"{mood_indicator} {mood_name}")
                 except Exception:
                     pass
-            # Schedule next refresh
-            self._stats_auto_refresh_id = self.after(5000, self._start_stats_auto_refresh)
+            # Update all stat labels in-place
+            if hasattr(self, '_stats_labels') and self.panda:
+                try:
+                    stats = self.panda.get_statistics()
+                    for key in ('click_count', 'pet_count', 'feed_count', 'hover_count',
+                                'files_processed', 'failed_operations', 'easter_eggs_found'):
+                        lbl = self._stats_labels.get(key)
+                        if lbl:
+                            lbl.configure(text=str(stats.get(key, 0)))
+                    # Update animation label
+                    anim_lbl = self._stats_labels.get('animation')
+                    if anim_lbl and hasattr(self, 'panda_widget') and self.panda_widget:
+                        anim_lbl.configure(text=f"Current animation: {self.panda_widget.current_animation}")
+                    # Update level/XP
+                    if self.panda_level_system:
+                        lvl_lbl = self._stats_labels.get('level_text')
+                        if lvl_lbl:
+                            level = self.panda_level_system.level
+                            xp = self.panda_level_system.xp
+                            xp_needed = self.panda_level_system.get_xp_to_next_level()
+                            lvl_lbl.configure(text=f"Level {level}  •  XP: {xp}/{xp_needed}")
+                        if hasattr(self, '_stats_xp_bar'):
+                            xp = self.panda_level_system.xp
+                            xp_needed = self.panda_level_system.get_xp_to_next_level()
+                            self._stats_xp_bar.set(min(1.0, xp / max(1, xp_needed)))
+                except Exception:
+                    pass
+            self._stats_auto_refresh_id = self.after(3000, self._start_stats_auto_refresh)
         except Exception as e:
             logger.debug(f"Stats auto-refresh error: {e}")
 
