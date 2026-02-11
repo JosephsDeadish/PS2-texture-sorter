@@ -977,6 +977,7 @@ class PS2TextureSorter(ctk.CTk):
                         logger.error(f"Error saving popout notes during dock: {e}")
             else:
                 # Reparent widgets back to original tab frame
+                reparented = False
                 if hasattr(self, '_popout_pack_info') and tab_name in self._popout_pack_info:
                     tab_frame = self._popout_original_frames.get(tab_name)
                     if tab_frame and tab_frame.winfo_exists():
@@ -989,9 +990,14 @@ class PS2TextureSorter(ctk.CTk):
                                         child.pack(**{k: v for k, v in pack_info.items() if k != 'in'})
                                     else:
                                         child.pack(fill="both", expand=True)
+                                    reparented = True
                             except Exception as e:
                                 logger.debug(f"Could not reparent widget back: {e}")
                     self._popout_pack_info.pop(tab_name, None)
+                
+                # If reparenting failed, regenerate tab content
+                if not reparented:
+                    self._regenerate_tab_content(tab_name)
             
             # Destroy pop-out window
             if popout_window and popout_window.winfo_exists():
@@ -1011,6 +1017,61 @@ class PS2TextureSorter(ctk.CTk):
             except Exception:
                 pass
             self._popout_windows.pop(tab_name, None)
+    
+    def _regenerate_tab_content(self, tab_name):
+        """Regenerate content for a tab after failed undock/dock cycle."""
+        try:
+            tab_frame = self._popout_original_frames.get(tab_name)
+            if not tab_frame or not tab_frame.winfo_exists():
+                return
+            # Clear any leftover widgets (except the popout button)
+            for child in list(tab_frame.winfo_children()):
+                if not self._is_popout_button(child):
+                    try:
+                        child.destroy()
+                    except Exception:
+                        pass
+            # Regenerate based on tab name
+            tab_creators = {
+                "🏆 Achievements": lambda: self._rebuild_achievements_in_frame(tab_frame),
+                "🛒 Shop": lambda: self._rebuild_shop_in_frame(tab_frame),
+                "🎁 Rewards": lambda: self._rebuild_rewards_in_frame(tab_frame),
+                "📦 Inventory": lambda: self._rebuild_inventory_in_frame(tab_frame),
+                "📊 Panda Stats & Mood": lambda: self._rebuild_panda_stats_in_frame(tab_frame),
+            }
+            creator = tab_creators.get(tab_name)
+            if creator:
+                creator()
+                logger.info(f"Regenerated content for tab: {tab_name}")
+        except Exception as e:
+            logger.error(f"Error regenerating tab '{tab_name}': {e}")
+    
+    def _rebuild_achievements_in_frame(self, frame):
+        """Rebuild achievements tab content."""
+        scroll = ctk.CTkScrollableFrame(frame)
+        scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        self.achieve_scroll = scroll
+        self._display_achievements(getattr(self, '_achievement_category_filter', 'all'))
+    
+    def _rebuild_shop_in_frame(self, frame):
+        """Rebuild shop tab content."""
+        self.tab_shop = frame
+        self.create_shop_tab()
+    
+    def _rebuild_rewards_in_frame(self, frame):
+        """Rebuild rewards tab content."""
+        self.tab_rewards = frame
+        self.create_rewards_tab()
+    
+    def _rebuild_inventory_in_frame(self, frame):
+        """Rebuild inventory tab content."""
+        self.tab_inventory = frame
+        self.create_inventory_tab()
+    
+    def _rebuild_panda_stats_in_frame(self, frame):
+        """Rebuild panda stats & mood tab content."""
+        self.tab_panda_stats = frame
+        self.create_panda_stats_tab()
     
     def _create_popout_browser(self, popout_window, container):
         """Create file browser in popout window"""
@@ -4923,70 +4984,104 @@ Built with:
         self._start_stats_auto_refresh()
 
     def _draw_static_panda(self, canvas, w, h):
-        """Draw a simplified static panda on a preview canvas."""
+        """Draw a static panda on a preview canvas matching the live panda_widget style."""
         cx = w // 2
-        # Reference dimensions for the panda drawing (original design space)
         sx = w / 220.0
         sy = h / 270.0
-        s = min(sx, sy)
+        black = "#1a1a1a"
+        white = "#F5F5F5"
+        pink = "#FFB6C1"
 
-        # Body (white oval)
-        bx, by = cx, int(160 * s)
-        bw, bh = int(50 * s), int(60 * s)
-        canvas.create_oval(bx - bw, by - bh, bx + bw, by + bh, fill="white", outline="")
+        # Legs (behind body)
+        leg_top = int(145 * sy)
+        leg_len = int(30 * sy)
+        for lx in [cx - int(25 * sx), cx + int(25 * sx)]:
+            canvas.create_oval(lx - int(12 * sx), leg_top,
+                               lx + int(12 * sx), leg_top + leg_len,
+                               fill=black, outline=black)
+            # Foot pad
+            canvas.create_oval(lx - int(10 * sx), leg_top + leg_len - int(8 * sy),
+                               lx + int(10 * sx), leg_top + leg_len + int(4 * sy),
+                               fill=white, outline=black, width=1)
 
-        # Head (white circle)
-        hx, hy = cx, int(85 * s)
-        hr = int(42 * s)
-        canvas.create_oval(hx - hr, hy - hr, hx + hr, hy + hr, fill="white", outline="")
+        # Body (white belly)
+        body_top = int(75 * sy)
+        body_bot = int(160 * sy)
+        body_rx = int(42 * sx)
+        canvas.create_oval(cx - body_rx, body_top, cx + body_rx, body_bot,
+                           fill=white, outline=black, width=2)
+        # Inner belly patch
+        belly_rx = int(28 * sx)
+        canvas.create_oval(cx - belly_rx, body_top + int(15 * sy),
+                           cx + belly_rx, body_bot - int(10 * sy),
+                           fill="#FAFAFA", outline="")
 
-        # Ears (black circles)
-        er = int(18 * s)
-        for dx in [-30, 30]:
-            ex = hx + int(dx * s)
-            ey = hy - int(30 * s)
-            canvas.create_oval(ex - er, ey - er, ex + er, ey + er, fill="black", outline="")
+        # Arms
+        arm_top = int(95 * sy)
+        arm_len = int(35 * sy)
+        canvas.create_oval(cx - int(55 * sx), arm_top,
+                           cx - int(30 * sx), arm_top + arm_len,
+                           fill=black, outline=black)
+        canvas.create_oval(cx + int(30 * sx), arm_top,
+                           cx + int(55 * sx), arm_top + arm_len,
+                           fill=black, outline=black)
 
-        # Eye patches (black ovals)
-        epr = int(14 * s)
-        for dx in [-16, 16]:
-            epx = hx + int(dx * s)
-            epy = hy - int(2 * s)
-            canvas.create_oval(epx - epr, epy - int(10 * s),
-                               epx + epr, epy + int(10 * s), fill="black", outline="")
+        # Head
+        head_cy = int(52 * sy)
+        head_rx = int(36 * sx)
+        head_ry = int(32 * sy)
+        canvas.create_oval(cx - head_rx, head_cy - head_ry,
+                           cx + head_rx, head_cy + head_ry,
+                           fill=white, outline=black, width=2)
 
-        # Eyes (white dots inside patches)
-        eyr = int(5 * s)
-        for dx in [-16, 16]:
-            exx = hx + int(dx * s)
-            eyy = hy - int(2 * s)
-            canvas.create_oval(exx - eyr, eyy - eyr, exx + eyr, eyy + eyr, fill="white", outline="")
-            # Pupil
-            pr = int(3 * s)
-            canvas.create_oval(exx - pr, eyy - pr, exx + pr, eyy + pr, fill="black", outline="")
+        # Ears
+        ear_y = head_cy - head_ry + int(5 * sy)
+        ear_w = int(22 * sx)
+        canvas.create_oval(cx - head_rx - int(2 * sx), ear_y - int(16 * sy),
+                           cx - head_rx + ear_w, ear_y + int(8 * sy),
+                           fill=black, outline=black)
+        canvas.create_oval(cx - head_rx + int(4 * sx), ear_y - int(10 * sy),
+                           cx - head_rx + int(16 * sx), ear_y + int(2 * sy),
+                           fill=pink, outline="")
+        canvas.create_oval(cx + head_rx - ear_w, ear_y - int(16 * sy),
+                           cx + head_rx + int(2 * sx), ear_y + int(8 * sy),
+                           fill=black, outline=black)
+        canvas.create_oval(cx + head_rx - int(16 * sx), ear_y - int(10 * sy),
+                           cx + head_rx - int(4 * sx), ear_y + int(2 * sy),
+                           fill=pink, outline="")
 
-        # Nose (small black oval)
-        nr = int(5 * s)
-        nx, ny = hx, hy + int(12 * s)
-        canvas.create_oval(nx - nr, ny - int(3 * s), nx + nr, ny + int(3 * s), fill="black", outline="")
+        # Eye patches
+        eye_y = head_cy - int(4 * sy)
+        patch_rx = int(14 * sx)
+        patch_ry = int(11 * sy)
+        eye_offset = int(24 * sx)
+        for dx in [-eye_offset, eye_offset]:
+            canvas.create_oval(cx + dx - patch_rx, eye_y - patch_ry,
+                               cx + dx + patch_rx, eye_y + patch_ry,
+                               fill=black, outline="")
 
-        # Mouth (small arc)
-        canvas.create_arc(hx - int(8 * s), ny, hx + int(8 * s), ny + int(10 * s),
-                          start=200, extent=140, style="arc", outline="black", width=max(1, int(1.5 * s)))
+        # Eyes (white with pupils)
+        es = int(6 * sx)
+        ps = int(3 * sx)
+        for dx in [-eye_offset, eye_offset]:
+            ex = cx + dx
+            canvas.create_oval(ex - es, eye_y - es, ex + es, eye_y + es,
+                               fill="white", outline="")
+            canvas.create_oval(ex - ps, eye_y - ps, ex + ps, eye_y + ps,
+                               fill="#222222", outline="")
 
-        # Arms (black ovals)
-        for dx in [-50, 50]:
-            ax = cx + int(dx * s)
-            ay = int(155 * s)
-            aw, ah = int(16 * s), int(35 * s)
-            canvas.create_oval(ax - aw, ay - ah, ax + aw, ay + ah, fill="black", outline="")
+        # Nose
+        nose_y = head_cy + int(8 * sy)
+        canvas.create_oval(cx - int(5 * sx), nose_y - int(3 * sy),
+                           cx + int(5 * sx), nose_y + int(4 * sy),
+                           fill=black, outline="")
 
-        # Legs (black ovals)
-        for dx in [-22, 22]:
-            lx = cx + int(dx * s)
-            ly = int(220 * s)
-            lw, lh = int(18 * s), int(22 * s)
-            canvas.create_oval(lx - lw, ly - lh, lx + lw, ly + lh, fill="black", outline="")
+        # Mouth (smile arc)
+        my = nose_y + int(6 * sy)
+        canvas.create_arc(cx - int(8 * sx), my - int(4 * sy),
+                          cx + int(8 * sx), my + int(6 * sy),
+                          start=200, extent=140, style="arc",
+                          outline=black, width=max(1, int(1.5 * sx)))
 
     def _refresh_panda_stats(self):
         """Refresh panda stats display by rebuilding the tab content"""
@@ -5023,7 +5118,7 @@ Built with:
                 except Exception:
                     pass
             # Update all stat labels in-place
-            if hasattr(self, '_stats_labels') and self.panda:
+            if hasattr(self, '_stats_labels') and self._stats_labels and self.panda:
                 try:
                     stats = self.panda.get_statistics()
                     for key in ('click_count', 'pet_count', 'feed_count', 'hover_count',

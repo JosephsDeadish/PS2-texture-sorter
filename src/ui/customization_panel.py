@@ -187,6 +187,19 @@ class ColorWheelWidget(ctk.CTkFrame):
         self.preview = ctk.CTkLabel(scroll_frame, text="", width=200, height=50, fg_color=self.current_color)
         self.preview.pack(pady=10, padx=10)
         
+        # --- Interactive color wheel canvas ---
+        import tkinter as _tk
+        wheel_label = ctk.CTkLabel(scroll_frame, text="🎡 Color Wheel (click to pick):", font=("Arial Bold", 11))
+        wheel_label.pack(anchor="w", padx=15, pady=(5, 2))
+        
+        self._wheel_size = 200
+        self._wheel_canvas = _tk.Canvas(scroll_frame, width=self._wheel_size, height=self._wheel_size,
+                                         bg="#2b2b2b", highlightthickness=0)
+        self._wheel_canvas.pack(pady=5)
+        self._draw_color_wheel()
+        self._wheel_canvas.bind("<Button-1>", self._on_wheel_click)
+        self._wheel_canvas.bind("<B1-Motion>", self._on_wheel_click)
+        
         # RGB sliders
         rgb_label = ctk.CTkLabel(scroll_frame, text="RGB Sliders:", font=("Arial Bold", 11))
         rgb_label.pack(anchor="w", padx=15, pady=(5, 2))
@@ -380,6 +393,49 @@ class ColorWheelWidget(ctk.CTkFrame):
                                command=lambda c=color: self.set_color(c))
             btn.grid(row=0, column=i, padx=2, pady=2)
     
+    def _draw_color_wheel(self):
+        """Draw an HSV color wheel on the canvas."""
+        size = self._wheel_size
+        cx, cy = size // 2, size // 2
+        radius = size // 2 - 4
+        # Draw the wheel using small rectangles for each angle/radius
+        step = 3  # pixel step for performance
+        for x in range(0, size, step):
+            for y in range(0, size, step):
+                dx = x - cx
+                dy = y - cy
+                dist = (dx * dx + dy * dy) ** 0.5
+                if dist <= radius:
+                    h = (math.atan2(dy, dx) / (2 * math.pi)) % 1.0
+                    s = dist / radius
+                    r, g, b = colorsys.hsv_to_rgb(h, s, 1.0)
+                    color = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+                    self._wheel_canvas.create_rectangle(
+                        x, y, x + step, y + step,
+                        fill=color, outline="", tags="wheel")
+    
+    def _on_wheel_click(self, event):
+        """Pick a color from the wheel canvas on click/drag."""
+        size = self._wheel_size
+        cx, cy = size // 2, size // 2
+        radius = size // 2 - 4
+        dx = event.x - cx
+        dy = event.y - cy
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist > radius:
+            return
+        h = (math.atan2(dy, dx) / (2 * math.pi)) % 1.0
+        s = min(dist / radius, 1.0)
+        v = int(self.v_slider.get()) / 100.0 if hasattr(self, 'v_slider') else 1.0
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        r, g, b = int(r * 255), int(g * 255), int(b * 255)
+        self.rgb = (r, g, b)
+        self.current_color = self._rgb_to_hex(r, g, b)
+        self._update_all_from_rgb()
+        self._add_to_recent(self.current_color)
+        if self.on_color_change:
+            self.on_color_change(self.current_color)
+    
     def set_color(self, hex_color: str):
         self.current_color = hex_color
         self.rgb = self._hex_to_rgb(hex_color)
@@ -447,14 +503,27 @@ class CursorCustomizer(ctk.CTkFrame):
             "Pencil", "Dot", "X Cursor", "Diamond", "Fleur",
             "Spraycan", "Left Arrow", "Right Arrow"
         ]
-        self.cursor_sizes = {"small": (16, 16), "medium": (32, 32), "large": (48, 48)}
+        self.cursor_sizes = {
+            "🔹 tiny": (8, 8),
+            "🔸 small": (16, 16),
+            "🔷 medium": (32, 32),
+            "🔶 large": (48, 48),
+            "⬛ extra-large": (64, 64),
+            "🟪 huge": (96, 96),
+        }
         
         self.trail_styles = [
             "rainbow", "fire", "ice", "nature", "galaxy", "gold"
         ]
         
         self.current_cursor = config.get('ui', 'cursor', default='default')
-        self.current_size = config.get('ui', 'cursor_size', default='medium')
+        saved_size = config.get('ui', 'cursor_size', default='medium')
+        # Migrate old plain size names to emoji-prefixed keys
+        _size_migration = {"tiny": "🔹 tiny", "small": "🔸 small", "medium": "🔷 medium",
+                           "large": "🔶 large", "extra-large": "⬛ extra-large", "huge": "🟪 huge"}
+        self.current_size = _size_migration.get(saved_size, saved_size)
+        if self.current_size not in self.cursor_sizes:
+            self.current_size = "🔷 medium"
         self.current_tint = "#ffffff"
         self.trail_enabled = config.get('ui', 'cursor_trail', default=False)
         self.trail_style = config.get('ui', 'cursor_trail_color', default='rainbow')
@@ -1365,13 +1434,17 @@ class SoundSettingsPanel(ctk.CTkFrame):
             ctk.CTkLabel(radio_frame, text=f"- {description}", font=("Arial", 9),
                         text_color="gray").pack(side="left", padx=5)
         
-        # Individual Sound Muting
+        # Individual Sound Muting & Selection
         mute_frame = ctk.CTkFrame(scroll_frame)
         mute_frame.pack(fill="x", padx=10, pady=10)
         
-        ctk.CTkLabel(mute_frame, text="🔇 Mute Individual Sounds:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        ctk.CTkLabel(mute_frame, text="🔇 Per-Event Sound Settings:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        ctk.CTkLabel(mute_frame, text="Toggle each sound on/off and choose a sound for each event",
+                     font=("Arial", 9), text_color="gray").pack(anchor="w", padx=20, pady=(0, 5))
         
         self.mute_vars = {}
+        self.sound_choice_vars = {}
+        sound_choices = ["🔔 Default", "🎵 Chime", "🔊 Beep", "🎶 Melody", "🛎️ Bell", "📯 Horn", "🥁 Drum"]
         sound_events = [
             ("complete", "✅ Completion Sound"),
             ("error", "❌ Error Sound"),
@@ -1387,11 +1460,21 @@ class SoundSettingsPanel(ctk.CTkFrame):
         ]
         
         for event_id, event_label in sound_events:
+            row = ctk.CTkFrame(mute_frame)
+            row.pack(fill="x", padx=20, pady=2)
+            
             var = ctk.BooleanVar(value=True)  # True = enabled (not muted)
             self.mute_vars[event_id] = var
-            cb = ctk.CTkCheckBox(mute_frame, text=event_label, variable=var,
+            cb = ctk.CTkCheckBox(row, text=event_label, variable=var,
                                 command=lambda eid=event_id: self._on_mute_toggle(eid))
-            cb.pack(pady=2, padx=20, anchor="w")
+            cb.pack(side="left", padx=5)
+            
+            choice_var = ctk.StringVar(value="🔔 Default")
+            self.sound_choice_vars[event_id] = choice_var
+            choice_menu = ctk.CTkOptionMenu(row, variable=choice_var, values=sound_choices,
+                                           width=130,
+                                           command=lambda val, eid=event_id: self._on_sound_choice_change(eid, val))
+            choice_menu.pack(side="right", padx=5)
     
     def _on_sound_toggle(self):
         enabled = self.sound_enabled_var.get()
@@ -1425,6 +1508,11 @@ class SoundSettingsPanel(ctk.CTkFrame):
         enabled = self.mute_vars[event_id].get()
         if self.on_settings_change:
             self.on_settings_change('mute_sound', {'event': event_id, 'enabled': enabled})
+    
+    def _on_sound_choice_change(self, event_id, value):
+        """Handle per-event sound selection change."""
+        if self.on_settings_change:
+            self.on_settings_change('sound_choice', {'event': event_id, 'sound': value})
     
     def get_settings(self) -> Dict[str, Any]:
         return {

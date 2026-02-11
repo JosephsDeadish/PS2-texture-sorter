@@ -83,10 +83,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     # Drag pattern detection thresholds
     DRAG_HISTORY_SECONDS = 1.5      # How long to retain drag positions
-    SHAKE_DIRECTION_CHANGES = 15    # X direction changes needed for shaking (increased from 10)
-    MIN_SHAKE_MOVEMENT = 3          # Min px movement for a direction change (increased from 2)
-    MIN_ROTATION_ANGLE = 0.20       # Min angle diff (radians) for spin detection (increased from 0.15)
-    SPIN_CONSISTENCY_THRESHOLD = 0.85  # Required ratio of consistent rotations
+    SHAKE_DIRECTION_CHANGES = 25    # X direction changes needed for shaking (increased for less sensitivity)
+    MIN_SHAKE_MOVEMENT = 6          # Min px movement for a direction change (increased for less sensitivity)
+    MIN_ROTATION_ANGLE = 0.35       # Min angle diff (radians) for spin detection (increased for less sensitivity)
+    SPIN_CONSISTENCY_THRESHOLD = 0.90  # Required ratio of consistent rotations (increased)
     
     # Toss physics constants
     TOSS_FRICTION = 0.92            # Velocity decay per frame
@@ -95,6 +95,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     TOSS_MIN_VELOCITY = 1.5         # Minimum velocity to keep bouncing
     TOSS_FRAME_INTERVAL = 20        # Physics tick interval (ms)
     TOSS_FRAME_TIME = 0.016         # Approximate frame time in seconds (~60fps)
+    
+    # Cooldown between drag-pattern animation triggers (seconds)
+    DRAG_PATTERN_COOLDOWN = 2.0
     
     # Tail wag animation frequency
     TAIL_WAG_FREQUENCY = 0.8
@@ -128,6 +131,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         'lay_on_back': ['😌', '💤', '☁️', '💭', '🌙', '😴'],
         'lay_on_side': ['😴', '💤', '☁️', '😌', '🛌', '💭'],
         'carrying': ['📦', '💪', '🎁', '📚', '🧳'],
+        'sitting': ['🪑', '😌', '💭', '☕', '🧘'],
+        'belly_grab': ['🤗', '😊', '💕', '🐼', '🫃'],
     }
     
     def __init__(self, parent, panda_character=None, panda_level_system=None,
@@ -163,6 +168,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._drag_positions = []  # list of (x, y, time) tuples
         self._last_drag_time = 0  # Throttle drag events (ms)
         self._last_wall_hit_time = 0  # Cooldown for wall hit reactions
+        self._last_drag_pattern_time = 0  # Cooldown for drag-pattern animations
         
         # Toss physics state
         self._toss_velocity_x = 0.0
@@ -618,10 +624,28 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             leg_swing = math.sin(phase) * 6
             arm_swing = -abs(math.sin(phase)) * 18  # Arms up
             body_bob = abs(math.sin(phase)) * 4
-        elif anim in ('sleeping', 'laying_down', 'laying_back', 'laying_side'):
+        elif anim in ('sleeping', 'laying_down'):
+            # Gradual settling with gentle breathing
+            settle_phase = min(1.0, frame_idx / 30.0)  # settle over ~30 frames
+            leg_swing = (1 - settle_phase) * math.sin(phase) * 3
+            arm_swing = settle_phase * 5  # arms rest outward
+            body_bob = settle_phase * 25 + math.sin(phase * 0.3) * 2  # lower body, gentle breathing
+        elif anim in ('laying_back', 'laying_side'):
+            leg_swing = math.sin(phase * 0.3) * 2
+            arm_swing = 5
+            body_bob = 30 + math.sin(phase * 0.3) * 2
+        elif anim == 'sitting':
+            # Smooth sit-down transition
+            sit_phase = min(1.0, frame_idx / 24.0)  # settle over ~24 frames
+            leg_swing = sit_phase * 8  # legs forward
+            arm_swing = math.sin(phase) * 3
+            body_bob = sit_phase * 18 + math.sin(phase * 0.5) * 2  # lower body gradually
+        elif anim == 'belly_grab':
+            # Arms move to belly, gentle rocking
+            grab_phase = min(1.0, frame_idx / 12.0)
             leg_swing = 0
-            arm_swing = 0
-            body_bob = math.sin(phase) * 1
+            arm_swing = -grab_phase * 15  # arms inward toward belly
+            body_bob = math.sin(phase * 1.5) * 4 + grab_phase * 3
         elif anim == 'rage':
             leg_swing = math.sin(phase * 3) * 8
             arm_swing = math.sin(phase * 3) * 10
@@ -660,9 +684,24 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = math.cos(phase * 2) * 15
             body_bob = math.sin(phase) * 8
         elif anim == 'clicked':
-            leg_swing = math.sin(phase * 2) * 5
-            arm_swing = math.sin(phase * 2 + math.pi) * 8
-            body_bob = -abs(math.sin(phase * 3)) * 6  # bounce effect
+            # Multi-phase click reaction: bounce up, arms out, settle back
+            click_phase = (frame_idx % 24) / 24.0
+            if click_phase < 0.2:
+                # Jump up with surprise
+                body_bob = -click_phase * 40
+                arm_swing = -click_phase * 30
+                leg_swing = math.sin(phase * 3) * 6
+            elif click_phase < 0.5:
+                # Arms out, body settling
+                settle = (click_phase - 0.2) / 0.3
+                body_bob = -8 + settle * 8
+                arm_swing = -6 + math.sin(phase * 2) * 10
+                leg_swing = math.sin(phase * 2) * 4
+            else:
+                # Happy bounce
+                body_bob = math.sin(phase * 2) * 4
+                arm_swing = math.sin(phase * 1.5) * 6
+                leg_swing = math.sin(phase) * 3
         elif anim == 'stretching':
             # Arms above head, body elongated
             leg_swing = 0
@@ -740,7 +779,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         breath_scale = 1.0
         if anim in ('idle', 'working', 'sarcastic', 'thinking'):
             breath_scale = 1.0 + math.sin(phase * 0.5) * 0.015
-        elif anim in ('sleeping', 'laying_down', 'laying_back', 'laying_side'):
+        elif anim in ('sleeping', 'laying_down', 'laying_back', 'laying_side', 'sitting'):
             breath_scale = 1.0 + math.sin(phase * 0.3) * 0.025
         
         by = body_bob  # vertical body offset
@@ -748,7 +787,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # --- Determine eye style based on animation ---
         eye_style = 'normal'
         if anim == 'sleeping' or anim in ('laying_down', 'laying_back', 'laying_side'):
-            eye_style = 'closed'
+            # Gradual eye closing for sleep transitions
+            cycle = frame_idx % 16
+            if cycle < 4:
+                eye_style = 'half'
+            else:
+                eye_style = 'closed'
+        elif anim == 'sitting':
+            eye_style = 'half'
+        elif anim == 'belly_grab':
+            eye_style = 'happy'
         elif anim == 'celebrating':
             eye_style = 'happy'
         elif anim == 'rage':
@@ -767,12 +815,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             else:
                 eye_style = 'happy'
         elif anim == 'clicked':
-            # Surprised then transitions to happy
-            cycle = frame_idx % 8
-            if cycle < 3:
+            # Multi-phase eye transitions: surprised → wide → wink → happy
+            cycle = frame_idx % 24
+            if cycle < 5:
                 eye_style = 'surprised'
-            elif cycle < 5:
+            elif cycle < 10:
+                eye_style = 'normal'
+            elif cycle < 14:
                 eye_style = 'wink'
+            elif cycle < 18:
+                eye_style = 'happy'
             else:
                 eye_style = 'happy'
         elif anim in ('playing', 'eating', 'customizing'):
@@ -914,10 +966,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             cx - body_rx, body_top, cx + body_rx, body_bot,
             fill=white, outline=black, width=2, tags="body"
         )
-        # Inner belly patch (lighter)
-        belly_rx = int(28 * sx * breath_scale)
+        # Inner belly patch (lighter) — sized to fit fully inside body with no visible gap
+        belly_rx = int(26 * sx * breath_scale)
         c.create_oval(
-            cx - belly_rx, body_top + int(15 * sy), cx + belly_rx, body_bot - int(10 * sy),
+            cx - belly_rx, body_top + int(18 * sy), cx + belly_rx, body_bot - int(14 * sy),
             fill="#FAFAFA", outline="", tags="belly"
         )
         
@@ -1319,7 +1371,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                           font=("Arial", int(20 * sx)), tags="extra")
         
         # Blush cheeks when petting, celebrating, playing, eating, etc.
-        if anim in ('petting', 'celebrating', 'fed', 'playing', 'eating', 'customizing', 'tail_wag'):
+        if anim in ('petting', 'celebrating', 'fed', 'playing', 'eating', 'customizing', 'tail_wag', 'belly_grab'):
             cheek_y = int(56 * sy + by)
             br = int(5 * sx)
             c.create_oval(cx - int(38 * sx), cheek_y - br, cx - int(28 * sx), cheek_y + br,
@@ -1433,6 +1485,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         if len(self._drag_positions) < 8:
             return
         
+        # Enforce cooldown between drag-pattern animation triggers
+        now = time.monotonic()
+        if now - self._last_drag_pattern_time < self.DRAG_PATTERN_COOLDOWN:
+            return
+        
         positions = self._drag_positions
         
         # Detect fast side-to-side shaking (rapid X direction changes)
@@ -1444,6 +1501,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 x_direction_changes += 1
         
         if x_direction_changes >= self.SHAKE_DIRECTION_CHANGES:
+            self._last_drag_pattern_time = now
             self._set_animation_no_cancel('shaking')
             if self.panda:
                 response = self.panda.on_shake() if hasattr(self.panda, 'on_shake') else "🐼 S-s-stop shaking me!"
@@ -1477,6 +1535,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             total = positive_diffs + negative_diffs
             if total > 0 and (positive_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD or negative_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD):
+                self._last_drag_pattern_time = now
                 self._set_animation_no_cancel('spinning')
                 if self.panda:
                     response = self.panda.on_spin() if hasattr(self.panda, 'on_spin') else "🐼 I'm getting dizzy! 🌀"
