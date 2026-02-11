@@ -3788,7 +3788,7 @@ class PS2TextureSorter(ctk.CTk):
             # Tier badge
             canvas.create_oval(popup_w - 35, 10, popup_w - 10, 35,
                                fill=bg_color, outline=accent_color, width=1)
-            canvas.create_text(popup_w - 22, 22, text=tier_name[0].upper(),
+            canvas.create_text(popup_w - 22, 22, text=tier_name[0].upper() if tier_name else '?',
                                font=('Arial', 10, 'bold'), fill='#1e1e2e')
 
             # Auto-close after 5 seconds with fade

@@ -1640,7 +1640,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # New fur style emojis
         '🌬️': '#B0C4DE', '🐆': '#DEB887', '🦓': '#808080', '💠': '#00CED1',
         '🔩': '#808080', '🌱': '#228B22', '🧸': '#DEB887', '⛈️': '#4682B4',
-        '🌟': '#FFD700', '🌌': '#191970', '⌚': '#C0C0C0',
+        '🌟': '#FFD700', '🌌': '#191970', '⌚': '#C0C0C0', '🤘': '#8B0000',
     }
 
     @staticmethod
@@ -1755,7 +1755,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     la_swing = math.sin(phase * 2) * 14
                     ra_swing = -math.sin(phase * 2) * 14
                 elif anim == 'clicked':
-                    click_phase = (self.animation_frame % 24) / 24.0
+                    click_phase = (self.animation_frame % 30) / 30.0
                     if click_phase < 0.2:
                         la_swing = -click_phase * 30
                     elif click_phase < 0.5:
@@ -2642,7 +2642,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     equipped_items.append(shoes_item.emoji)
             
             if appearance.accessories:
-                for acc_id in appearance.accessories[:2]:
+                for acc_id in appearance.accessories[:3]:
                     acc_item = self.panda_closet.get_item(acc_id)
                     if acc_item:
                         equipped_items.append(acc_item.emoji)

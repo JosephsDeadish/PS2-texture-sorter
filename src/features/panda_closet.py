@@ -149,7 +149,7 @@ class PandaCloset:
         ),
         'mohawk': CustomizationItem(
             'mohawk', 'Mohawk Panda', CustomizationCategory.FUR_STYLE,
-            '🐼🔥', 'Punk rock mohawk style', ItemRarity.RARE, 350, False, False
+            '🐼🤘', 'Punk rock mohawk style', ItemRarity.RARE, 350, False, False
         ),
         'braided': CustomizationItem(
             'braided', 'Braided Panda', CustomizationCategory.FUR_STYLE,
