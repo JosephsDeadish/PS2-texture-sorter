@@ -20,18 +20,18 @@ logger = logging.getLogger(__name__)
 
 
 # Canvas dimensions for the panda drawing
-PANDA_CANVAS_W = 160
-PANDA_CANVAS_H = 200
+PANDA_CANVAS_W = 220
+PANDA_CANVAS_H = 270
 
 # Speech bubble layout constants
-BUBBLE_MAX_CHARS_PER_LINE = 25
-BUBBLE_PAD_X = 12
-BUBBLE_PAD_Y = 8
-BUBBLE_CHAR_WIDTH = 7   # approximate px per character at font size 10
-BUBBLE_LINE_HEIGHT = 16  # px per line of text
-BUBBLE_MAX_WIDTH = 200
-BUBBLE_CORNER_RADIUS = 10
-BUBBLE_TAIL_HEIGHT = 8
+BUBBLE_MAX_CHARS_PER_LINE = 30
+BUBBLE_PAD_X = 14
+BUBBLE_PAD_Y = 10
+BUBBLE_CHAR_WIDTH = 8   # approximate px per character at font size 12
+BUBBLE_LINE_HEIGHT = 20  # px per line of text
+BUBBLE_MAX_WIDTH = 280
+BUBBLE_CORNER_RADIUS = 12
+BUBBLE_TAIL_HEIGHT = 10
 
 
 class _SpeechProxy:
@@ -278,7 +278,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         bc.delete("all")
 
         # Measure text to determine bubble size
-        font = ("Arial", 10)
+        font = ("Arial", 12)
         # Wrap long text
         words = text.split()
         lines = []
@@ -388,13 +388,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         anim = self.current_animation
         
         # --- Determine limb offsets for walking ---
-        # Cycle through 8 frames for smooth walking
-        phase = (frame_idx % 8) / 8.0 * 2 * math.pi
+        # Cycle through 16 frames for smoother animation
+        phase = (frame_idx % 16) / 16.0 * 2 * math.pi
         
         if anim in ('idle', 'working', 'sarcastic', 'thinking'):
-            # Gentle body bob for idle
+            # Gentle body bob for idle with subtle arm sway
             leg_swing = 0
-            arm_swing = 0
+            arm_swing = math.sin(phase) * 3  # Subtle arm movement
             body_bob = math.sin(phase) * 2
         elif anim in ('dragging', 'tossed', 'wall_hit'):
             leg_swing = math.sin(phase) * 10
@@ -426,10 +426,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = math.sin(phase * 2) * 14
             body_bob = abs(math.sin(phase * 2)) * 4
         elif anim == 'eating':
-            # Gentle bob, arms brought together toward mouth
+            # Gentle bob, arms brought together toward mouth, alternating
             leg_swing = 0
-            arm_swing = -abs(math.sin(phase)) * 8  # Arms forward
-            body_bob = math.sin(phase) * 2
+            arm_swing = -abs(math.sin(phase * 2)) * 12  # Arms forward, faster
+            body_bob = math.sin(phase) * 3
         elif anim == 'customizing':
             # Preening, gentle sway with arms up
             leg_swing = 0
@@ -457,6 +457,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             eye_style = 'dizzy'
         elif anim == 'petting':
             eye_style = 'happy'
+        elif anim == 'clicked':
+            # Alternate between wink and surprised on click
+            eye_style = 'wink' if frame_idx % 4 < 2 else 'surprised'
         elif anim in ('playing', 'eating', 'customizing'):
             eye_style = 'happy'
         
@@ -483,253 +486,308 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         pink = "#FFB6C1"
         nose_color = "#333333"
         
+        # Scale factor for larger canvas (base was 160x200)
+        sx = w / 160.0
+        sy = h / 200.0
+        
+        # --- Ear wiggle for idle/petting ---
+        ear_wiggle = 0
+        if anim in ('idle', 'petting', 'celebrating', 'playing'):
+            ear_wiggle = math.sin(phase * 2) * 3 * sx
+        
         # --- Draw legs (behind body) ---
-        leg_top = 145 + by
-        leg_len = 30
+        leg_top = int(145 * sy + by)
+        leg_len = int(30 * sy)
         # Left leg
-        left_leg_x = cx - 25
+        left_leg_x = cx - int(25 * sx)
         left_leg_swing = leg_swing
         c.create_oval(
-            left_leg_x - 12, leg_top + left_leg_swing,
-            left_leg_x + 12, leg_top + leg_len + left_leg_swing,
+            left_leg_x - int(12 * sx), leg_top + left_leg_swing,
+            left_leg_x + int(12 * sx), leg_top + leg_len + left_leg_swing,
             fill=black, outline=black, tags="leg"
         )
         # Left foot (white pad)
         c.create_oval(
-            left_leg_x - 10, leg_top + leg_len - 8 + left_leg_swing,
-            left_leg_x + 10, leg_top + leg_len + 4 + left_leg_swing,
+            left_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + left_leg_swing,
+            left_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + left_leg_swing,
             fill=white, outline=black, width=1, tags="foot"
         )
         # Right leg
-        right_leg_x = cx + 25
+        right_leg_x = cx + int(25 * sx)
         right_leg_swing = -leg_swing
         c.create_oval(
-            right_leg_x - 12, leg_top + right_leg_swing,
-            right_leg_x + 12, leg_top + leg_len + right_leg_swing,
+            right_leg_x - int(12 * sx), leg_top + right_leg_swing,
+            right_leg_x + int(12 * sx), leg_top + leg_len + right_leg_swing,
             fill=black, outline=black, tags="leg"
         )
         # Right foot (white pad)
         c.create_oval(
-            right_leg_x - 10, leg_top + leg_len - 8 + right_leg_swing,
-            right_leg_x + 10, leg_top + leg_len + 4 + right_leg_swing,
+            right_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + right_leg_swing,
+            right_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + right_leg_swing,
             fill=white, outline=black, width=1, tags="foot"
         )
         
         # --- Draw body (white belly, rounded) ---
-        body_top = 75 + by
-        body_bot = 160 + by
+        body_top = int(75 * sy + by)
+        body_bot = int(160 * sy + by)
         c.create_oval(
-            cx - 42, body_top, cx + 42, body_bot,
+            cx - int(42 * sx), body_top, cx + int(42 * sx), body_bot,
             fill=white, outline=black, width=2, tags="body"
         )
         # Inner belly patch (lighter)
         c.create_oval(
-            cx - 28, body_top + 15, cx + 28, body_bot - 10,
+            cx - int(28 * sx), body_top + int(15 * sy), cx + int(28 * sx), body_bot - int(10 * sy),
             fill="#FAFAFA", outline="", tags="belly"
         )
         
         # --- Draw arms (black, attached to body sides) ---
-        arm_top = 95 + by
-        arm_len = 35
+        arm_top = int(95 * sy + by)
+        arm_len = int(35 * sy)
         # Left arm
         la_swing = arm_swing
         c.create_oval(
-            cx - 55, arm_top + la_swing,
-            cx - 30, arm_top + arm_len + la_swing,
+            cx - int(55 * sx), arm_top + la_swing,
+            cx - int(30 * sx), arm_top + arm_len + la_swing,
             fill=black, outline=black, tags="arm"
         )
         # Right arm
         ra_swing = -arm_swing
         c.create_oval(
-            cx + 30, arm_top + ra_swing,
-            cx + 55, arm_top + arm_len + ra_swing,
+            cx + int(30 * sx), arm_top + ra_swing,
+            cx + int(55 * sx), arm_top + arm_len + ra_swing,
             fill=black, outline=black, tags="arm"
         )
         
         # --- Draw head ---
-        head_cy = 52 + by
-        head_rx = 36
-        head_ry = 32
+        head_cy = int(52 * sy + by)
+        head_rx = int(36 * sx)
+        head_ry = int(32 * sy)
         c.create_oval(
             cx - head_rx, head_cy - head_ry,
             cx + head_rx, head_cy + head_ry,
             fill=white, outline=black, width=2, tags="head"
         )
         
-        # --- Draw ears (black circles on top of head) ---
-        ear_y = head_cy - head_ry + 5
+        # --- Draw ears (black circles on top of head) with wiggle ---
+        ear_y = head_cy - head_ry + int(5 * sy)
+        ear_w = int(22 * sx)
+        ear_h = int(24 * sy)
         # Left ear
-        c.create_oval(cx - head_rx - 2, ear_y - 16,
-                       cx - head_rx + 22, ear_y + 8,
+        c.create_oval(cx - head_rx - int(2 * sx) + ear_wiggle, ear_y - int(16 * sy),
+                       cx - head_rx + ear_w + ear_wiggle, ear_y + int(8 * sy),
                        fill=black, outline=black, tags="ear")
         # Inner ear pink
-        c.create_oval(cx - head_rx + 4, ear_y - 10,
-                       cx - head_rx + 16, ear_y + 2,
+        c.create_oval(cx - head_rx + int(4 * sx) + ear_wiggle, ear_y - int(10 * sy),
+                       cx - head_rx + int(16 * sx) + ear_wiggle, ear_y + int(2 * sy),
                        fill=pink, outline="", tags="ear_inner")
         # Right ear
-        c.create_oval(cx + head_rx - 22, ear_y - 16,
-                       cx + head_rx + 2, ear_y + 8,
+        c.create_oval(cx + head_rx - ear_w - ear_wiggle, ear_y - int(16 * sy),
+                       cx + head_rx + int(2 * sx) - ear_wiggle, ear_y + int(8 * sy),
                        fill=black, outline=black, tags="ear")
         # Inner ear pink
-        c.create_oval(cx + head_rx - 16, ear_y - 10,
-                       cx + head_rx - 4, ear_y + 2,
+        c.create_oval(cx + head_rx - int(16 * sx) - ear_wiggle, ear_y - int(10 * sy),
+                       cx + head_rx - int(4 * sx) - ear_wiggle, ear_y + int(2 * sy),
                        fill=pink, outline="", tags="ear_inner")
         
         # --- Draw eye patches (black ovals around eyes) ---
-        eye_y = head_cy - 4
-        patch_rx = 14
-        patch_ry = 11
+        eye_y = head_cy - int(4 * sy)
+        patch_rx = int(14 * sx)
+        patch_ry = int(11 * sy)
+        eye_offset = int(24 * sx)
         # Left eye patch
-        c.create_oval(cx - 24 - patch_rx, eye_y - patch_ry,
-                       cx - 24 + patch_rx, eye_y + patch_ry,
+        c.create_oval(cx - eye_offset - patch_rx, eye_y - patch_ry,
+                       cx - eye_offset + patch_rx, eye_y + patch_ry,
                        fill=black, outline="", tags="eye_patch")
         # Right eye patch
-        c.create_oval(cx + 24 - patch_rx, eye_y - patch_ry,
-                       cx + 24 + patch_rx, eye_y + patch_ry,
+        c.create_oval(cx + eye_offset - patch_rx, eye_y - patch_ry,
+                       cx + eye_offset + patch_rx, eye_y + patch_ry,
                        fill=black, outline="", tags="eye_patch")
         
         # --- Draw eyes ---
-        self._draw_eyes(c, cx, eye_y, eye_style)
+        self._draw_eyes(c, cx, eye_y, eye_style, sx, sy)
         
         # --- Draw nose ---
-        nose_y = head_cy + 8
-        c.create_oval(cx - 5, nose_y - 3, cx + 5, nose_y + 4,
+        nose_y = head_cy + int(8 * sy)
+        c.create_oval(cx - int(5 * sx), nose_y - int(3 * sy), cx + int(5 * sx), nose_y + int(4 * sy),
                        fill=nose_color, outline="", tags="nose")
         
         # --- Draw mouth ---
-        self._draw_mouth(c, cx, nose_y + 6, mouth_style)
+        self._draw_mouth(c, cx, nose_y + int(6 * sy), mouth_style, sx, sy)
+        
+        # --- Draw equipped items on panda body ---
+        self._draw_equipped_items(c, cx, by, sx, sy)
         
         # --- Draw animation-specific extras ---
-        self._draw_animation_extras(c, cx, by, anim, frame_idx)
+        self._draw_animation_extras(c, cx, by, anim, frame_idx, sx, sy)
     
-    def _draw_eyes(self, c: tk.Canvas, cx: int, ey: int, style: str):
+    def _draw_eyes(self, c: tk.Canvas, cx: int, ey: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda eyes based on the current animation style."""
-        left_ex = cx - 24
-        right_ex = cx + 24
+        left_ex = cx - int(24 * sx)
+        right_ex = cx + int(24 * sx)
+        es = int(6 * sx)  # eye size
+        ps = int(3 * sx)  # pupil size
         
         if style == 'closed':
-            # Sleeping - curved lines
-            c.create_line(left_ex - 6, ey, left_ex + 6, ey,
+            c.create_line(left_ex - es, ey, left_ex + es, ey,
                           fill="white", width=2, tags="eye")
-            c.create_line(right_ex - 6, ey, right_ex + 6, ey,
+            c.create_line(right_ex - es, ey, right_ex + es, ey,
                           fill="white", width=2, tags="eye")
         elif style == 'happy':
-            # Happy - upward arcs (^  ^)
-            c.create_arc(left_ex - 6, ey - 6, left_ex + 6, ey + 4,
+            c.create_arc(left_ex - es, ey - es, left_ex + es, ey + int(4 * sy),
                          start=0, extent=180, style="arc",
                          outline="white", width=2, tags="eye")
-            c.create_arc(right_ex - 6, ey - 6, right_ex + 6, ey + 4,
+            c.create_arc(right_ex - es, ey - es, right_ex + es, ey + int(4 * sy),
                          start=0, extent=180, style="arc",
                          outline="white", width=2, tags="eye")
         elif style == 'angry':
-            # Angry - small dots with angled brows
-            c.create_oval(left_ex - 3, ey - 3, left_ex + 3, ey + 3,
+            c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
                           fill="red", outline="", tags="eye")
-            c.create_oval(right_ex - 3, ey - 3, right_ex + 3, ey + 3,
+            c.create_oval(right_ex - ps, ey - ps, right_ex + ps, ey + ps,
                           fill="red", outline="", tags="eye")
-            # Angry brows
-            c.create_line(left_ex - 7, ey - 10, left_ex + 5, ey - 6,
+            c.create_line(left_ex - int(7 * sx), ey - int(10 * sy), left_ex + int(5 * sx), ey - es,
                           fill="white", width=2, tags="brow")
-            c.create_line(right_ex + 7, ey - 10, right_ex - 5, ey - 6,
+            c.create_line(right_ex + int(7 * sx), ey - int(10 * sy), right_ex - int(5 * sx), ey - es,
                           fill="white", width=2, tags="brow")
         elif style == 'half':
-            # Sarcastic half-lidded
-            c.create_oval(left_ex - 4, ey - 1, left_ex + 4, ey + 4,
+            c.create_oval(left_ex - int(4 * sx), ey - 1, left_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", outline="", tags="eye")
-            c.create_oval(left_ex - 2, ey + 0, left_ex + 2, ey + 3,
+            c.create_oval(left_ex - int(2 * sx), ey, left_ex + int(2 * sx), ey + ps,
                           fill="#222222", outline="", tags="pupil")
-            c.create_oval(right_ex - 4, ey - 1, right_ex + 4, ey + 4,
+            c.create_oval(right_ex - int(4 * sx), ey - 1, right_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", outline="", tags="eye")
-            c.create_oval(right_ex - 2, ey + 0, right_ex + 2, ey + 3,
+            c.create_oval(right_ex - int(2 * sx), ey, right_ex + int(2 * sx), ey + ps,
                           fill="#222222", outline="", tags="pupil")
         elif style == 'dizzy':
-            # Drunk - spiral/x eyes
-            c.create_line(left_ex - 4, ey - 4, left_ex + 4, ey + 4,
+            c.create_line(left_ex - int(4 * sx), ey - int(4 * sy), left_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", width=2, tags="eye")
-            c.create_line(left_ex - 4, ey + 4, left_ex + 4, ey - 4,
+            c.create_line(left_ex - int(4 * sx), ey + int(4 * sy), left_ex + int(4 * sx), ey - int(4 * sy),
                           fill="white", width=2, tags="eye")
-            c.create_line(right_ex - 4, ey - 4, right_ex + 4, ey + 4,
+            c.create_line(right_ex - int(4 * sx), ey - int(4 * sy), right_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", width=2, tags="eye")
-            c.create_line(right_ex - 4, ey + 4, right_ex + 4, ey - 4,
+            c.create_line(right_ex - int(4 * sx), ey + int(4 * sy), right_ex + int(4 * sx), ey - int(4 * sy),
                           fill="white", width=2, tags="eye")
+        elif style == 'wink':
+            # Left eye normal, right eye winking (line)
+            c.create_oval(left_ex - es, ey - es, left_ex + es, ey + es,
+                          fill="white", outline="", tags="eye")
+            c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
+                          fill="#222222", outline="", tags="pupil")
+            c.create_line(right_ex - es, ey, right_ex + es, ey,
+                          fill="white", width=2, tags="eye")
+        elif style == 'surprised':
+            # Wide open eyes
+            big_es = int(8 * sx)
+            c.create_oval(left_ex - big_es, ey - big_es, left_ex + big_es, ey + big_es,
+                          fill="white", outline="", tags="eye")
+            c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
+                          fill="#222222", outline="", tags="pupil")
+            c.create_oval(right_ex - big_es, ey - big_es, right_ex + big_es, ey + big_es,
+                          fill="white", outline="", tags="eye")
+            c.create_oval(right_ex - ps, ey - ps, right_ex + ps, ey + ps,
+                          fill="#222222", outline="", tags="pupil")
         else:
             # Normal round eyes with pupils and shine
-            # Left eye white
-            c.create_oval(left_ex - 6, ey - 6, left_ex + 6, ey + 6,
+            c.create_oval(left_ex - es, ey - es, left_ex + es, ey + es,
                           fill="white", outline="", tags="eye")
-            # Left pupil
-            c.create_oval(left_ex - 3, ey - 3, left_ex + 3, ey + 3,
+            c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
                           fill="#222222", outline="", tags="pupil")
-            # Left shine
-            c.create_oval(left_ex - 5, ey - 5, left_ex - 2, ey - 2,
+            c.create_oval(left_ex - int(5 * sx), ey - int(5 * sy), left_ex - int(2 * sx), ey - int(2 * sy),
                           fill="white", outline="", tags="shine")
-            # Right eye white
-            c.create_oval(right_ex - 6, ey - 6, right_ex + 6, ey + 6,
+            c.create_oval(right_ex - es, ey - es, right_ex + es, ey + es,
                           fill="white", outline="", tags="eye")
-            # Right pupil
-            c.create_oval(right_ex - 3, ey - 3, right_ex + 3, ey + 3,
+            c.create_oval(right_ex - ps, ey - ps, right_ex + ps, ey + ps,
                           fill="#222222", outline="", tags="pupil")
-            # Right shine
-            c.create_oval(right_ex - 5, ey - 5, right_ex - 2, ey - 2,
+            c.create_oval(right_ex - int(5 * sx), ey - int(5 * sy), right_ex - int(2 * sx), ey - int(2 * sy),
                           fill="white", outline="", tags="shine")
     
-    def _draw_mouth(self, c: tk.Canvas, cx: int, my: int, style: str):
+    def _draw_mouth(self, c: tk.Canvas, cx: int, my: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda mouth based on the current animation style."""
+        ms = int(8 * sx)  # mouth size
         if style == 'smile':
-            c.create_arc(cx - 8, my - 6, cx + 8, my + 6,
+            c.create_arc(cx - ms, my - int(6 * sy), cx + ms, my + int(6 * sy),
                          start=200, extent=140, style="arc",
                          outline="#333333", width=2, tags="mouth")
         elif style == 'angry':
-            # Frown
-            c.create_arc(cx - 8, my, cx + 8, my + 10,
+            c.create_arc(cx - ms, my, cx + ms, my + int(10 * sy),
                          start=20, extent=140, style="arc",
                          outline="#333333", width=2, tags="mouth")
         elif style == 'sleep':
-            # Small 'z' drawn as text
-            c.create_text(cx + 30, my - 20, text="z",
-                          font=("Arial", 8), fill="gray", tags="zzz")
-            c.create_text(cx + 38, my - 30, text="Z",
-                          font=("Arial", 10), fill="gray", tags="zzz")
-            c.create_text(cx + 46, my - 42, text="Z",
-                          font=("Arial", 13), fill="gray", tags="zzz")
-            # Small line mouth
-            c.create_line(cx - 4, my + 2, cx + 4, my + 2,
+            c.create_text(cx + int(30 * sx), my - int(20 * sy), text="z",
+                          font=("Arial", int(10 * sx)), fill="gray", tags="zzz")
+            c.create_text(cx + int(38 * sx), my - int(30 * sy), text="Z",
+                          font=("Arial", int(12 * sx)), fill="gray", tags="zzz")
+            c.create_text(cx + int(46 * sx), my - int(42 * sy), text="Z",
+                          font=("Arial", int(15 * sx)), fill="gray", tags="zzz")
+            c.create_line(cx - int(4 * sx), my + 2, cx + int(4 * sx), my + 2,
                           fill="#333333", width=1, tags="mouth")
         elif style == 'wavy':
-            # Wavy drunk mouth
             points = []
             for i in range(9):
-                px = cx - 8 + i * 2
-                py = my + math.sin(i * 1.2) * 3
+                px = cx - ms + i * int(2 * sx)
+                py = my + math.sin(i * 1.2) * int(3 * sy)
                 points.extend([px, py])
             if len(points) >= 4:
                 c.create_line(*points, fill="#333333", width=2,
                               smooth=True, tags="mouth")
         elif style == 'eating':
-            # Open mouth / chewing animation
-            c.create_oval(cx - 5, my - 2, cx + 5, my + 5,
+            c.create_oval(cx - int(5 * sx), my - int(2 * sy), cx + int(5 * sx), my + int(5 * sy),
                           fill="#333333", outline="#333333", tags="mouth")
         else:
-            # Neutral small curve
-            c.create_arc(cx - 5, my - 3, cx + 5, my + 4,
+            c.create_arc(cx - int(5 * sx), my - int(3 * sy), cx + int(5 * sx), my + int(4 * sy),
                          start=210, extent=120, style="arc",
                          outline="#333333", width=1.5, tags="mouth")
+
+    def _draw_equipped_items(self, c: tk.Canvas, cx: int, by: float, sx: float, sy: float):
+        """Draw equipped closet items on the panda body for visual consistency."""
+        if not self.panda_closet:
+            return
+        try:
+            appearance = self.panda_closet.get_current_appearance()
+            # Draw hat on head
+            if appearance.hat:
+                hat_item = self.panda_closet.get_item(appearance.hat)
+                if hat_item:
+                    c.create_text(cx, int(15 * sy + by), text=hat_item.emoji,
+                                  font=("Arial", int(18 * sx)), tags="equipped_hat")
+            # Draw clothing on body
+            if appearance.clothing:
+                clothing_item = self.panda_closet.get_item(appearance.clothing)
+                if clothing_item:
+                    c.create_text(cx, int(115 * sy + by), text=clothing_item.emoji,
+                                  font=("Arial", int(14 * sx)), tags="equipped_clothing")
+            # Draw accessories near neck/chest
+            if appearance.accessories:
+                for i, acc_id in enumerate(appearance.accessories[:2]):
+                    acc_item = self.panda_closet.get_item(acc_id)
+                    if acc_item:
+                        offset_x = int((-15 + i * 30) * sx)
+                        c.create_text(cx + offset_x, int(85 * sy + by), text=acc_item.emoji,
+                                      font=("Arial", int(12 * sx)), tags="equipped_acc")
+            # Draw shoes near feet
+            if appearance.shoes:
+                shoes_item = self.panda_closet.get_item(appearance.shoes)
+                if shoes_item:
+                    c.create_text(cx, int(180 * sy + by), text=shoes_item.emoji,
+                                  font=("Arial", int(12 * sx)), tags="equipped_shoes")
+        except Exception as e:
+            logger.debug(f"Error drawing equipped items: {e}")
     
     def _draw_animation_extras(self, c: tk.Canvas, cx: int, by: float,
-                                anim: str, frame_idx: int):
+                                anim: str, frame_idx: int, sx: float = 1.0, sy: float = 1.0):
         """Draw extra decorations based on animation type."""
         emoji_list = self.ANIMATION_EMOJIS.get(anim)
         if emoji_list:
             emoji = emoji_list[frame_idx % len(emoji_list)]
-            c.create_text(cx + 45, 18 + by, text=emoji,
-                          font=("Arial", 16), tags="extra")
+            c.create_text(cx + int(55 * sx), int(18 * sy + by), text=emoji,
+                          font=("Arial", int(20 * sx)), tags="extra")
         
         # Blush cheeks when petting, celebrating, playing, eating, etc.
         if anim in ('petting', 'celebrating', 'fed', 'playing', 'eating', 'customizing'):
-            cheek_y = 56 + by
-            c.create_oval(cx - 38, cheek_y - 4, cx - 28, cheek_y + 4,
+            cheek_y = int(56 * sy + by)
+            br = int(5 * sx)
+            c.create_oval(cx - int(38 * sx), cheek_y - br, cx - int(28 * sx), cheek_y + br,
                           fill="#FFB6C1", outline="", tags="blush")
-            c.create_oval(cx + 28, cheek_y - 4, cx + 38, cheek_y + 4,
+            c.create_oval(cx + int(28 * sx), cheek_y - br, cx + int(38 * sx), cheek_y + br,
                           fill="#FFB6C1", outline="", tags="blush")
     
     def _on_drag_start(self, event):
@@ -937,13 +995,32 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         try:
             if self.panda:
                 menu_items = self.panda.get_context_menu()
-                # Create context menu
-                menu = tk.Menu(self, tearoff=0)
+                # Create context menu with larger font for readability
+                menu = tk.Menu(self, tearoff=0, font=("Arial", 13))
                 for key, label in menu_items.items():
                     menu.add_command(
                         label=label,
                         command=lambda k=key: self._handle_menu_action(k)
                     )
+
+                # Add panda stats submenu (name, gender, mood)
+                menu.add_separator()
+                stats_menu = tk.Menu(menu, tearoff=0, font=("Arial", 13))
+                stats_menu.add_command(
+                    label=f"📛 Rename Panda",
+                    command=self._show_rename_dialog
+                )
+                stats_menu.add_command(
+                    label=f"⚧ Change Gender",
+                    command=self._show_gender_dialog
+                )
+                mood_indicator = self.panda.get_mood_indicator() if self.panda else "🐼"
+                mood_name = self.panda.current_mood.value if self.panda else "happy"
+                stats_menu.add_command(
+                    label=f"{mood_indicator} Mood: {mood_name}",
+                    state="disabled"
+                )
+                menu.add_cascade(label="📊 Panda Stats", menu=stats_menu)
 
                 # Add toy/food sub-menus if widget collection available
                 if self.widget_collection:
@@ -951,7 +1028,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     toys = self.widget_collection.get_toys(unlocked_only=True)
                     if toys:
                         menu.add_separator()
-                        toy_menu = tk.Menu(menu, tearoff=0)
+                        toy_menu = tk.Menu(menu, tearoff=0, font=("Arial", 13))
                         for toy in toys:
                             toy_menu.add_command(
                                 label=f"{toy.emoji} {toy.name}",
@@ -962,7 +1039,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     # Food sub-menu
                     food = self.widget_collection.get_food(unlocked_only=True)
                     if food:
-                        food_menu = tk.Menu(menu, tearoff=0)
+                        food_menu = tk.Menu(menu, tearoff=0, font=("Arial", 13))
                         for f in food:
                             food_menu.add_command(
                                 label=f"{f.emoji} {f.name}",
@@ -998,6 +1075,78 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         if self.panda:
             self.info_label.configure(text="🐼 Back to my corner!")
+
+    def _show_rename_dialog(self):
+        """Show dialog to rename the panda."""
+        if not self.panda:
+            return
+        try:
+            from tkinter import simpledialog
+            new_name = simpledialog.askstring(
+                "Rename Panda",
+                f"Current name: {self.panda.name}\n\nEnter new name:",
+                initialvalue=self.panda.name
+            )
+            if new_name and new_name.strip():
+                new_name = new_name.strip()
+                self.panda.set_name(new_name)
+                # Save to config
+                try:
+                    from src.config import config
+                    config.set('panda', 'name', value=new_name)
+                    config.save()
+                except Exception as e:
+                    logger.warning(f"Failed to save panda name: {e}")
+                self.info_label.configure(text=f"🐼 Call me {new_name}!")
+                logger.info(f"Panda renamed to: {new_name}")
+        except Exception as e:
+            logger.error(f"Error renaming panda: {e}")
+
+    def _show_gender_dialog(self):
+        """Show dialog to change panda gender."""
+        if not self.panda:
+            return
+        try:
+            from src.features.panda_character import PandaGender
+            # Create a small dialog window
+            dialog = tk.Toplevel(self)
+            dialog.title("Panda Gender")
+            dialog.geometry("300x180")
+            dialog.resizable(False, False)
+            dialog.transient(self.winfo_toplevel())
+            dialog.grab_set()
+
+            tk.Label(dialog, text="Select Gender:", font=("Arial", 14, "bold")).pack(pady=10)
+
+            gender_var = tk.StringVar(value=self.panda.gender.value)
+
+            for gender, label in [
+                (PandaGender.MALE, "♂ Male"),
+                (PandaGender.FEMALE, "♀ Female"),
+                (PandaGender.NON_BINARY, "⚧ Non-Binary")
+            ]:
+                tk.Radiobutton(
+                    dialog, text=label, variable=gender_var,
+                    value=gender.value, font=("Arial", 12)
+                ).pack(anchor="w", padx=30)
+
+            def apply_gender():
+                selected = PandaGender(gender_var.get())
+                self.panda.set_gender(selected)
+                try:
+                    from src.config import config
+                    config.set('panda', 'gender', value=selected.value)
+                    config.save()
+                except Exception as e:
+                    logger.warning(f"Failed to save panda gender: {e}")
+                pronoun = self.panda.get_pronoun_subject()
+                self.info_label.configure(text=f"🐼 Pronouns set to {pronoun}/{self.panda.get_pronoun_object()}!")
+                logger.info(f"Panda gender set to: {selected.value}")
+                dialog.destroy()
+
+            tk.Button(dialog, text="Apply", font=("Arial", 12), command=apply_gender).pack(pady=10)
+        except Exception as e:
+            logger.error(f"Error changing panda gender: {e}")
 
     def _give_widget_to_panda(self, widget):
         """Give a toy or food widget to the panda."""
@@ -1165,12 +1314,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             if self.animation_frame > self.MAX_ANIMATION_FRAME:
                 self.animation_frame = 0
             
-            # Draw equipped items text on canvas
+            # Draw equipped items text on canvas (supplementary to body drawing)
             equipped = self._get_equipped_items_text()
             if equipped:
                 self.panda_canvas.create_text(
-                    PANDA_CANVAS_W // 2, PANDA_CANVAS_H - 6,
-                    text=equipped, font=("Arial", 9),
+                    PANDA_CANVAS_W // 2, PANDA_CANVAS_H - 8,
+                    text=equipped, font=("Arial", 12),
                     fill="gray", tags="equipped"
                 )
             
