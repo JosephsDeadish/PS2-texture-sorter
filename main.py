@@ -68,13 +68,6 @@ except ImportError:
     PANDA_CHARACTER_AVAILABLE = False
     print("Warning: Panda character not available.")
 
-# Keep PandaMode import for backward compatibility during transition
-try:
-    from src.features.panda_mode import PandaMode
-    PANDA_MODE_AVAILABLE = True
-except ImportError:
-    PANDA_MODE_AVAILABLE = False
-    print("Warning: Panda mode not available.")
 
 try:
     from src.features.sound_manager import SoundManager
@@ -369,7 +362,6 @@ class PS2TextureSorter(ctk.CTk):
         
         # Initialize feature modules
         self.panda = None  # Always-present panda character
-        self.panda_mode = None  # Deprecated - keeping for backward compatibility
         self.sound_manager = None
         self.achievement_manager = None
         self.unlockables_manager = None
@@ -405,11 +397,6 @@ class PS2TextureSorter(ctk.CTk):
                 if PANDA_CHARACTER_AVAILABLE:
                     self.panda = PandaCharacter()
                     logger.info("Panda character initialized (always present)")
-                
-                # Keep old panda_mode for backward compatibility (will be deprecated)
-                if PANDA_MODE_AVAILABLE and not PANDA_CHARACTER_AVAILABLE:
-                    self.panda_mode = PandaMode()
-                    logger.warning("Using deprecated PandaMode - should migrate to PandaCharacter")
                 
                 if SOUND_AVAILABLE:
                     self.sound_manager = SoundManager()
@@ -990,6 +977,7 @@ class PS2TextureSorter(ctk.CTk):
                         logger.error(f"Error saving popout notes during dock: {e}")
             else:
                 # Reparent widgets back to original tab frame
+                reparented = False
                 if hasattr(self, '_popout_pack_info') and tab_name in self._popout_pack_info:
                     tab_frame = self._popout_original_frames.get(tab_name)
                     if tab_frame and tab_frame.winfo_exists():
@@ -1002,9 +990,14 @@ class PS2TextureSorter(ctk.CTk):
                                         child.pack(**{k: v for k, v in pack_info.items() if k != 'in'})
                                     else:
                                         child.pack(fill="both", expand=True)
+                                    reparented = True
                             except Exception as e:
                                 logger.debug(f"Could not reparent widget back: {e}")
                     self._popout_pack_info.pop(tab_name, None)
+                
+                # If reparenting failed, regenerate tab content
+                if not reparented:
+                    self._regenerate_tab_content(tab_name)
             
             # Destroy pop-out window
             if popout_window and popout_window.winfo_exists():
@@ -1024,6 +1017,61 @@ class PS2TextureSorter(ctk.CTk):
             except Exception:
                 pass
             self._popout_windows.pop(tab_name, None)
+    
+    def _regenerate_tab_content(self, tab_name):
+        """Regenerate content for a tab after failed undock/dock cycle."""
+        try:
+            tab_frame = self._popout_original_frames.get(tab_name)
+            if not tab_frame or not tab_frame.winfo_exists():
+                return
+            # Clear any leftover widgets (except the popout button)
+            for child in list(tab_frame.winfo_children()):
+                if not self._is_popout_button(child):
+                    try:
+                        child.destroy()
+                    except Exception:
+                        pass
+            # Regenerate based on tab name
+            tab_creators = {
+                "🏆 Achievements": lambda: self._rebuild_achievements_in_frame(tab_frame),
+                "🛒 Shop": lambda: self._rebuild_shop_in_frame(tab_frame),
+                "🎁 Rewards": lambda: self._rebuild_rewards_in_frame(tab_frame),
+                "📦 Inventory": lambda: self._rebuild_inventory_in_frame(tab_frame),
+                "📊 Panda Stats & Mood": lambda: self._rebuild_panda_stats_in_frame(tab_frame),
+            }
+            creator = tab_creators.get(tab_name)
+            if creator:
+                creator()
+                logger.info(f"Regenerated content for tab: {tab_name}")
+        except Exception as e:
+            logger.error(f"Error regenerating tab '{tab_name}': {e}")
+    
+    def _rebuild_achievements_in_frame(self, frame):
+        """Rebuild achievements tab content."""
+        scroll = ctk.CTkScrollableFrame(frame)
+        scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        self.achieve_scroll = scroll
+        self._display_achievements(getattr(self, '_achievement_category_filter', 'all'))
+    
+    def _rebuild_shop_in_frame(self, frame):
+        """Rebuild shop tab content."""
+        self.tab_shop = frame
+        self.create_shop_tab()
+    
+    def _rebuild_rewards_in_frame(self, frame):
+        """Rebuild rewards tab content."""
+        self.tab_rewards = frame
+        self.create_rewards_tab()
+    
+    def _rebuild_inventory_in_frame(self, frame):
+        """Rebuild inventory tab content."""
+        self.tab_inventory = frame
+        self.create_inventory_tab()
+    
+    def _rebuild_panda_stats_in_frame(self, frame):
+        """Rebuild panda stats & mood tab content."""
+        self.tab_panda_stats = frame
+        self.create_panda_stats_tab()
     
     def _create_popout_browser(self, popout_window, container):
         """Create file browser in popout window"""
@@ -2091,6 +2139,19 @@ class PS2TextureSorter(ctk.CTk):
                                      "UI customization panel is not available.\n"
                                      "Please check your installation.")
     
+    def _open_sound_settings(self):
+        """Open customization dialog directly on the Sound tab."""
+        if CUSTOMIZATION_AVAILABLE:
+            try:
+                open_customization_dialog(parent=self,
+                                          on_settings_change=self._on_customization_change,
+                                          initial_tab="🔊 Sound")
+                self.log("✅ Opened Sound Settings")
+            except Exception as e:
+                self.log(f"❌ Error opening sound settings: {e}")
+        else:
+            self.log("⚠️ UI Customization not available")
+    
     def _on_customization_change(self, setting_type, value):
         """Handle customization setting changes from the customization panel"""
         try:
@@ -2172,10 +2233,9 @@ class PS2TextureSorter(ctk.CTk):
                     except Exception as tooltip_err:
                         logger.debug(f"Could not change tooltip mode via manager: {tooltip_err}")
                 
-                # Sync sarcastic/vulgar tooltip text preference with PandaMode
-                # This only controls tooltip TEXT style, not theme or application mode
-                if self.panda_mode and hasattr(self.panda_mode, 'set_vulgar_mode'):
-                    self.panda_mode.set_vulgar_mode(value == 'vulgar_panda')
+                # Sync vulgar tooltip text preference with PandaCharacter
+                if self.panda and hasattr(self.panda, 'set_vulgar_mode'):
+                    self.panda.set_vulgar_mode(value == 'vulgar_panda')
                 
                 # Always save to config immediately
                 try:
@@ -2253,6 +2313,17 @@ class PS2TextureSorter(ctk.CTk):
                     config.save()
                 except Exception as mute_err:
                     logger.debug(f"Could not save mute setting: {mute_err}")
+            
+            elif setting_type == 'sound_choice':
+                try:
+                    event_id = value.get('event', '')
+                    sound = value.get('sound', '')
+                    sound_choices = config.get('sound', 'sound_choices', default={})
+                    sound_choices[event_id] = sound
+                    config.set('sound', 'sound_choices', value=sound_choices)
+                    config.save()
+                except Exception as choice_err:
+                    logger.debug(f"Could not save sound choice: {choice_err}")
                 
         except Exception as e:
             self.log(f"❌ Error applying customization: {e}")
@@ -2803,7 +2874,7 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(scale_frame, text="(applies immediately)", 
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
-        # Note: Tooltip mode, cursor style, and panda mode settings are
+        # Note: Tooltip mode, cursor style, and sound settings are
         # available in the Advanced Customization panel to avoid duplication.
         
         # Advanced Customization button
@@ -2902,105 +2973,13 @@ class PS2TextureSorter(ctk.CTk):
         ctk.CTkLabel(notif_frame, text="🔔 Notifications & Sounds", 
                      font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
         
-        sound_var = ctk.BooleanVar(value=config.get('notifications', 'play_sounds', default=True))
-        ctk.CTkCheckBox(notif_frame, text="Play sound effects", 
-                       variable=sound_var).pack(anchor="w", padx=20, pady=3)
+        ctk.CTkLabel(notif_frame,
+                     text="🔊 All sound settings are in Advanced Customization → Sound tab",
+                     font=("Arial", 11), text_color="gray").pack(anchor="w", padx=20, pady=3)
         
-        completion_var = ctk.BooleanVar(value=config.get('notifications', 'completion_alert', default=True))
-        ctk.CTkCheckBox(notif_frame, text="Alert on operation completion", 
-                       variable=completion_var).pack(anchor="w", padx=20, pady=3)
-        
-        # Sound pack selector
-        sound_pack_frame = ctk.CTkFrame(notif_frame)
-        sound_pack_frame.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkLabel(sound_pack_frame, text="Sound Pack:").pack(side="left", padx=10)
-        sound_pack_var = ctk.StringVar(value=config.get('sound', 'sound_pack', default='default'))
-        
-        def on_sound_pack_change(choice):
-            try:
-                config.set('sound', 'sound_pack', value=choice)
-                config.save()
-                if hasattr(self, 'sound_manager') and self.sound_manager:
-                    try:
-                        from src.features.sound_manager import SoundPack
-                        pack = SoundPack(choice)
-                        self.sound_manager.set_sound_pack(pack)
-                    except Exception:
-                        pass
-                self.log(f"✅ Sound pack changed to: {choice}")
-            except Exception as e:
-                logger.error(f"Failed to change sound pack: {e}")
-        
-        ctk.CTkOptionMenu(sound_pack_frame, variable=sound_pack_var,
-                         values=["default", "minimal", "vulgar"],
-                         command=on_sound_pack_change).pack(side="left", padx=10)
-        
-        # Per-event sound customization
-        ctk.CTkLabel(notif_frame, text="🔊 Per-Event Sound Settings (frequency Hz / duration ms):", 
-                    font=("Arial", 10), text_color="gray").pack(anchor="w", padx=20, pady=(10, 5))
-        
-        sound_events_frame = ctk.CTkScrollableFrame(notif_frame, height=200)
-        sound_events_frame.pack(fill="x", padx=20, pady=5)
-        
-        # Get current sound definitions
-        self._sound_event_vars = {}
-        try:
-            from src.features.sound_manager import SoundEvent, SoundPack, Sound, SoundManager
-            current_pack_name = config.get('sound', 'sound_pack', default='default')
-            try:
-                current_pack = SoundPack(current_pack_name)
-            except Exception:
-                current_pack = SoundPack.DEFAULT
-            current_sounds = SoundManager.SOUND_DEFINITIONS.get(current_pack, {})
-            custom_sounds = config.get('sound', 'custom_sounds', default={})
-            
-            sound_event_vars = {}
-            for event in SoundEvent:
-                row = ctk.CTkFrame(sound_events_frame)
-                row.pack(fill="x", pady=2)
-                
-                sound = current_sounds.get(event)
-                default_freq = sound.frequency if sound else 500
-                default_dur = sound.duration if sound else 200
-                
-                # Use custom value if set, otherwise default
-                custom = custom_sounds.get(event.value, {})
-                freq_val = custom.get('frequency', default_freq)
-                dur_val = custom.get('duration', default_dur)
-                
-                ctk.CTkLabel(row, text=f"{event.value}:", width=120, anchor="w",
-                           font=("Arial", 10)).pack(side="left", padx=5)
-                
-                freq_var = ctk.StringVar(value=str(freq_val))
-                ctk.CTkLabel(row, text="Hz:", font=("Arial", 9)).pack(side="left", padx=2)
-                ctk.CTkEntry(row, textvariable=freq_var, width=60).pack(side="left", padx=2)
-                
-                dur_var = ctk.StringVar(value=str(dur_val))
-                ctk.CTkLabel(row, text="ms:", font=("Arial", 9)).pack(side="left", padx=2)
-                ctk.CTkEntry(row, textvariable=dur_var, width=60).pack(side="left", padx=2)
-                
-                # Test button
-                def test_sound(f=freq_var, d=dur_var):
-                    try:
-                        import sys
-                        if sys.platform == 'win32':
-                            import winsound
-                            winsound.Beep(int(f.get()), int(d.get()))
-                    except Exception as ex:
-                        logger.debug(f"Sound test failed: {ex}")
-                
-                ctk.CTkButton(row, text="▶", width=30, height=24,
-                            command=test_sound).pack(side="left", padx=5)
-                
-                sound_event_vars[event.value] = (freq_var, dur_var)
-            
-            # Store vars for save
-            self._sound_event_vars = sound_event_vars
-        except Exception as e:
-            logger.error(f"Failed to load sound event settings: {e}")
-            ctk.CTkLabel(notif_frame, text=f"⚠️ Sound customization unavailable: {e}",
-                        text_color="orange").pack(padx=20, pady=5)
+        ctk.CTkButton(notif_frame, text="🔊 Open Sound Settings",
+                     command=self._open_sound_settings,
+                     width=220, height=30).pack(padx=20, pady=8)
         
         # === AI MODEL SETTINGS ===
         ai_frame = ctk.CTkFrame(settings_scroll)
@@ -3332,22 +3311,7 @@ class PS2TextureSorter(ctk.CTk):
                 config.set('logging', 'log_level', value=loglevel_var.get())
                 config.set('logging', 'crash_reports', value=crash_report_var.get())
                 
-                # Notifications & Sounds
-                config.set('notifications', 'play_sounds', value=sound_var.get())
-                config.set('notifications', 'completion_alert', value=completion_var.get())
-                
-                # Save per-event custom sound settings
-                if hasattr(self, '_sound_event_vars'):
-                    custom_sounds = {}
-                    for event_name, (freq_var, dur_var) in self._sound_event_vars.items():
-                        try:
-                            freq = int(freq_var.get())
-                            dur = int(dur_var.get())
-                            if freq > 0 and dur > 0:
-                                custom_sounds[event_name] = {'frequency': freq, 'duration': dur}
-                        except (ValueError, TypeError):
-                            pass
-                    config.set('sound', 'custom_sounds', value=custom_sounds)
+                # Notifications & Sounds are now managed in Advanced Customization → Sound tab
                 
                 # AI Settings
                 config.set('ai', 'prefer_image_content', value=prefer_image_var.get())
@@ -4617,30 +4581,6 @@ support (200,000+ textures). 100% offline operation."""
             ctk.CTkLabel(features_frame, text=feature,
                         font=("Arial", 11), anchor="w").pack(anchor="w", padx=20, pady=3)
         
-        # ============= PANDA MODE =============
-        panda_frame = ctk.CTkFrame(scrollable_frame)
-        panda_frame.pack(fill="x", padx=20, pady=15)
-        
-        ctk.CTkLabel(panda_frame, text="🐼 PANDA MODE",
-                     font=("Arial Bold", 18)).pack(pady=10)
-        
-        panda_text = """The interactive panda character is your companion throughout texture sorting!
-
-• 13 dynamic moods (happy, working, celebrating, rage, sarcastic, drunk, existential, etc.)
-• Level system - Both you and the panda gain XP and level up through usage
-• 250+ tooltip variations ranging from helpful to hilariously sarcastic
-• Random panda facts, jokes, and motivational quotes during processing
-• Easter eggs and hidden surprises (try clicking the panda 10 times!)
-• Vulgar Mode toggle for uncensored panda commentary (opt-in, off by default)
-• Right-click the panda for special interactions: pet, feed bamboo, check mood, reset position
-• Draggable - Click and drag the panda anywhere on screen! Position is saved automatically
-• Earn Bamboo Bucks currency through interactions and achievements
-• Customizable appearance and behavior in Settings → Panda
-
-Drag the panda to your favorite spot or right-click to reset to corner! 🎋"""
-        
-        ctk.CTkLabel(panda_frame, text=panda_text,
-                     font=("Arial", 11), justify="left", wraplength=900).pack(pady=10, padx=20)
         
         # ============= CREDITS =============
         credits_frame = ctk.CTkFrame(scrollable_frame)
@@ -5053,70 +4993,104 @@ Built with:
         self._start_stats_auto_refresh()
 
     def _draw_static_panda(self, canvas, w, h):
-        """Draw a simplified static panda on a preview canvas."""
+        """Draw a static panda on a preview canvas matching the live panda_widget style."""
         cx = w // 2
-        # Reference dimensions for the panda drawing (original design space)
         sx = w / 220.0
         sy = h / 270.0
-        s = min(sx, sy)
+        black = "#1a1a1a"
+        white = "#F5F5F5"
+        pink = "#FFB6C1"
 
-        # Body (white oval)
-        bx, by = cx, int(160 * s)
-        bw, bh = int(50 * s), int(60 * s)
-        canvas.create_oval(bx - bw, by - bh, bx + bw, by + bh, fill="white", outline="")
+        # Legs (behind body)
+        leg_top = int(145 * sy)
+        leg_len = int(30 * sy)
+        for lx in [cx - int(25 * sx), cx + int(25 * sx)]:
+            canvas.create_oval(lx - int(12 * sx), leg_top,
+                               lx + int(12 * sx), leg_top + leg_len,
+                               fill=black, outline=black)
+            # Foot pad
+            canvas.create_oval(lx - int(10 * sx), leg_top + leg_len - int(8 * sy),
+                               lx + int(10 * sx), leg_top + leg_len + int(4 * sy),
+                               fill=white, outline=black, width=1)
 
-        # Head (white circle)
-        hx, hy = cx, int(85 * s)
-        hr = int(42 * s)
-        canvas.create_oval(hx - hr, hy - hr, hx + hr, hy + hr, fill="white", outline="")
+        # Body (white belly)
+        body_top = int(75 * sy)
+        body_bot = int(160 * sy)
+        body_rx = int(42 * sx)
+        canvas.create_oval(cx - body_rx, body_top, cx + body_rx, body_bot,
+                           fill=white, outline=black, width=2)
+        # Inner belly patch
+        belly_rx = int(28 * sx)
+        canvas.create_oval(cx - belly_rx, body_top + int(15 * sy),
+                           cx + belly_rx, body_bot - int(10 * sy),
+                           fill="#FAFAFA", outline="")
 
-        # Ears (black circles)
-        er = int(18 * s)
-        for dx in [-30, 30]:
-            ex = hx + int(dx * s)
-            ey = hy - int(30 * s)
-            canvas.create_oval(ex - er, ey - er, ex + er, ey + er, fill="black", outline="")
+        # Arms
+        arm_top = int(95 * sy)
+        arm_len = int(35 * sy)
+        canvas.create_oval(cx - int(55 * sx), arm_top,
+                           cx - int(30 * sx), arm_top + arm_len,
+                           fill=black, outline=black)
+        canvas.create_oval(cx + int(30 * sx), arm_top,
+                           cx + int(55 * sx), arm_top + arm_len,
+                           fill=black, outline=black)
 
-        # Eye patches (black ovals)
-        epr = int(14 * s)
-        for dx in [-16, 16]:
-            epx = hx + int(dx * s)
-            epy = hy - int(2 * s)
-            canvas.create_oval(epx - epr, epy - int(10 * s),
-                               epx + epr, epy + int(10 * s), fill="black", outline="")
+        # Head
+        head_cy = int(52 * sy)
+        head_rx = int(36 * sx)
+        head_ry = int(32 * sy)
+        canvas.create_oval(cx - head_rx, head_cy - head_ry,
+                           cx + head_rx, head_cy + head_ry,
+                           fill=white, outline=black, width=2)
 
-        # Eyes (white dots inside patches)
-        eyr = int(5 * s)
-        for dx in [-16, 16]:
-            exx = hx + int(dx * s)
-            eyy = hy - int(2 * s)
-            canvas.create_oval(exx - eyr, eyy - eyr, exx + eyr, eyy + eyr, fill="white", outline="")
-            # Pupil
-            pr = int(3 * s)
-            canvas.create_oval(exx - pr, eyy - pr, exx + pr, eyy + pr, fill="black", outline="")
+        # Ears
+        ear_y = head_cy - head_ry + int(5 * sy)
+        ear_w = int(22 * sx)
+        canvas.create_oval(cx - head_rx - int(2 * sx), ear_y - int(16 * sy),
+                           cx - head_rx + ear_w, ear_y + int(8 * sy),
+                           fill=black, outline=black)
+        canvas.create_oval(cx - head_rx + int(4 * sx), ear_y - int(10 * sy),
+                           cx - head_rx + int(16 * sx), ear_y + int(2 * sy),
+                           fill=pink, outline="")
+        canvas.create_oval(cx + head_rx - ear_w, ear_y - int(16 * sy),
+                           cx + head_rx + int(2 * sx), ear_y + int(8 * sy),
+                           fill=black, outline=black)
+        canvas.create_oval(cx + head_rx - int(16 * sx), ear_y - int(10 * sy),
+                           cx + head_rx - int(4 * sx), ear_y + int(2 * sy),
+                           fill=pink, outline="")
 
-        # Nose (small black oval)
-        nr = int(5 * s)
-        nx, ny = hx, hy + int(12 * s)
-        canvas.create_oval(nx - nr, ny - int(3 * s), nx + nr, ny + int(3 * s), fill="black", outline="")
+        # Eye patches
+        eye_y = head_cy - int(4 * sy)
+        patch_rx = int(14 * sx)
+        patch_ry = int(11 * sy)
+        eye_offset = int(24 * sx)
+        for dx in [-eye_offset, eye_offset]:
+            canvas.create_oval(cx + dx - patch_rx, eye_y - patch_ry,
+                               cx + dx + patch_rx, eye_y + patch_ry,
+                               fill=black, outline="")
 
-        # Mouth (small arc)
-        canvas.create_arc(hx - int(8 * s), ny, hx + int(8 * s), ny + int(10 * s),
-                          start=200, extent=140, style="arc", outline="black", width=max(1, int(1.5 * s)))
+        # Eyes (white with pupils)
+        es = int(6 * sx)
+        ps = int(3 * sx)
+        for dx in [-eye_offset, eye_offset]:
+            ex = cx + dx
+            canvas.create_oval(ex - es, eye_y - es, ex + es, eye_y + es,
+                               fill="white", outline="")
+            canvas.create_oval(ex - ps, eye_y - ps, ex + ps, eye_y + ps,
+                               fill="#222222", outline="")
 
-        # Arms (black ovals)
-        for dx in [-50, 50]:
-            ax = cx + int(dx * s)
-            ay = int(155 * s)
-            aw, ah = int(16 * s), int(35 * s)
-            canvas.create_oval(ax - aw, ay - ah, ax + aw, ay + ah, fill="black", outline="")
+        # Nose
+        nose_y = head_cy + int(8 * sy)
+        canvas.create_oval(cx - int(5 * sx), nose_y - int(3 * sy),
+                           cx + int(5 * sx), nose_y + int(4 * sy),
+                           fill=black, outline="")
 
-        # Legs (black ovals)
-        for dx in [-22, 22]:
-            lx = cx + int(dx * s)
-            ly = int(220 * s)
-            lw, lh = int(18 * s), int(22 * s)
-            canvas.create_oval(lx - lw, ly - lh, lx + lw, ly + lh, fill="black", outline="")
+        # Mouth (smile arc)
+        my = nose_y + int(6 * sy)
+        canvas.create_arc(cx - int(8 * sx), my - int(4 * sy),
+                          cx + int(8 * sx), my + int(6 * sy),
+                          start=200, extent=140, style="arc",
+                          outline=black, width=max(1, int(1.5 * sx)))
 
     def _refresh_panda_stats(self):
         """Refresh panda stats display by rebuilding the tab content"""
@@ -5153,7 +5127,7 @@ Built with:
                 except Exception:
                     pass
             # Update all stat labels in-place
-            if hasattr(self, '_stats_labels') and self.panda:
+            if hasattr(self, '_stats_labels') and self._stats_labels and self.panda:
                 try:
                     stats = self.panda.get_statistics()
                     for key in ('click_count', 'pet_count', 'feed_count', 'hover_count',
