@@ -946,15 +946,10 @@ class ThemeManager(ctk.CTkFrame):
         self.current_theme = self.preview_theme
         
         # Apply theme colors to the root application window and all its children
-        root = self.winfo_toplevel()
-        # Walk up to find the actual root CTk window (skip CTkToplevel dialogs)
         try:
-            master = root.master
-            while master is not None:
-                root = master
-                master = root.master
-        except AttributeError:
-            pass
+            root = self.nametowidget(".")
+        except (KeyError, ValueError):
+            root = self.winfo_toplevel()
         self._apply_theme_to_existing_widgets(root, colors)
         
         if self.on_theme_apply:
