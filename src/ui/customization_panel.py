@@ -1444,6 +1444,8 @@ class SoundSettingsPanel(ctk.CTkFrame):
         
         self.mute_vars = {}
         self.sound_choice_vars = {}
+        # Sound style choices - the selected value is saved to config and used
+        # by SoundManager to pick the waveform/sample for each event
         sound_choices = ["🔔 Default", "🎵 Chime", "🔊 Beep", "🎶 Melody", "🛎️ Bell", "📯 Horn", "🥁 Drum"]
         sound_events = [
             ("complete", "✅ Completion Sound"),

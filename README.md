@@ -142,7 +142,7 @@ Settings are stored in: `%USERPROFILE%\.ps2_texture_sorter\config.json`
 
 ### Key Settings Categories
 
-- **UI Settings** - Theme, colors, cursors, tooltips (expert/normal/beginner/panda modes), layout, animation speed, thumbnail controls
+- **UI Settings** - Theme, colors, cursors, tooltips (normal/beginner/vulgar), layout, animation speed, thumbnail controls
 - **Performance** - Thread count, memory limits, cache size, batch sizes, thumbnail cache
 - **File Handling** - Backup options, overwrite behavior, auto-save, undo depth (default 50)
 - **Sorting** - Classification mode, organization style, grouping options, LOD detection

@@ -1591,7 +1591,7 @@ Q: How do keyboard shortcuts work?
 A: Press F1 for help, Ctrl+P to start processing, Ctrl+S to save, and more. Check the About tab for a complete list of shortcuts.
 
 Q: How do I customize the UI theme?
-A: Click Settings button -> UI & Appearance to change colors, cursors (default/skull/panda/sword), themes, and tooltip verbosity. The Vulgar Panda theme uses a red color scheme.
+A: Click Settings button -> UI & Appearance to change colors, cursors, themes, and tooltip verbosity. Open Advanced Customization for full control over colors, cursors, and sounds.
 
 Q: How do I see thumbnails in the File Browser?
 A: Check the "Thumbnails" checkbox in the File Browser tab header. You can also adjust thumbnail size in Settings -> Performance.

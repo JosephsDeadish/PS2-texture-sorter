@@ -2300,6 +2300,17 @@ class PS2TextureSorter(ctk.CTk):
                     config.save()
                 except Exception as mute_err:
                     logger.debug(f"Could not save mute setting: {mute_err}")
+            
+            elif setting_type == 'sound_choice':
+                try:
+                    event_id = value.get('event', '')
+                    sound = value.get('sound', '')
+                    sound_choices = config.get('sound', 'sound_choices', default={})
+                    sound_choices[event_id] = sound
+                    config.set('sound', 'sound_choices', value=sound_choices)
+                    config.save()
+                except Exception as choice_err:
+                    logger.debug(f"Could not save sound choice: {choice_err}")
                 
         except Exception as e:
             self.log(f"❌ Error applying customization: {e}")
