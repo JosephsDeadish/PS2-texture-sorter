@@ -1,5 +1,5 @@
 """
-PS2 Texture Sorter - AI Model System
+Game Texture Sorter - AI Model System
 Comprehensive AI-powered texture classification with offline and online support
 Author: Dead On The Inside / JosephsDeadish
 """

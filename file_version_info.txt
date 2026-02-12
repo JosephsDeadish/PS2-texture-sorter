@@ -28,15 +28,14 @@ VSVersionInfo(
       StringTable(
         u'040904B0',
         [StringStruct(u'CompanyName', u'Dead On The Inside / JosephsDeadish'),
-        StringStruct(u'FileDescription', u'PS2 Texture Sorter - Automatic texture classification and organization for PS2 game dumps'),
+        StringStruct(u'FileDescription', u'Game Texture Sorter - Automatic texture classification and organization for game texture dumps'),
         StringStruct(u'FileVersion', u'1.0.0.0'),
-        StringStruct(u'InternalName', u'PS2TextureSorter'),
+        StringStruct(u'InternalName', u'GameTextureSorter'),
         StringStruct(u'LegalCopyright', u'© 2024 Dead On The Inside / JosephsDeadish'),
-        StringStruct(u'OriginalFilename', u'PS2TextureSorter.exe'),
-        StringStruct(u'ProductName', u'PS2 Texture Sorter'),
+        StringStruct(u'OriginalFilename', u'GameTextureSorter.exe'),
+        StringStruct(u'ProductName', u'Game Texture Sorter'),
         StringStruct(u'ProductVersion', u'1.0.0.0'),
-        StringStruct(u'Author', u'Dead On The Inside / JosephsDeadish'),
-        StringStruct(u'Repository', u'JosephsDeadish/PS2-texture-sorter')])
+        StringStruct(u'Author', u'Dead On The Inside / JosephsDeadish')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
   ]

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Application metadata
-APP_NAME = "PS2 Texture Sorter"
+APP_NAME = "Game Texture Sorter"
 APP_VERSION = "1.0.0"
 APP_AUTHOR = "Dead On The Inside / JosephsDeadish"
 

@@ -1,5 +1,5 @@
 """
-Performance Management for PS2 Texture Sorter.
+Performance Management for Game Texture Sorter.
 
 This module provides performance profiles and management for optimizing
 resource usage based on user preferences and system capabilities.

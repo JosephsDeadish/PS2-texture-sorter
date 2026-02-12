@@ -1,5 +1,5 @@
 """
-PS2 Texture Sorter - Organization Engine
+Game Texture Sorter - Organization Engine
 Author: Dead On The Inside / JosephsDeadish
 
 Main engine for organizing textures into hierarchical folder structures.

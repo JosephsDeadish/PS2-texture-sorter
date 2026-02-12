@@ -1,5 +1,5 @@
 """
-PS2 Texture Sorter - Organization System Package
+Game Texture Sorter - Organization System Package
 Author: Dead On The Inside / JosephsDeadish
 
 This package contains the organization/hierarchy system for sorting textures
