@@ -1119,11 +1119,13 @@ class ThemeManager(ctk.CTkFrame):
         """Return '#ffffff' or '#000000' depending on which contrasts better with the given color."""
         try:
             hex_color = hex_color.lstrip('#')
+            if len(hex_color) < 6:
+                return "#ffffff"
             r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
             # Relative luminance formula (ITU-R BT.709)
             luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
             return "#000000" if luminance > 0.5 else "#ffffff"
-        except Exception:
+        except (ValueError, IndexError, TypeError):
             return "#ffffff"
     
     def _save_custom_theme(self):

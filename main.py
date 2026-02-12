@@ -3866,10 +3866,7 @@ class GameTextureSorter(ctk.CTk):
                 config.save()
                 self.log(f"✅ Panda animations {'disabled' if disabled else 'enabled'}")
                 if hasattr(self, 'panda_widget') and self.panda_widget:
-                    if disabled:
-                        self.panda_widget.start_animation('idle')
-                    else:
-                        self.panda_widget.start_animation('idle')
+                    self.panda_widget.start_animation('idle')
             except Exception as e:
                 logger.error(f"Failed to save panda animation setting: {e}")
         
@@ -3923,7 +3920,7 @@ class GameTextureSorter(ctk.CTk):
             
             mode_label = mode_val.replace('_', ' ').replace('-', ' ').title()
             rb = ctk.CTkRadioButton(mode_frame, text=mode_label, variable=tooltip_mode_var, value=mode_val,
-                                     command=lambda v=mode_val: self._apply_setting_change('tooltip_mode', v))
+                                     command=lambda v=mode_val: self._on_customization_change('tooltip_mode', v))
             rb.pack(side="left", padx=5)
             
             desc_lbl = ctk.CTkLabel(mode_frame, text=f"— {mode_desc}", font=("Arial", 10), text_color="gray")
