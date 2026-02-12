@@ -312,7 +312,7 @@ class ConfigLoader:
         """
         return {
             "version": "1.0",
-            "description": "PS2 Texture Sorter Configuration Template",
+            "description": "Game Texture Sorter Configuration Template",
             "settings": {
                 "organization_style": "by_category",
                 "auto_classify": True,

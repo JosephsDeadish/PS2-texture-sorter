@@ -1,5 +1,5 @@
 """
-Thread Pool Management for PS2 Texture Sorter.
+Thread Pool Management for Game Texture Sorter.
 
 This module provides a comprehensive threading system for managing concurrent
 operations such as texture loading, processing, and thumbnail generation.

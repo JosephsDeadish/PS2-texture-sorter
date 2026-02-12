@@ -1,9 +1,9 @@
 """
-PS2 Texture Sorter - Main Entry Point
+Game Texture Sorter - Main Entry Point
 Author: Dead On The Inside / JosephsDeadish
 
 A professional, single-executable Windows application for automatically 
-sorting PS2 texture dumps with advanced AI classification and massive-scale 
+sorting game texture dumps with advanced AI classification and massive-scale 
 support (200,000+ textures).
 """
 
@@ -11,7 +11,7 @@ support (200,000+ textures).
 import ctypes
 try:
     # Follow Microsoft's AppUserModelID naming convention
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Josephs.PS2TextureSorter.Main.1.0.0')
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Josephs.GameTextureSorter.Main.1.0.0')
 except (AttributeError, OSError):
     pass  # Not Windows or no windll
 
@@ -288,7 +288,7 @@ class SplashScreen:
         print(f"Author: {APP_AUTHOR}")
         print("=" * 60)
         print("""
-    🐼 PS2 Texture Sorter 🐼
+    🐼 Game Texture Sorter 🐼
     
         ████████████████
       ██░░░░░░░░░░░░░░██
@@ -319,7 +319,7 @@ class SplashScreen:
             self.window.destroy()
 
 
-class PS2TextureSorter(ctk.CTk):
+class GameTextureSorter(ctk.CTk):
     """Main application window"""
     
     # Configuration constants
@@ -6559,8 +6559,7 @@ Built with:
         equip_frame = ctk.CTkFrame(self.tab_armory)
         equip_frame.pack(fill="x", pady=5, padx=10)
 
-        equipped = self.weapon_collection.equipped_weapon_id
-        equipped_weapon = self.weapon_collection.get_weapon(equipped) if equipped else None
+        equipped_weapon = self.weapon_collection.equipped_weapon
         equipped_text = f"Equipped: {equipped_weapon.name} ({equipped_weapon.rarity.value})" if equipped_weapon else "No weapon equipped"
         ctk.CTkLabel(equip_frame, text=equipped_text,
                      font=("Arial Bold", 14)).pack(pady=8, padx=10)
@@ -7811,7 +7810,7 @@ def main():
     if sys.platform == 'win32':
         try:
             import ctypes
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('JosephsDeadish.PS2TextureSorter.App.1.0.0')
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('JosephsDeadish.GameTextureSorter.App.1.0.0')
         except Exception as e:
             logger.debug(f"Could not set AppUserModelID: {e}")
     
@@ -7840,13 +7839,13 @@ def main():
         splash.close()
         
         # Destroy the temporary root window before creating the real app.
-        # PS2TextureSorter inherits from ctk.CTk, so it creates its own root
+        # GameTextureSorter inherits from ctk.CTk, so it creates its own root
         # window internally. Without this destroy(), the temporary root would
         # remain visible as a blank window with the default "ctk" title.
         root.destroy()
         
         # Create and show main application (creates its own CTk root window)
-        app = PS2TextureSorter()
+        app = GameTextureSorter()
         
         # Start main loop
         app.mainloop()

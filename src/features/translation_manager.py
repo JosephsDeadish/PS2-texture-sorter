@@ -30,7 +30,7 @@ class TranslationManager:
     # Default English translations (fallback)
     DEFAULT_TRANSLATIONS = {
         # Application
-        'app_title': 'PS2 Texture Sorter',
+        'app_title': 'Game Texture Sorter',
         'app_version': 'Version {version}',
         
         # Main menu
@@ -138,7 +138,7 @@ class TranslationManager:
         'tooltip_help': 'Show help',
         
         # Messages
-        'msg_welcome': 'Welcome to PS2 Texture Sorter! 🐼',
+        'msg_welcome': 'Welcome to Game Texture Sorter! 🐼',
         'msg_ready': 'Ready to sort textures',
         'msg_no_files': 'No files selected',
         'msg_operation_complete': 'Operation completed successfully',

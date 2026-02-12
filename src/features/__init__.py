@@ -1,5 +1,5 @@
 """
-Feature modules for PS2 Texture Sorter
+Feature modules for Game Texture Sorter
 Includes statistics tracking, texture analysis, search/filter, profiles, batch operations, LOD replacement, backups,
 hotkeys, sound system, and achievements
 Author: Dead On The Inside / JosephsDeadish

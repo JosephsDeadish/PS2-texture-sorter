@@ -1,5 +1,5 @@
 """
-CLI Interface - Command Line Interface for PS2 Texture Sorter
+CLI Interface - Command Line Interface for Game Texture Sorter
 Supports batch processing and automation workflows
 Author: Dead On The Inside / JosephsDeadish
 """
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class CLIInterface:
-    """Command-line interface for PS2 Texture Sorter."""
+    """Command-line interface for Game Texture Sorter."""
     
     def __init__(self):
         """Initialize CLI interface."""

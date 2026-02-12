@@ -1,5 +1,5 @@
 """
-Core modules for PS2 Texture Sorter
+Core modules for Game Texture Sorter
 Threading, performance management, and engine coordination
 """
 

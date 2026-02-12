@@ -1,5 +1,5 @@
 """
-PS2 Texture Sorter - Organization Styles
+Game Texture Sorter - Organization Styles
 Author: Dead On The Inside / JosephsDeadish
 
 Implementation of all 9 organization style presets for sorting textures.

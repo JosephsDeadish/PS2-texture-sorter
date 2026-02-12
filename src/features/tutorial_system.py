@@ -1254,10 +1254,10 @@ class TutorialManager:
         """Create the 7-step tutorial sequence"""
         steps = [
             TutorialStep(
-                title="Welcome to PS2 Texture Sorter! 🐼",
+                title="Welcome to Game Texture Sorter! 🐼",
                 message=(
                     "Welcome! This quick tutorial will show you how to use the application.\n\n"
-                    "PS2 Texture Sorter helps you organize and manage texture files from "
+                    "Game Texture Sorter helps you organize and manage texture files from "
                     "PS2 game dumps with intelligent classification and LOD detection.\n\n"
                     "Let's get started!"
                 ),
@@ -3498,7 +3498,7 @@ class ContextHelp:
         """Get help text for a specific context"""
         help_texts = {
             'general': """
-PS2 Texture Sorter - Quick Help
+Game Texture Sorter - Quick Help
 
 This application helps you organize and manage texture files from PS2 game dumps.
 
@@ -3626,7 +3626,7 @@ Q: How do I earn achievements?
 A: Process files, explore features, interact with the panda, and discover Easter eggs! Check the Achievements tab to see all available achievements.
 
 Q: Does this require internet?
-A: No! PS2 Texture Sorter is 100% offline. No network calls, complete privacy.
+A: No! Game Texture Sorter is 100% offline. No network calls, complete privacy.
 
 Q: Where are my settings and data stored?
 A: In your user profile folder: ~/.ps2_texture_sorter/ (or %USERPROFILE%\\.ps2_texture_sorter\\ on Windows)

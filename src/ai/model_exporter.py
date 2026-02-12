@@ -253,7 +253,7 @@ This model classifies textures into {len(categories)} categories:
 ## Usage
 
 1. Place this .ps2model file in your models directory
-2. Restart PS2 Texture Sorter
+2. Restart Game Texture Sorter
 3. Select this model in Settings → AI Models
 
 ## Compatibility
@@ -263,7 +263,7 @@ This model classifies textures into {len(categories)} categories:
 
 ---
 
-*Exported with PS2 Texture Sorter Model Exporter*
+*Exported with Game Texture Sorter Model Exporter*
 """
         return readme
 

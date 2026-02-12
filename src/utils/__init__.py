@@ -1,5 +1,5 @@
 """
-Utility modules for PS2 Texture Sorter
+Utility modules for Game Texture Sorter
 Includes caching, memory management, performance utilities, and image processing
 """
 

@@ -1,5 +1,5 @@
 """
-PS2 Texture Sorter
+Game Texture Sorter
 Author: Dead On The Inside / JosephsDeadish
 Repository: JosephsDeadish/PS2-texture-sorter
 
@@ -10,4 +10,4 @@ support (200,000+ textures).
 
 __version__ = "1.0.0"
 __author__ = "Dead On The Inside / JosephsDeadish"
-__project__ = "PS2 Texture Sorter"
+__project__ = "Game Texture Sorter"
