@@ -1892,16 +1892,51 @@ class PS2TextureSorter(ctk.CTk):
                                      search_entry, browser_show_all_cb)
     
     def browser_select_directory(self):
-        """Select directory for file browser"""
-        directory = filedialog.askdirectory(title="Select Directory to Browse")
-        if directory:
-            self.browser_path_var.set(directory)
-            self.browser_current_dir = Path(directory)
-            
-            # Attempt to identify game from directory
-            self._identify_and_display_game(Path(directory))
-            
-            self.browser_refresh()
+        """Select directory or archive for file browser"""
+        # Allow selecting both directories and archive files
+        from tkinter import filedialog as tk_filedialog
+        
+        # Create custom file dialog that allows selecting directories or archives
+        result = tk_filedialog.askopenfilename(
+            title="Select Directory or Archive",
+            filetypes=[
+                ("All Supported", "*.zip *.7z *.rar *.tar.gz *.tgz"),
+                ("ZIP archives", "*.zip"),
+                ("7Z archives", "*.7z"),
+                ("RAR archives", "*.rar"),
+                ("TAR archives", "*.tar.gz *.tgz"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        # If user didn't select a file, try directory selection
+        if not result:
+            directory = filedialog.askdirectory(title="Select Directory to Browse")
+            if directory:
+                self.browser_path_var.set(directory)
+                self.browser_current_dir = Path(directory)
+                self.browser_is_archive = False
+                self.browser_archive_path = None
+                
+                # Attempt to identify game from directory
+                self._identify_and_display_game(Path(directory))
+                
+                self.browser_refresh()
+        else:
+            # User selected an archive file
+            archive_path = Path(result)
+            if self.file_handler.is_archive(archive_path):
+                self.browser_path_var.set(f"📦 {archive_path.name}")
+                self.browser_current_dir = archive_path
+                self.browser_is_archive = True
+                self.browser_archive_path = archive_path
+                
+                # Try to identify game from archive name
+                self._identify_and_display_game(archive_path)
+                
+                self.browser_refresh_archive()
+            else:
+                messagebox.showwarning("Invalid Archive", "Selected file is not a valid archive format.")
     
     def _identify_and_display_game(self, directory: Path):
         """Identify game from directory and display info in browser."""
@@ -2055,6 +2090,11 @@ class PS2TextureSorter(ctk.CTk):
         if not hasattr(self, 'browser_current_dir'):
             return
         
+        # Check if we're browsing an archive
+        if hasattr(self, 'browser_is_archive') and self.browser_is_archive:
+            self.browser_refresh_archive()
+            return
+        
         # Debounce rapid refresh calls (e.g. from search typing)
         # Note: This flag is only accessed from the main UI thread
         # (_browser_update_ui is scheduled via self.after), so no lock is needed.
@@ -2182,6 +2222,96 @@ class PS2TextureSorter(ctk.CTk):
             self.browser_status.configure(text=status)
             
         except Exception as e:
+            self.browser_status.configure(text=f"Error: {e}")
+    
+    def browser_refresh_archive(self):
+        """Refresh file browser content for archive files"""
+        if not hasattr(self, 'browser_archive_path'):
+            return
+        
+        try:
+            # Clear current file list
+            for widget in self.browser_file_list.winfo_children():
+                widget.destroy()
+            
+            # Show loading indicator
+            self.browser_status.configure(text="Reading archive contents...")
+            
+            # Get archive contents
+            archive_contents = self.file_handler.list_archive_contents(self.browser_archive_path)
+            
+            if not archive_contents:
+                ctk.CTkLabel(self.browser_file_list, text="❌ Failed to read archive contents",
+                           font=("Arial", 12)).pack(pady=20)
+                self.browser_status.configure(text="Error reading archive")
+                return
+            
+            # Filter for texture files
+            texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+            show_all = self.browser_show_all.get() if hasattr(self, 'browser_show_all') else False
+            search_query = self.browser_search_var.get().lower() if hasattr(self, 'browser_search_var') else ""
+            
+            filtered_files = []
+            for file_path in archive_contents:
+                file_lower = file_path.lower()
+                # Check if it's a file (not directory)
+                if '/' in file_path and not file_path.endswith('/'):
+                    ext = Path(file_path).suffix.lower()
+                    if show_all or ext in texture_extensions:
+                        if not search_query or search_query in file_lower:
+                            filtered_files.append(file_path)
+            
+            # Sort files
+            filtered_files.sort()
+            
+            # Display files
+            MAX_DISPLAY = 200
+            total_files = len(filtered_files)
+            display_files = filtered_files[:MAX_DISPLAY]
+            
+            if not display_files:
+                file_type = "files" if show_all else "texture files"
+                no_files_msg = f"No {file_type} found"
+                if search_query:
+                    no_files_msg += f" matching '{search_query}'"
+                ctk.CTkLabel(self.browser_file_list, text=no_files_msg,
+                           font=("Arial", 12)).pack(pady=20)
+            else:
+                # Display file entries
+                for file_path in display_files:
+                    file_name = Path(file_path).name
+                    file_frame = ctk.CTkFrame(self.browser_file_list)
+                    file_frame.pack(fill="x", pady=2, padx=5)
+                    
+                    # Archive icon
+                    icon_label = ctk.CTkLabel(file_frame, text="📦", width=30)
+                    icon_label.pack(side="left", padx=5)
+                    
+                    # File name
+                    name_label = ctk.CTkLabel(file_frame, text=file_name, anchor="w")
+                    name_label.pack(side="left", fill="x", expand=True, padx=5)
+                    
+                    # Path in archive
+                    path_label = ctk.CTkLabel(file_frame, text=file_path, 
+                                             font=("Arial", 8), text_color="gray", anchor="w")
+                    path_label.pack(side="left", padx=5)
+                
+                if total_files > MAX_DISPLAY:
+                    overflow_text = f"... and {total_files - MAX_DISPLAY} more files (use search to filter)"
+                    ctk.CTkLabel(self.browser_file_list, 
+                               text=overflow_text,
+                               font=("Arial", 10), text_color="gray").pack(pady=10)
+            
+            # Clear folder list for archives
+            if hasattr(self, 'browser_folder_list'):
+                self.browser_folder_list.delete("1.0", "end")
+                self.browser_folder_list.insert("end", "📦 Archive contents (no folder navigation)\n")
+            
+            status = f"Archive: {len(display_files)} of {total_files} file(s)"
+            self.browser_status.configure(text=status)
+            
+        except Exception as e:
+            logger.error(f"Error refreshing archive browser: {e}", exc_info=True)
             self.browser_status.configure(text=f"Error: {e}")
     
     def _browser_load_batch(self):
