@@ -786,6 +786,1001 @@ class GameIdentifier:
                 'common_prefixes': ['jade', 'peyj', 'vehicle', 'hillys']
             }
         },
+        # Crash Bandicoot Series
+        'SLUS-20238': {
+            'title': 'Crash Bandicoot: The Wrath of Cortex',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['crash', 'coco', 'cortex', 'wumpa']
+            }
+        },
+        'SLUS-20835': {
+            'title': 'Crash Twinsanity',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['crash', 'cortex', 'twin', 'wumpa']
+            }
+        },
+        'SLUS-21153': {
+            'title': 'Crash Tag Team Racing',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'vehicles', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['crash', 'kart', 'track', 'power']
+            }
+        },
+        # Spyro Series
+        'SLUS-20315': {
+            'title': 'Spyro: Enter the Dragonfly',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['spyro', 'sparx', 'dragon', 'gem']
+            }
+        },
+        # Devil May Cry Series
+        'SLUS-20216': {
+            'title': 'Devil May Cry',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'enemies', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['dante', 'weapon', 'demon', 'sword']
+            }
+        },
+        'SLUS-20484': {
+            'title': 'Devil May Cry 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'enemies', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['dante', 'lucia', 'weapon', 'demon']
+            }
+        },
+        'SLUS-20828': {
+            'title': 'Devil May Cry 3: Dante\'s Awakening',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'enemies', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['dante', 'vergil', 'weapon', 'demon']
+            }
+        },
+        # Silent Hill Series
+        'SLUS-20146': {
+            'title': 'Silent Hill 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'enemies', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['james', 'maria', 'monster', 'town']
+            }
+        },
+        'SLUS-20593': {
+            'title': 'Silent Hill 3',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'enemies', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['heather', 'monster', 'town', 'alessa']
+            }
+        },
+        'SLUS-21082': {
+            'title': 'Silent Hill 4: The Room',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'enemies', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['henry', 'eileen', 'room', 'monster']
+            }
+        },
+        # Onimusha Series
+        'SLUS-20019': {
+            'title': 'Onimusha: Warlords',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'enemies', 'environment', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['samanosuke', 'demon', 'weapon', 'castle']
+            }
+        },
+        'SLUS-20481': {
+            'title': 'Onimusha 2: Samurai\'s Destiny',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'enemies', 'environment', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['jubei', 'demon', 'weapon', 'castle']
+            }
+        },
+        'SLUS-20867': {
+            'title': 'Onimusha 3: Demon Siege',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'enemies', 'environment', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['samanosuke', 'jacques', 'demon', 'weapon']
+            }
+        },
+        # Disgaea Series
+        'SLUS-20666': {
+            'title': 'Disgaea: Hour of Darkness',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'sprites', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['laharl', 'etna', 'flonne', 'unit']
+            }
+        },
+        'SLUS-21397': {
+            'title': 'Disgaea 2: Cursed Memories',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'sprites', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['adell', 'rozalin', 'taro', 'unit']
+            }
+        },
+        # Ace Combat Series
+        'SLUS-20605': {
+            'title': 'Ace Combat 04: Shattered Skies',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['vehicles', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['aircraft', 'cockpit', 'sky', 'hud']
+            }
+        },
+        'SLUS-20851': {
+            'title': 'Ace Combat 5: The Unsung War',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['vehicles', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['aircraft', 'cockpit', 'sky', 'hud']
+            }
+        },
+        'SLUS-21346': {
+            'title': 'Ace Combat Zero: The Belkan War',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['vehicles', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['aircraft', 'cockpit', 'sky', 'hud']
+            }
+        },
+        # SSX Series
+        'SLUS-20326': {
+            'title': 'SSX Tricky',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['rider', 'board', 'snow', 'track']
+            }
+        },
+        'SLUS-20772': {
+            'title': 'SSX 3',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['rider', 'board', 'snow', 'mountain']
+            }
+        },
+        # Shadow of the Colossus
+        'SLUS-21207': {
+            'title': 'Shadow of the Colossus',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'creatures', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['wander', 'agro', 'colossus', 'landscape']
+            }
+        },
+        # ICO
+        'SLUS-20001': {
+            'title': 'ICO',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['ico', 'yorda', 'castle', 'shadow']
+            }
+        },
+        # Dark Cloud Series
+        'SLUS-20130': {
+            'title': 'Dark Cloud',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['toan', 'dungeon', 'weapon', 'village']
+            }
+        },
+        'SLUS-20680': {
+            'title': 'Dark Chronicle (Dark Cloud 2)',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['max', 'monica', 'dungeon', 'weapon']
+            }
+        },
+        # .hack Series
+        'SLUS-20267': {
+            'title': '.hack//INFECTION',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['kite', 'blackrose', 'dungeon', 'data']
+            }
+        },
+        'SLUS-20325': {
+            'title': '.hack//MUTATION',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['kite', 'blackrose', 'dungeon', 'data']
+            }
+        },
+        'SLUS-20427': {
+            'title': '.hack//OUTBREAK',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['kite', 'blackrose', 'dungeon', 'data']
+            }
+        },
+        'SLUS-20485': {
+            'title': '.hack//QUARANTINE',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['kite', 'blackrose', 'dungeon', 'data']
+            }
+        },
+        # Zone of the Enders Series
+        'SLUS-20188': {
+            'title': 'Zone of the Enders',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['mecha', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['jehuty', 'orbital', 'mecha', 'effect']
+            }
+        },
+        'SLUS-20680': {
+            'title': 'Zone of the Enders: The 2nd Runner',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['mecha', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['jehuty', 'orbital', 'mecha', 'effect']
+            }
+        },
+        # Virtua Fighter 4
+        'SLUS-20249': {
+            'title': 'Virtua Fighter 4',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['fighter', 'stage', 'costume']
+            }
+        },
+        'SLUS-20616': {
+            'title': 'Virtua Fighter 4: Evolution',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['fighter', 'stage', 'costume']
+            }
+        },
+        # Soul Calibur Series
+        'SLUS-20111': {
+            'title': 'Soul Calibur II',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'stages', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'weapon', 'stage', 'effect']
+            }
+        },
+        'SLUS-21216': {
+            'title': 'Soul Calibur III',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'stages', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'weapon', 'stage', 'effect']
+            }
+        },
+        # Street Fighter Series
+        'SLUS-20573': {
+            'title': 'Capcom vs. SNK 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'stage', 'effect', 'sprite']
+            }
+        },
+        'SLUS-21316': {
+            'title': 'Street Fighter Alpha Anthology',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'stage', 'effect', 'sprite']
+            }
+        },
+        # King of Fighters Series
+        'SLUS-20923': {
+            'title': 'The King of Fighters XI',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'stage', 'effect', 'sprite']
+            }
+        },
+        # Mortal Kombat Series
+        'SLUS-20881': {
+            'title': 'Mortal Kombat: Deception',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'stage', 'fatality', 'blood']
+            }
+        },
+        'SLUS-21356': {
+            'title': 'Mortal Kombat: Armageddon',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'square',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['char', 'stage', 'fatality', 'blood']
+            }
+        },
+        # WWE/Wrestling Games
+        'SLUS-20483': {
+            'title': 'WWE SmackDown! Here Comes the Pain',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'arenas', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['wrestler', 'arena', 'logo', 'crowd']
+            }
+        },
+        'SLUS-21159': {
+            'title': 'WWE SmackDown! vs. Raw',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'arenas', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['wrestler', 'arena', 'logo', 'crowd']
+            }
+        },
+        # Time Crisis Series
+        'SLUS-20219': {
+            'title': 'Time Crisis 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['enemy', 'gun', 'building', 'target']
+            }
+        },
+        'SLUS-20645': {
+            'title': 'Time Crisis 3',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['enemy', 'gun', 'building', 'target']
+            }
+        },
+        # Prince of Persia Series
+        'SLUS-20788': {
+            'title': 'Prince of Persia: The Sands of Time',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['prince', 'farah', 'palace', 'sand']
+            }
+        },
+        'SLUS-21022': {
+            'title': 'Prince of Persia: Warrior Within',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['prince', 'kaileena', 'fortress', 'sand']
+            }
+        },
+        'SLUS-21287': {
+            'title': 'Prince of Persia: The Two Thrones',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['prince', 'farah', 'babylon', 'sand']
+            }
+        },
+        # Tomb Raider Series
+        'SLUS-20229': {
+            'title': 'Tomb Raider: The Angel of Darkness',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['lara', 'kurtis', 'weapon', 'artifact']
+            }
+        },
+        'SLUS-20811': {
+            'title': 'Tomb Raider: Legend',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['lara', 'weapon', 'artifact', 'tomb']
+            }
+        },
+        # Hitman Series
+        'SLUS-20374': {
+            'title': 'Hitman 2: Silent Assassin',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['agent47', 'target', 'weapon', 'building']
+            }
+        },
+        'SLUS-21018': {
+            'title': 'Hitman: Contracts',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['agent47', 'target', 'weapon', 'building']
+            }
+        },
+        'SLUS-21260': {
+            'title': 'Hitman: Blood Money',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['agent47', 'target', 'weapon', 'building']
+            }
+        },
+        # Star Wars Series
+        'SLUS-20044': {
+            'title': 'Star Wars: Bounty Hunter',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'weapons', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['jango', 'weapon', 'droid', 'ship']
+            }
+        },
+        'SLUS-20486': {
+            'title': 'Star Wars: Battlefront',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'vehicles', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['trooper', 'vehicle', 'weapon', 'planet']
+            }
+        },
+        'SLUS-21240': {
+            'title': 'Star Wars: Battlefront II',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'vehicles', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['trooper', 'vehicle', 'weapon', 'planet']
+            }
+        },
+        # Batman Series
+        'SLUS-20374': {
+            'title': 'Batman: Rise of Sin Tzu',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['batman', 'villain', 'gotham', 'gadget']
+            }
+        },
+        'SLUS-20977': {
+            'title': 'Batman Begins',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['batman', 'scarecrow', 'gotham', 'gadget']
+            }
+        },
+        # Spider-Man Series
+        'SLUS-20805': {
+            'title': 'Spider-Man 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['spiderman', 'villain', 'city', 'web']
+            }
+        },
+        'SLUS-21421': {
+            'title': 'Ultimate Spider-Man',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['spiderman', 'venom', 'city', 'web']
+            }
+        },
+        # X-Men Legends Series
+        'SLUS-20844': {
+            'title': 'X-Men Legends',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['mutant', 'power', 'villain', 'mansion']
+            }
+        },
+        'SLUS-21204': {
+            'title': 'X-Men Legends II: Rise of Apocalypse',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['mutant', 'power', 'apocalypse', 'villain']
+            }
+        },
+        # Marvel Ultimate Alliance
+        'SLUS-21414': {
+            'title': 'Marvel: Ultimate Alliance',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['hero', 'villain', 'power', 'base']
+            }
+        },
+        # Baldur's Gate: Dark Alliance Series
+        'SLUS-20023': {
+            'title': 'Baldur\'s Gate: Dark Alliance',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['hero', 'dungeon', 'weapon', 'monster']
+            }
+        },
+        'SLUS-20531': {
+            'title': 'Baldur\'s Gate: Dark Alliance II',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['hero', 'dungeon', 'weapon', 'monster']
+            }
+        },
+        # Champions of Norrath Series
+        'SLUS-20565': {
+            'title': 'Champions of Norrath',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['hero', 'dungeon', 'weapon', 'monster']
+            }
+        },
+        'SLUS-21140': {
+            'title': 'Champions: Return to Arms',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'items', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['hero', 'dungeon', 'weapon', 'monster']
+            }
+        },
+        # Summoner Series
+        'SLUS-20079': {
+            'title': 'Summoner',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'magic', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['joseph', 'summon', 'spell', 'monster']
+            }
+        },
+        'SLUS-20458': {
+            'title': 'Summoner 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'environment', 'magic', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'varied',
+                'common_prefixes': ['maia', 'summon', 'spell', 'monster']
+            }
+        },
+        # Dragon Ball Z Series
+        'SLUS-20553': {
+            'title': 'Dragon Ball Z: Budokai',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['goku', 'vegeta', 'stage', 'energy']
+            }
+        },
+        'SLUS-20842': {
+            'title': 'Dragon Ball Z: Budokai 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['goku', 'vegeta', 'stage', 'energy']
+            }
+        },
+        'SLUS-21214': {
+            'title': 'Dragon Ball Z: Budokai 3',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['goku', 'vegeta', 'stage', 'energy']
+            }
+        },
+        'SLUS-21678': {
+            'title': 'Dragon Ball Z: Budokai Tenkaichi',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['goku', 'vegeta', 'stage', 'energy']
+            }
+        },
+        'SLUS-21434': {
+            'title': 'Dragon Ball Z: Budokai Tenkaichi 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['goku', 'vegeta', 'stage', 'energy']
+            }
+        },
+        # Naruto Series
+        'SLUS-20594': {
+            'title': 'Naruto: Ultimate Ninja',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['naruto', 'sasuke', 'jutsu', 'ninja']
+            }
+        },
+        'SLUS-21346': {
+            'title': 'Naruto: Ultimate Ninja 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['naruto', 'sasuke', 'jutsu', 'ninja']
+            }
+        },
+        # Bleach Series
+        'SLUS-21450': {
+            'title': 'Bleach: Blade Battlers',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['ichigo', 'rukia', 'zanpakuto', 'soul']
+            }
+        },
+        # One Piece Series
+        'SLUS-21281': {
+            'title': 'One Piece: Grand Battle',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'stages', 'ui', 'effects'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['luffy', 'zoro', 'pirate', 'ship']
+            }
+        },
+        # Yu-Gi-Oh! Series
+        'SLUS-20990': {
+            'title': 'Yu-Gi-Oh! The Duelists of the Roses',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['cards', 'ui', 'effects'],
+                'icon_shapes': 'rectangular',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['card', 'monster', 'spell', 'trap']
+            }
+        },
+        # Medal of Honor Series
+        'SLUS-20624': {
+            'title': 'Medal of Honor: Frontline',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'building']
+            }
+        },
+        'SLUS-20802': {
+            'title': 'Medal of Honor: Rising Sun',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'building']
+            }
+        },
+        'SLUS-21014': {
+            'title': 'Medal of Honor: European Assault',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'building']
+            }
+        },
+        # Call of Duty Series
+        'SLUS-20949': {
+            'title': 'Call of Duty: Finest Hour',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'war']
+            }
+        },
+        'SLUS-21228': {
+            'title': 'Call of Duty 2: Big Red One',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'war']
+            }
+        },
+        'SLUS-21497': {
+            'title': 'Call of Duty 3',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'war']
+            }
+        },
+        # Brothers in Arms Series
+        'SLUS-21058': {
+            'title': 'Brothers in Arms: Road to Hill 30',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'normandy']
+            }
+        },
+        'SLUS-21287': {
+            'title': 'Brothers in Arms: Earned in Blood',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'vehicles', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'tank', 'normandy']
+            }
+        },
+        # Killzone
+        'SLUS-20821': {
+            'title': 'Killzone',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'helghast', 'weapon', 'war']
+            }
+        },
+        # Black
+        'SLUS-21376': {
+            'title': 'Black',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['weapons', 'environment', 'effects', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'power_of_two',
+                'common_prefixes': ['gun', 'bullet', 'explosion', 'soldier']
+            }
+        },
+        # TimeSplitters Series
+        'SLUS-20090': {
+            'title': 'TimeSplitters',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['char', 'weapon', 'map', 'time']
+            }
+        },
+        'SLUS-20314': {
+            'title': 'TimeSplitters 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['char', 'weapon', 'map', 'time']
+            }
+        },
+        'SLUS-21148': {
+            'title': 'TimeSplitters: Future Perfect',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['char', 'weapon', 'map', 'time']
+            }
+        },
+        # Red Faction Series
+        'SLUS-20073': {
+            'title': 'Red Faction',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['miner', 'weapon', 'mars', 'tunnel']
+            }
+        },
+        'SLUS-20442': {
+            'title': 'Red Faction II',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['soldier', 'weapon', 'city', 'nano']
+            }
+        },
+        # Destroy All Humans Series
+        'SLUS-21036': {
+            'title': 'Destroy All Humans!',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'vehicles', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['crypto', 'human', 'saucer', 'probe']
+            }
+        },
+        'SLUS-21439': {
+            'title': 'Destroy All Humans! 2',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'vehicles', 'environment', 'weapons', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['crypto', 'human', 'saucer', 'probe']
+            }
+        },
+        # Mercenaries
+        'SLUS-20932': {
+            'title': 'Mercenaries: Playground of Destruction',
+            'region': 'NTSC-U',
+            'texture_profile': {
+                'common_categories': ['character', 'vehicles', 'weapons', 'environment', 'ui'],
+                'icon_shapes': 'varied',
+                'atlas_layout': 'mixed',
+                'common_prefixes': ['merc', 'tank', 'heli', 'weapon']
+            }
+        },
     }
     
     def __init__(self, gameindex_path: Optional[Path] = None):
