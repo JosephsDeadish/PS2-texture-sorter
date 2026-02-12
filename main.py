@@ -1326,6 +1326,20 @@ class PS2TextureSorter(ctk.CTk):
         detect_dupes_cb = ctk.CTkCheckBox(check_frame, text="Detect Duplicates", variable=self.detect_duplicates_var)
         detect_dupes_cb.pack(side="left", padx=10)
         
+        # Archive support checkboxes (new row)
+        archive_check_frame = ctk.CTkFrame(opts_grid)
+        archive_check_frame.grid(row=2, column=0, columnspan=4, padx=10, pady=5, sticky="w")
+        
+        self.extract_from_archive_var = ctk.BooleanVar(value=False)
+        extract_archive_cb = ctk.CTkCheckBox(archive_check_frame, text="📦 Extract from archive", 
+                                            variable=self.extract_from_archive_var)
+        extract_archive_cb.pack(side="left", padx=10)
+        
+        self.compress_to_archive_var = ctk.BooleanVar(value=False)
+        compress_archive_cb = ctk.CTkCheckBox(archive_check_frame, text="📦 Compress output to archive", 
+                                             variable=self.compress_to_archive_var)
+        compress_archive_cb.pack(side="left", padx=10)
+        
         # Progress section
         progress_frame = ctk.CTkFrame(scrollable_frame)
         progress_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -1345,10 +1359,12 @@ class PS2TextureSorter(ctk.CTk):
         
         # Apply tooltips to sort tab widgets
         self._apply_sort_tooltips(browse_btn, browse_out_btn, mode_menu, style_menu, 
-                                  detect_lods_cb, group_lods_cb, detect_dupes_cb)
+                                  detect_lods_cb, group_lods_cb, detect_dupes_cb,
+                                  extract_archive_cb, compress_archive_cb)
     
     def _apply_sort_tooltips(self, browse_in_btn, browse_out_btn, mode_menu, style_menu,
-                            detect_lods_cb, group_lods_cb, detect_dupes_cb):
+                            detect_lods_cb, group_lods_cb, detect_dupes_cb,
+                            extract_archive_cb, compress_archive_cb):
         """Apply tooltips to sort tab widgets"""
         if not WidgetTooltip:
             return
@@ -1381,6 +1397,16 @@ class PS2TextureSorter(ctk.CTk):
         self._tooltips.append(WidgetTooltip(detect_lods_cb, tt('lod_detection') or "Automatically detect Level of Detail (LOD) textures", widget_id='lod_detection', tooltip_manager=tm))
         self._tooltips.append(WidgetTooltip(group_lods_cb, tt('group_lods') or "Group LOD textures together in folders", widget_id='group_lods', tooltip_manager=tm))
         self._tooltips.append(WidgetTooltip(detect_dupes_cb, tt('detect_duplicates') or "Find and mark duplicate texture files", widget_id='detect_duplicates', tooltip_manager=tm))
+        
+        # NEW: Archive support tooltips
+        self._tooltips.append(WidgetTooltip(extract_archive_cb, 
+            "Extract textures from archive files before sorting\n"
+            "Supports: ZIP, 7Z, RAR, TAR.GZ formats\n"
+            "Automatically detects and extracts to temp directory"))
+        self._tooltips.append(WidgetTooltip(compress_archive_cb, 
+            "Compress sorted output into a ZIP archive\n"
+            "Creates a .zip file with all organized textures\n"
+            "Useful for sharing or storing sorted collections"))
     
     def _get_tooltip_text(self, widget_id):
         """Get tooltip text from the tooltip manager"""
@@ -1522,6 +1548,20 @@ class PS2TextureSorter(ctk.CTk):
                        variable=self.convert_keep_original_var)
         convert_keep_cb.pack(side="left", padx=10)
         
+        # Archive support checkboxes
+        archive_check_frame = ctk.CTkFrame(check_frame)
+        archive_check_frame.pack(side="left", padx=20)
+        
+        self.convert_extract_from_archive_var = ctk.BooleanVar(value=False)
+        convert_extract_archive_cb = ctk.CTkCheckBox(archive_check_frame, text="📦 Extract from archive", 
+                       variable=self.convert_extract_from_archive_var)
+        convert_extract_archive_cb.pack(side="left", padx=10)
+        
+        self.convert_compress_to_archive_var = ctk.BooleanVar(value=False)
+        convert_compress_archive_cb = ctk.CTkCheckBox(archive_check_frame, text="📦 Compress output to archive", 
+                       variable=self.convert_compress_to_archive_var)
+        convert_compress_archive_cb.pack(side="left", padx=10)
+        
         # === OUTPUT SECTION ===
         output_frame = ctk.CTkFrame(scrollable_content)
         output_frame.pack(fill="x", padx=10, pady=10)
@@ -1563,6 +1603,8 @@ class PS2TextureSorter(ctk.CTk):
         from_format = self.convert_from_var.get().lower()
         to_format = self.convert_to_var.get().lower()
         recursive = self.convert_recursive_var.get()
+        extract_from_archive = self.convert_extract_from_archive_var.get()
+        compress_to_archive = self.convert_compress_to_archive_var.get()
         
         if not input_path:
             self.convert_log("⚠️ Please select an input directory")
@@ -1588,15 +1630,31 @@ class PS2TextureSorter(ctk.CTk):
         # Start conversion in background thread with all parameters
         threading.Thread(
             target=self.conversion_thread,
-            args=(input_path, output_path, from_format, to_format, recursive),
+            args=(input_path, output_path, from_format, to_format, recursive, extract_from_archive, compress_to_archive),
             daemon=True
         ).start()
     
-    def conversion_thread(self, input_path_str, output_path_str, from_format, to_format, recursive):
+    def conversion_thread(self, input_path_str, output_path_str, from_format, to_format, recursive, 
+                         extract_from_archive=False, compress_to_archive=False):
         """Background thread for file conversion"""
+        temp_extraction_dir = None
         try:
             input_path = Path(input_path_str)
             output_path = Path(output_path_str)
+            
+            # Handle archive extraction if requested
+            if extract_from_archive and self.file_handler.is_archive(input_path):
+                self.convert_log(f"📦 Extracting archive: {input_path.name}")
+                self.after(0, lambda: self.convert_progress_bar.set(0.05))
+                self.after(0, lambda: self.convert_progress_label.configure(text="Extracting archive..."))
+                temp_extraction_dir = self.file_handler.extract_archive(input_path)
+                if temp_extraction_dir:
+                    input_path = temp_extraction_dir
+                    self.convert_log(f"✓ Archive extracted to temporary directory")
+                else:
+                    self.convert_log(f"❌ Failed to extract archive: {input_path.name}")
+                    return
+            
             from_format = f".{from_format}"
             to_format = f".{to_format}"
             
@@ -1667,10 +1725,30 @@ class PS2TextureSorter(ctk.CTk):
                 self.convert_log(f"Failed: {failed}")
             self.convert_log("=" * 60)
             
+            # Handle archive compression if requested
+            if compress_to_archive and converted > 0:
+                self.after(0, lambda: self.convert_progress_bar.set(0.95))
+                self.after(0, lambda: self.convert_progress_label.configure(text="Compressing output..."))
+                self.convert_log(f"📦 Creating archive from output directory...")
+                archive_name = f"{output_path.name}_converted.zip"
+                archive_path = output_path.parent / archive_name
+                success = self.file_handler.create_archive(output_path, archive_path)
+                if success:
+                    self.convert_log(f"✓ Archive created: {archive_path.name}")
+                else:
+                    self.convert_log(f"⚠️ Failed to create output archive")
+            
         except Exception as e:
             self.convert_log(f"❌ Error during conversion: {e}")
         
         finally:
+            # Clean up temporary extraction directory if it was created
+            if temp_extraction_dir and temp_extraction_dir.exists():
+                try:
+                    self.file_handler.cleanup_temp_archives()
+                except Exception as e:
+                    logger.error(f"Failed to cleanup temp dir: {e}")
+            
             # Re-enable button
             self.after(0, lambda: self.convert_start_button.configure(state="normal"))
     
@@ -1826,16 +1904,51 @@ class PS2TextureSorter(ctk.CTk):
                                      search_entry, browser_show_all_cb)
     
     def browser_select_directory(self):
-        """Select directory for file browser"""
-        directory = filedialog.askdirectory(title="Select Directory to Browse")
-        if directory:
-            self.browser_path_var.set(directory)
-            self.browser_current_dir = Path(directory)
-            
-            # Attempt to identify game from directory
-            self._identify_and_display_game(Path(directory))
-            
-            self.browser_refresh()
+        """Select directory or archive for file browser"""
+        # Allow selecting both directories and archive files
+        from tkinter import filedialog as tk_filedialog
+        
+        # Create custom file dialog that allows selecting directories or archives
+        result = tk_filedialog.askopenfilename(
+            title="Select Directory or Archive",
+            filetypes=[
+                ("All Supported", "*.zip *.7z *.rar *.tar.gz *.tgz"),
+                ("ZIP archives", "*.zip"),
+                ("7Z archives", "*.7z"),
+                ("RAR archives", "*.rar"),
+                ("TAR archives", "*.tar.gz *.tgz"),
+                ("All files", "*.*")
+            ]
+        )
+        
+        # If user didn't select a file, try directory selection
+        if not result:
+            directory = filedialog.askdirectory(title="Select Directory to Browse")
+            if directory:
+                self.browser_path_var.set(directory)
+                self.browser_current_dir = Path(directory)
+                self.browser_is_archive = False
+                self.browser_archive_path = None
+                
+                # Attempt to identify game from directory
+                self._identify_and_display_game(Path(directory))
+                
+                self.browser_refresh()
+        else:
+            # User selected an archive file
+            archive_path = Path(result)
+            if self.file_handler.is_archive(archive_path):
+                self.browser_path_var.set(f"📦 {archive_path.name}")
+                self.browser_current_dir = archive_path
+                self.browser_is_archive = True
+                self.browser_archive_path = archive_path
+                
+                # Try to identify game from archive name
+                self._identify_and_display_game(archive_path)
+                
+                self.browser_refresh_archive()
+            else:
+                messagebox.showwarning("Invalid Archive", "Selected file is not a valid archive format.")
     
     def _identify_and_display_game(self, directory: Path):
         """Identify game from directory and display info in browser."""
@@ -1989,6 +2102,11 @@ class PS2TextureSorter(ctk.CTk):
         if not hasattr(self, 'browser_current_dir'):
             return
         
+        # Check if we're browsing an archive
+        if hasattr(self, 'browser_is_archive') and self.browser_is_archive:
+            self.browser_refresh_archive()
+            return
+        
         # Debounce rapid refresh calls (e.g. from search typing)
         # Note: This flag is only accessed from the main UI thread
         # (_browser_update_ui is scheduled via self.after), so no lock is needed.
@@ -2116,6 +2234,96 @@ class PS2TextureSorter(ctk.CTk):
             self.browser_status.configure(text=status)
             
         except Exception as e:
+            self.browser_status.configure(text=f"Error: {e}")
+    
+    def browser_refresh_archive(self):
+        """Refresh file browser content for archive files"""
+        if not hasattr(self, 'browser_archive_path'):
+            return
+        
+        try:
+            # Clear current file list
+            for widget in self.browser_file_list.winfo_children():
+                widget.destroy()
+            
+            # Show loading indicator
+            self.browser_status.configure(text="Reading archive contents...")
+            
+            # Get archive contents
+            archive_contents = self.file_handler.list_archive_contents(self.browser_archive_path)
+            
+            if not archive_contents:
+                ctk.CTkLabel(self.browser_file_list, text="❌ Failed to read archive contents",
+                           font=("Arial", 12)).pack(pady=20)
+                self.browser_status.configure(text="Error reading archive")
+                return
+            
+            # Filter for texture files
+            texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
+            show_all = self.browser_show_all.get() if hasattr(self, 'browser_show_all') else False
+            search_query = self.browser_search_var.get().lower() if hasattr(self, 'browser_search_var') else ""
+            
+            filtered_files = []
+            for file_path in archive_contents:
+                file_lower = file_path.lower()
+                # Check if it's a file (not directory)
+                if '/' in file_path and not file_path.endswith('/'):
+                    ext = Path(file_path).suffix.lower()
+                    if show_all or ext in texture_extensions:
+                        if not search_query or search_query in file_lower:
+                            filtered_files.append(file_path)
+            
+            # Sort files
+            filtered_files.sort()
+            
+            # Display files
+            MAX_DISPLAY = 200
+            total_files = len(filtered_files)
+            display_files = filtered_files[:MAX_DISPLAY]
+            
+            if not display_files:
+                file_type = "files" if show_all else "texture files"
+                no_files_msg = f"No {file_type} found"
+                if search_query:
+                    no_files_msg += f" matching '{search_query}'"
+                ctk.CTkLabel(self.browser_file_list, text=no_files_msg,
+                           font=("Arial", 12)).pack(pady=20)
+            else:
+                # Display file entries
+                for file_path in display_files:
+                    file_name = Path(file_path).name
+                    file_frame = ctk.CTkFrame(self.browser_file_list)
+                    file_frame.pack(fill="x", pady=2, padx=5)
+                    
+                    # Archive icon
+                    icon_label = ctk.CTkLabel(file_frame, text="📦", width=30)
+                    icon_label.pack(side="left", padx=5)
+                    
+                    # File name
+                    name_label = ctk.CTkLabel(file_frame, text=file_name, anchor="w")
+                    name_label.pack(side="left", fill="x", expand=True, padx=5)
+                    
+                    # Path in archive
+                    path_label = ctk.CTkLabel(file_frame, text=file_path, 
+                                             font=("Arial", 8), text_color="gray", anchor="w")
+                    path_label.pack(side="left", padx=5)
+                
+                if total_files > MAX_DISPLAY:
+                    overflow_text = f"... and {total_files - MAX_DISPLAY} more files (use search to filter)"
+                    ctk.CTkLabel(self.browser_file_list, 
+                               text=overflow_text,
+                               font=("Arial", 10), text_color="gray").pack(pady=10)
+            
+            # Clear folder list for archives
+            if hasattr(self, 'browser_folder_list'):
+                self.browser_folder_list.delete("1.0", "end")
+                self.browser_folder_list.insert("end", "📦 Archive contents (no folder navigation)\n")
+            
+            status = f"Archive: {len(display_files)} of {total_files} file(s)"
+            self.browser_status.configure(text=status)
+            
+        except Exception as e:
+            logger.error(f"Error refreshing archive browser: {e}", exc_info=True)
             self.browser_status.configure(text=f"Error: {e}")
     
     def _browser_load_batch(self):
@@ -6071,9 +6279,12 @@ Built with:
             detect_lods = self.detect_lods_var.get()
             group_lods = self.group_lods_var.get()
             detect_duplicates = self.detect_duplicates_var.get()
+            extract_from_archive = self.extract_from_archive_var.get()
+            compress_to_archive = self.compress_to_archive_var.get()
             
             logger.debug(f"Sorting parameters - Input: {input_path}, Output: {output_path}, Mode: {mode}, Style: {style}")
             logger.debug(f"Options - LODs: {detect_lods}, Group LODs: {group_lods}, Duplicates: {detect_duplicates}")
+            logger.debug(f"Archive options - Extract: {extract_from_archive}, Compress: {compress_to_archive}")
             
             if not input_path or not output_path:
                 logger.warning("Sorting aborted - missing input or output path")
@@ -6107,7 +6318,8 @@ Built with:
             try:
                 thread = threading.Thread(
                     target=self.sort_textures_thread,
-                    args=(input_path, output_path, mode, style, detect_lods, group_lods, detect_duplicates),
+                    args=(input_path, output_path, mode, style, detect_lods, group_lods, detect_duplicates, 
+                          extract_from_archive, compress_to_archive),
                     daemon=True,
                     name="SortingThread"
                 )
@@ -6148,16 +6360,34 @@ Built with:
                 category_dropdown.configure(values=category_list)
         search_var.trace_add('write', _filter)
     
-    def sort_textures_thread(self, input_path_str, output_path_str, mode, style_name, detect_lods, group_lods, detect_duplicates):
+    def sort_textures_thread(self, input_path_str, output_path_str, mode, style_name, detect_lods, group_lods, detect_duplicates, 
+                           extract_from_archive=False, compress_to_archive=False):
         """Background thread for texture sorting with full organization system"""
         # Constants for error reporting
         MAX_UI_ERROR_MESSAGES = 5  # Maximum number of classification errors to show in UI
         MAX_RESULTS_ERROR_DISPLAY = 10  # Maximum number of organization errors to display
         
+        # Track temp extraction directory for cleanup
+        temp_extraction_dir = None
+        
         try:
             logger.info(f"sort_textures_thread started - Processing: {input_path_str} -> {output_path_str}")
             input_path = Path(input_path_str)
             output_path = Path(output_path_str)
+            
+            # Handle archive extraction if requested
+            if extract_from_archive and self.file_handler.is_archive(input_path):
+                self.log(f"📦 Extracting archive: {input_path.name}")
+                self.update_progress(0.02, "Extracting archive...")
+                temp_extraction_dir = self.file_handler.extract_archive(input_path)
+                if temp_extraction_dir:
+                    input_path = temp_extraction_dir
+                    self.log(f"✓ Archive extracted to temporary directory")
+                    logger.info(f"Archive extracted to: {temp_extraction_dir}")
+                else:
+                    self.log(f"❌ Failed to extract archive: {input_path.name}")
+                    logger.error(f"Archive extraction failed: {input_path}")
+                    return
             
             # Scan for texture files lazily to avoid memory issues with large directories
             logger.debug("Starting directory scan for texture files")
@@ -6685,6 +6915,20 @@ Built with:
                 # Play completion sound if enabled
                 self._play_completion_sound()
                 
+                # Handle archive compression if requested
+                if compress_to_archive and results.files_organized > 0:
+                    self.update_progress(0.95, "Compressing output to archive...")
+                    self.log(f"📦 Creating archive from output directory...")
+                    archive_name = f"{output_path.name}_sorted.zip"
+                    archive_path = output_path.parent / archive_name
+                    success = self.file_handler.create_archive(output_path, archive_path)
+                    if success:
+                        self.log(f"✓ Archive created: {archive_path.name}")
+                        logger.info(f"Output compressed to archive: {archive_path}")
+                    else:
+                        self.log(f"⚠️ Failed to create output archive")
+                        logger.error(f"Archive creation failed: {archive_path}")
+                
             except Exception as e:
                 logger.error(f"Organization engine failed: {e}", exc_info=True)
                 self.log(f"❌ Organization failed: {e}")
@@ -6737,6 +6981,15 @@ Built with:
         
         finally:
             logger.info("Sorting thread cleanup - re-enabling UI buttons")
+            
+            # Clean up temporary extraction directory if it was created
+            if temp_extraction_dir and temp_extraction_dir.exists():
+                try:
+                    self.file_handler.cleanup_temp_archives()
+                    logger.info(f"Cleaned up temp extraction dir: {temp_extraction_dir}")
+                except Exception as e:
+                    logger.error(f"Failed to cleanup temp dir: {e}")
+            
             # Re-enable buttons
             self.after(0, lambda: self.start_button.configure(state="normal"))
             self.after(0, lambda: self.pause_button.configure(state="disabled"))
