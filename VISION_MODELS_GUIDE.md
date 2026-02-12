@@ -1,5 +1,92 @@
 # Implementation Summary: Advanced Vision Models and Preprocessing
 
+## 🆕 HD/4K Texture Support
+
+**NEW**: The preprocessing pipeline now supports both low-resolution PS2 textures AND high-resolution HD/4K textures with conditional preprocessing!
+
+### Key Features
+
+#### Resolution-Aware Preprocessing
+The system automatically detects texture resolution and applies appropriate preprocessing:
+
+1. **Retro Mode** (< 256px): Low-resolution PS2 textures
+   - Upscaling (2x/4x/8x) with bicubic or Real-ESRGAN
+   - Light denoising to clean up compression artifacts
+   - Sharpening to restore details after upscaling
+   - Full color normalization
+
+2. **HD Mode** (> 1024px): High-resolution HD/4K textures
+   - **Minimal processing** to preserve detail
+   - NO aggressive sharpening (would hurt detail)
+   - NO heavy denoising (would blur fine details)
+   - Only gentle color normalization
+   - Direct downscaling for model input when needed
+
+3. **Standard Mode** (256-1024px): Medium-resolution textures
+   - Normal preprocessing pipeline
+   - Conditional upscaling if needed
+   - Standard sharpening and denoising
+   - Full color normalization
+
+#### Vision Model Compatibility
+All textures (PS2 to 4K) work with the same vision models:
+- **CLIP**: Fixed 224×224 input (common)
+- **ViT**: Fixed resolution per checkpoint (e.g., 224×224)
+- **DINOv2**: Typically 224×224 in standard usage
+- **EfficientNet**: Variable input sizes supported
+
+The preprocessing pipeline handles resizing automatically via `for_model_input=True`:
+```python
+# Prepare any texture (32×32 or 4096×4096) for model input
+result = pipeline.process(image, for_model_input=True)
+# Result: 224×224×3 ready for CLIP/ViT/DINOv2
+```
+
+#### Similarity Search Across Resolutions
+The FAISS-based similarity search is resolution-agnostic:
+- Store embeddings (vectors) instead of raw images
+- Compare with cosine similarity / nearest neighbors
+- Works across PS2, HD, and 4K textures in the same index
+- Same search pipeline for all resolutions
+
+### Usage Example
+
+```python
+from src.preprocessing.preprocessing_pipeline import PreprocessingPipeline
+
+# Initialize with HD/4K support
+pipeline = PreprocessingPipeline(
+    upscale_enabled=True,
+    sharpen_enabled=True,
+    denoise_enabled=True,
+    retro_threshold=256,    # Below this: retro mode
+    hd_threshold=1024,      # Above this: HD mode
+    target_model_size=224   # For CLIP/ViT/DINOv2
+)
+
+# Process low-res PS2 texture (gets upscaled + sharpened)
+ps2_result = pipeline.process(ps2_texture_128x128)
+# Mode: 'retro', upscaled: True
+
+# Process HD/4K texture (minimal processing)
+hd_result = pipeline.process(hd_texture_4096x4096)
+# Mode: 'hd', downscaled: True
+
+# Prepare for vision model (any resolution → 224×224)
+model_input = pipeline.process(any_texture, for_model_input=True)
+# Result: 224×224×3 ready for model
+```
+
+### Benefits
+
+✅ **Same recognition pipeline** for PS2 and HD/4K textures
+✅ **Preserves detail** in high-resolution textures
+✅ **Enhances quality** of low-resolution textures
+✅ **Consistent embeddings** for similarity search
+✅ **Future-proof** for next-gen texture resolutions
+
+---
+
 ## Overview
 
 This implementation adds comprehensive computer vision and preprocessing capabilities to the PS2 Texture Sorter project, enabling advanced texture analysis, classification, and organization.
@@ -81,7 +168,47 @@ Vector database for fast similarity search:
   - Find similar textures
   - Detect duplicates
   - Cluster by similarity
+  - **🆕 Keyword-based search** (search_by_text)
   - Save/load indices
+
+**NEW: Keyword-Based Texture Search**
+
+Search for textures using natural language descriptions! The `search_by_text()` method enables you to find textures by typing what you're looking for:
+
+```python
+from src.vision_models.clip_model import CLIPModel
+from src.similarity.similarity_search import SimilaritySearch
+
+# Initialize models
+clip = CLIPModel()
+search = SimilaritySearch(embedding_dim=512)
+
+# Index textures (do this once)
+for texture_path in texture_paths:
+    img_embedding = clip.encode_image(texture_path)
+    search.add_embedding(img_embedding, texture_path)
+
+# Search by keyword!
+text_embedding = clip.encode_text("gun texture")
+results = search.search_by_text(text_embedding, k=20)
+
+# Display results
+for result in results:
+    print(f"{result['texture_path']}: similarity {result['similarity']:.2f}")
+```
+
+**Example Searches:**
+- `"gun"` → finds weapon textures
+- `"character face"` → finds portrait textures  
+- `"metal surface"` → finds metallic textures
+- `"UI button"` → finds interface elements
+- `"grass and vegetation"` → finds environmental textures
+
+This works by:
+1. CLIP encodes your text query into a 512-dim embedding vector
+2. The similarity search compares it against all texture embeddings
+3. Results are ranked by cosine similarity (0-1 score)
+4. Works across PS2, HD, and 4K textures in the same index!
 
 #### Duplicate Detector (duplicate_detector.py)
 Find texture variants:
