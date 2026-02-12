@@ -6697,13 +6697,21 @@ Built with:
             enemy_canvas_frame = ctk.CTkFrame(combat_frame)
             enemy_canvas_frame.pack(pady=5)
             
+            # Canvas dimensions for enemy display
+            ENEMY_CANVAS_WIDTH = 200
+            ENEMY_CANVAS_HEIGHT = 200
+            
             # Create canvas for animated enemy display
-            enemy_canvas = tk.Canvas(enemy_canvas_frame, width=200, height=200, 
+            enemy_canvas = tk.Canvas(enemy_canvas_frame, 
+                                    width=ENEMY_CANVAS_WIDTH, 
+                                    height=ENEMY_CANVAS_HEIGHT, 
                                     bg='#2b2b2b', highlightthickness=0)
             enemy_canvas.pack()
             
             # Draw animated enemy
-            self._draw_enemy_on_canvas(enemy_canvas, enemy, 100, 100)
+            self._draw_enemy_on_canvas(enemy_canvas, enemy, 
+                                      ENEMY_CANVAS_WIDTH // 2, 
+                                      ENEMY_CANVAS_HEIGHT // 2)
             
             # Enemy name and stats
             ctk.CTkLabel(combat_frame, text=f"{enemy.icon} {enemy.name}",
@@ -7109,8 +7117,9 @@ Built with:
                              fill='#FFD700', outline='#FF0000', width=2,
                              tags="enemy")
             
-            # Fire breath effect (occasional)
-            if int(time.time() * 2) % 3 == 0:
+            # Fire breath effect (occasional - triggered during specific phase window)
+            breath_phase = (time.time() * 2) % 6.0  # 6 second cycle
+            if 1.0 < breath_phase < 1.5:  # Only show during 0.5s window every 6 seconds
                 for i in range(3):
                     fire_x = head_x + 20 + i * 10
                     fire_y = head_y + i * 3

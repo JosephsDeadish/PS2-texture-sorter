@@ -2625,7 +2625,6 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     
                     # Magic sparkles (if attacking)
                     if is_attacking:
-                        import random
                         for _ in range(3):
                             sparkle_x = weapon_x + random.randint(-10, 10)
                             sparkle_y = weapon_y - wand_length + random.randint(-10, 10)
