@@ -2189,6 +2189,9 @@ class PS2TextureSorter(ctk.CTk):
         self._browser_refresh_pending = False
         
         try:
+            # Update before clearing to prevent screen tearing
+            self.browser_file_list.update_idletasks()
+            
             # Clear current file list (in case it changed during scan)
             for widget in self.browser_file_list.winfo_children():
                 widget.destroy()
@@ -2233,6 +2236,9 @@ class PS2TextureSorter(ctk.CTk):
             status = f"Showing {len(display_files)} of {total_files} file(s) and {len(folders)} folder(s)"
             self.browser_status.configure(text=status)
             
+            # Update scroll region after all widgets are added
+            self.browser_file_list.update_idletasks()
+            
         except Exception as e:
             self.browser_status.configure(text=f"Error: {e}")
     
@@ -2242,6 +2248,9 @@ class PS2TextureSorter(ctk.CTk):
             return
         
         try:
+            # Update before clearing to prevent screen tearing
+            self.browser_file_list.update_idletasks()
+            
             # Clear current file list
             for widget in self.browser_file_list.winfo_children():
                 widget.destroy()
@@ -2321,6 +2330,9 @@ class PS2TextureSorter(ctk.CTk):
             
             status = f"Archive: {len(display_files)} of {total_files} file(s)"
             self.browser_status.configure(text=status)
+            
+            # Update scroll region after all widgets are added
+            self.browser_file_list.update_idletasks()
             
         except Exception as e:
             logger.error(f"Error refreshing archive browser: {e}", exc_info=True)
@@ -3945,6 +3957,9 @@ class PS2TextureSorter(ctk.CTk):
     
     def _display_achievements(self, category="all"):
         """Display achievements, optionally filtered by category"""
+        # Update before clearing to prevent screen tearing
+        self.achieve_scroll.update_idletasks()
+        
         # Clear current items
         for widget in self.achieve_scroll.winfo_children():
             widget.destroy()
@@ -4067,6 +4082,9 @@ class PS2TextureSorter(ctk.CTk):
             ctk.CTkLabel(self.achieve_scroll,
                         text=f"Error loading achievements: {e}",
                         font=("Arial", 12)).pack(pady=20)
+        
+        # Update scroll region after all widgets are added to prevent screen tearing
+        self.achieve_scroll.update_idletasks()
     
     def _get_achievement_rewards(self, achievement):
         """Get text describing what rewards an achievement unlocks"""
@@ -4453,7 +4471,10 @@ class PS2TextureSorter(ctk.CTk):
     
     def _display_shop_category(self, category: ShopCategory):
         """Display items in shop category"""
-        # Clear current items
+        # Disable updates during rebuild to prevent screen tearing
+        self.shop_scroll.update_idletasks()
+        
+        # Clear current items efficiently
         for widget in self.shop_scroll.winfo_children():
             widget.destroy()
         
@@ -4467,6 +4488,8 @@ class PS2TextureSorter(ctk.CTk):
             ctk.CTkLabel(self.shop_scroll,
                         text="No items available in this category",
                         font=("Arial", 14)).pack(pady=50)
+            # Update scroll region after adding widgets
+            self.shop_scroll.update_idletasks()
             return
         
         # Display each item
@@ -4547,6 +4570,9 @@ class PS2TextureSorter(ctk.CTk):
                 else:
                     tip = self._get_tooltip_text('shop_buy_button') or f"Buy {item.name} for ${item.price}"
                 self._tooltips.append(WidgetTooltip(buy_btn, tip))
+        
+        # Update scroll region after all widgets are added to prevent items being hidden
+        self.shop_scroll.update_idletasks()
     
     def _purchase_item(self, item):
         """Purchase an item from the shop"""
