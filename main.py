@@ -6747,17 +6747,21 @@ Built with:
             # Difficulty buttons
             btn_frame = ctk.CTkFrame(combat_frame)
             btn_frame.pack(pady=10)
-            for diff, emoji, enemy_type in [("Easy", "🟢", "slime"), ("Normal", "🟡", "goblin"), ("Hard", "🔴", "orc")]:
-                ctk.CTkButton(btn_frame, text=f"{emoji} {diff}",
+            for difficulty, emoji, enemy_type, enemy_level in [
+                ("Easy", "🟢", "slime", 1),
+                ("Normal", "🟡", "goblin", 2),
+                ("Hard", "🔴", "orc", 3),
+            ]:
+                ctk.CTkButton(btn_frame, text=f"{emoji} {difficulty}",
                               width=100,
-                              command=lambda et=enemy_type: self._start_battle(et)).pack(side="left", padx=8, pady=5)
+                              command=lambda et=enemy_type, el=enemy_level: self._start_battle(et, el)).pack(side="left", padx=8, pady=5)
 
-    def _start_battle(self, enemy_type: str):
-        """Start a battle with an enemy of the given type."""
+    def _start_battle(self, enemy_type: str, enemy_level: int = 1):
+        """Start a battle with an enemy of the given type and level."""
         if not self.enemy_collection:
             return
         self._combat_log = []
-        enemy = self.enemy_collection.create_enemy(enemy_type, level=1)
+        enemy = self.enemy_collection.create_enemy(enemy_type, level=enemy_level)
         if not enemy:
             return
         self.current_enemy = enemy
