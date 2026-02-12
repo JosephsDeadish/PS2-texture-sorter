@@ -232,6 +232,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._ear_stretch = 0.0        # Current ear stretch amount
         self._ear_stretch_vel = 0.0    # Ear stretch velocity
         
+        # Shake animation decay (shared between limb and body sway calculations)
+        self._shake_decay = 1.0
+        
         # Autonomous walking state
         self._auto_walk_timer = None
         self._is_auto_walking = False
@@ -825,10 +828,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_bob = math.sin(phase * 3 * spin_speed) * 10 + math.cos(phase * 2) * 4
         elif anim == 'shaking':
             # Intense rapid side-to-side shaking with head wobble
-            shake_decay = max(0.3, 1.0 - (frame_idx % 60) / 60.0)  # Decays over time
-            leg_swing = math.sin(phase * 10) * 12 * shake_decay
-            arm_swing = math.sin(phase * 10 + math.pi/3) * 16 * shake_decay
-            body_bob = math.sin(phase * 12) * 8 * shake_decay + math.cos(phase * 7) * 4 * shake_decay
+            self._shake_decay = max(0.3, 1.0 - (frame_idx % 60) / 60.0)  # Decays over time
+            leg_swing = math.sin(phase * 10) * 12 * self._shake_decay
+            arm_swing = math.sin(phase * 10 + math.pi/3) * 16 * self._shake_decay
+            body_bob = math.sin(phase * 12) * 8 * self._shake_decay + math.cos(phase * 7) * 4 * self._shake_decay
         elif anim == 'rolling':
             leg_swing = math.sin(phase * 2) * 15
             arm_swing = math.cos(phase * 2) * 15
@@ -1173,8 +1176,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         elif anim == 'backflip':
             body_sway = math.sin(phase * 2) * 4
         elif anim == 'shaking':
-            shake_decay = max(0.3, 1.0 - (frame_idx % 60) / 60.0)
-            body_sway = math.sin(phase * 12) * 8 * shake_decay
+            body_sway = math.sin(phase * 12) * 8 * self._shake_decay
         
         # --- Determine eye style based on animation ---
         eye_style = 'normal'

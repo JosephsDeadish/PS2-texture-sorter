@@ -39,8 +39,8 @@ def test_sensitivity_thresholds():
             f"SPIN_CONSISTENCY_THRESHOLD should be >= 0.95 (got {PandaWidget.SPIN_CONSISTENCY_THRESHOLD})"
         assert PandaWidget.MIN_SPIN_POSITIONS >= 24, \
             f"MIN_SPIN_POSITIONS should be >= 24 (got {PandaWidget.MIN_SPIN_POSITIONS})"
-        assert PandaWidget.MIN_SPIN_TOTAL_ANGLE >= 4.7, \
-            f"MIN_SPIN_TOTAL_ANGLE should be >= 4.7 (got {PandaWidget.MIN_SPIN_TOTAL_ANGLE})"
+        assert PandaWidget.MIN_SPIN_TOTAL_ANGLE >= 4.71239, \
+            f"MIN_SPIN_TOTAL_ANGLE should be >= 4.71239 (~1.5*pi) (got {PandaWidget.MIN_SPIN_TOTAL_ANGLE})"
         print("✓ Sensitivity thresholds correctly tuned")
     except ImportError:
         print("⚠ Skipping sensitivity test (GUI not available)")

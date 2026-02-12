@@ -245,11 +245,11 @@ class WidgetsPanel(ctk.CTkFrame if ctk else tk.Frame):
                 btn_frame,
                 text="📥",
                 width=40,
-                command=lambda: self._return_to_inventory(widget.name.lower().replace(' ', '_'))
+                command=lambda w=widget.name.lower().replace(' ', '_'): self._return_to_inventory(w)
             ) if ctk else tk.Button(
                 btn_frame,
                 text="📥",
-                command=lambda: self._return_to_inventory(widget.name.lower().replace(' ', '_'))
+                command=lambda w=widget.name.lower().replace(' ', '_'): self._return_to_inventory(w)
             )
             return_btn.pack(side="left", padx=2)
             
