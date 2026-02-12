@@ -111,15 +111,22 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     JIGGLE_VELOCITY_ITEM_HIT = 10.0  # Jiggle impulse from item impact
     
     # Limb dangle physics constants (arms/legs inertia during drag)
-    DANGLE_SPRING = 0.18             # Spring stiffness for limb dangle
-    DANGLE_DAMPING = 0.88            # Damping factor for limb dangle
-    DANGLE_ARM_FACTOR = 0.3          # Arm response to vertical drag velocity
-    DANGLE_LEG_FACTOR = 0.4          # Leg response to vertical drag velocity
-    DANGLE_ARM_H_FACTOR = 0.25       # Arm response to horizontal drag velocity
-    DANGLE_LEG_H_FACTOR = 0.35       # Leg response to horizontal drag velocity
+    DANGLE_SPRING = 0.22             # Spring stiffness for limb dangle (increased for more springy feel)
+    DANGLE_DAMPING = 0.86            # Damping factor for limb dangle (reduced for more bounce)
+    DANGLE_ARM_FACTOR = 0.35         # Arm response to vertical drag velocity (increased)
+    DANGLE_LEG_FACTOR = 0.45         # Leg response to vertical drag velocity (increased)
+    DANGLE_ARM_H_FACTOR = 0.30       # Arm response to horizontal drag velocity (increased)
+    DANGLE_LEG_H_FACTOR = 0.40       # Leg response to horizontal drag velocity (increased)
+    DANGLE_ROT_SPRING = 0.15         # Rotational spring for natural swinging
+    DANGLE_ROT_DAMPING = 0.90        # Rotational damping
+    DANGLE_ROT_FACTOR = 0.02         # Rotation response to velocity changes
     # Full dangle (dangly look) only when grabbed by head region
     DANGLE_HEAD_MULTIPLIER = 1.0     # Full dangle when held by head
     DANGLE_BODY_MULTIPLIER = 0.3     # Minimal dangle when held elsewhere
+    # Collision detection
+    LIMB_COLLISION_ENABLED = True    # Enable limb-to-limb collision
+    LIMB_COLLISION_RADIUS = 15.0     # Collision radius for limbs (pixels)
+    LIMB_COLLISION_STIFFNESS = 0.3   # How much limbs push apart on collision
     
     # Ear stretch physics constants (elastic stretch during drag)
     EAR_STRETCH_SPRING = 0.25        # Spring stiffness for ear stretch
@@ -250,6 +257,26 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._dangle_left_ear_vel = 0.0
         self._dangle_right_ear = 0.0
         self._dangle_right_ear_vel = 0.0
+        
+        # Horizontal dangle for full 2D physics (all directions)
+        self._dangle_left_arm_h = 0.0
+        self._dangle_left_arm_h_vel = 0.0
+        self._dangle_right_arm_h = 0.0
+        self._dangle_right_arm_h_vel = 0.0
+        self._dangle_left_leg_h = 0.0
+        self._dangle_left_leg_h_vel = 0.0
+        self._dangle_right_leg_h = 0.0
+        self._dangle_right_leg_h_vel = 0.0
+        
+        # Rotational dangle for natural swinging motion
+        self._dangle_left_arm_rot = 0.0
+        self._dangle_left_arm_rot_vel = 0.0
+        self._dangle_right_arm_rot = 0.0
+        self._dangle_right_arm_rot_vel = 0.0
+        self._dangle_left_leg_rot = 0.0
+        self._dangle_left_leg_rot_vel = 0.0
+        self._dangle_right_leg_rot = 0.0
+        self._dangle_right_leg_rot_vel = 0.0
         self._prev_drag_vy = 0.0       # Previous vertical drag velocity for dangle
         self._prev_drag_vx = 0.0       # Previous horizontal drag velocity for dangle
         self._drag_grab_head = False   # True when drag started in head region
@@ -1172,36 +1199,59 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Left arm dangles unless it's being grabbed
             if grabbed_part != 'left_arm':
+                # Vertical physics
                 self._dangle_left_arm_vel += self._prev_drag_vy * self.DANGLE_ARM_FACTOR
-                self._dangle_left_arm_vel += -self._prev_drag_vx * self.DANGLE_ARM_H_FACTOR * 0.5
+                # Horizontal physics for full 2D movement
+                self._dangle_left_arm_h_vel += self._prev_drag_vx * self.DANGLE_ARM_H_FACTOR
+                # Rotational physics for natural swinging
+                self._dangle_left_arm_rot_vel += (self._prev_drag_vx * self.DANGLE_ROT_FACTOR)
             else:
                 # Grabbed arm doesn't dangle - reset it
                 self._dangle_left_arm = 0.0
                 self._dangle_left_arm_vel = 0.0
+                self._dangle_left_arm_h = 0.0
+                self._dangle_left_arm_h_vel = 0.0
+                self._dangle_left_arm_rot = 0.0
+                self._dangle_left_arm_rot_vel = 0.0
             
             # Right arm dangles unless it's being grabbed
             if grabbed_part != 'right_arm':
                 self._dangle_right_arm_vel += self._prev_drag_vy * self.DANGLE_ARM_FACTOR
-                self._dangle_right_arm_vel += -self._prev_drag_vx * self.DANGLE_ARM_H_FACTOR * 0.5
+                self._dangle_right_arm_h_vel += self._prev_drag_vx * self.DANGLE_ARM_H_FACTOR
+                self._dangle_right_arm_rot_vel += (self._prev_drag_vx * self.DANGLE_ROT_FACTOR)
             else:
                 self._dangle_right_arm = 0.0
                 self._dangle_right_arm_vel = 0.0
+                self._dangle_right_arm_h = 0.0
+                self._dangle_right_arm_h_vel = 0.0
+                self._dangle_right_arm_rot = 0.0
+                self._dangle_right_arm_rot_vel = 0.0
             
             # Left leg dangles unless it's being grabbed
             if grabbed_part != 'left_leg':
                 self._dangle_left_leg_vel += self._prev_drag_vy * self.DANGLE_LEG_FACTOR
-                self._dangle_left_leg_vel += -self._prev_drag_vx * self.DANGLE_LEG_H_FACTOR * 0.5
+                self._dangle_left_leg_h_vel += self._prev_drag_vx * self.DANGLE_LEG_H_FACTOR
+                self._dangle_left_leg_rot_vel += (self._prev_drag_vx * self.DANGLE_ROT_FACTOR)
             else:
                 self._dangle_left_leg = 0.0
                 self._dangle_left_leg_vel = 0.0
+                self._dangle_left_leg_h = 0.0
+                self._dangle_left_leg_h_vel = 0.0
+                self._dangle_left_leg_rot = 0.0
+                self._dangle_left_leg_rot_vel = 0.0
             
             # Right leg dangles unless it's being grabbed
             if grabbed_part != 'right_leg':
                 self._dangle_right_leg_vel += self._prev_drag_vy * self.DANGLE_LEG_FACTOR
-                self._dangle_right_leg_vel += -self._prev_drag_vx * self.DANGLE_LEG_H_FACTOR * 0.5
+                self._dangle_right_leg_h_vel += self._prev_drag_vx * self.DANGLE_LEG_H_FACTOR
+                self._dangle_right_leg_rot_vel += (self._prev_drag_vx * self.DANGLE_ROT_FACTOR)
             else:
                 self._dangle_right_leg = 0.0
                 self._dangle_right_leg_vel = 0.0
+                self._dangle_right_leg_h = 0.0
+                self._dangle_right_leg_h_vel = 0.0
+                self._dangle_right_leg_rot = 0.0
+                self._dangle_right_leg_rot_vel = 0.0
             
             # Left ear stretches unless it's being grabbed
             if grabbed_part != 'left_ear':
@@ -1217,7 +1267,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self._dangle_right_ear = 0.0
                 self._dangle_right_ear_vel = 0.0
         
-        # Apply spring-damper physics to all individual limbs
+        # Apply spring-damper physics to all individual limbs (vertical)
         self._dangle_left_arm_vel = (self._dangle_left_arm_vel - self._dangle_left_arm * self.DANGLE_SPRING) * self.DANGLE_DAMPING
         self._dangle_left_arm += self._dangle_left_arm_vel
         self._dangle_right_arm_vel = (self._dangle_right_arm_vel - self._dangle_right_arm * self.DANGLE_SPRING) * self.DANGLE_DAMPING
@@ -1226,12 +1276,38 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._dangle_left_leg += self._dangle_left_leg_vel
         self._dangle_right_leg_vel = (self._dangle_right_leg_vel - self._dangle_right_leg * self.DANGLE_SPRING) * self.DANGLE_DAMPING
         self._dangle_right_leg += self._dangle_right_leg_vel
+        
+        # Apply spring-damper physics to horizontal dangle
+        self._dangle_left_arm_h_vel = (self._dangle_left_arm_h_vel - self._dangle_left_arm_h * self.DANGLE_SPRING) * self.DANGLE_DAMPING
+        self._dangle_left_arm_h += self._dangle_left_arm_h_vel
+        self._dangle_right_arm_h_vel = (self._dangle_right_arm_h_vel - self._dangle_right_arm_h * self.DANGLE_SPRING) * self.DANGLE_DAMPING
+        self._dangle_right_arm_h += self._dangle_right_arm_h_vel
+        self._dangle_left_leg_h_vel = (self._dangle_left_leg_h_vel - self._dangle_left_leg_h * self.DANGLE_SPRING) * self.DANGLE_DAMPING
+        self._dangle_left_leg_h += self._dangle_left_leg_h_vel
+        self._dangle_right_leg_h_vel = (self._dangle_right_leg_h_vel - self._dangle_right_leg_h * self.DANGLE_SPRING) * self.DANGLE_DAMPING
+        self._dangle_right_leg_h += self._dangle_right_leg_h_vel
+        
+        # Apply rotational physics
+        self._dangle_left_arm_rot_vel = (self._dangle_left_arm_rot_vel - self._dangle_left_arm_rot * self.DANGLE_ROT_SPRING) * self.DANGLE_ROT_DAMPING
+        self._dangle_left_arm_rot += self._dangle_left_arm_rot_vel
+        self._dangle_right_arm_rot_vel = (self._dangle_right_arm_rot_vel - self._dangle_right_arm_rot * self.DANGLE_ROT_SPRING) * self.DANGLE_ROT_DAMPING
+        self._dangle_right_arm_rot += self._dangle_right_arm_rot_vel
+        self._dangle_left_leg_rot_vel = (self._dangle_left_leg_rot_vel - self._dangle_left_leg_rot * self.DANGLE_ROT_SPRING) * self.DANGLE_ROT_DAMPING
+        self._dangle_left_leg_rot += self._dangle_left_leg_rot_vel
+        self._dangle_right_leg_rot_vel = (self._dangle_right_leg_rot_vel - self._dangle_right_leg_rot * self.DANGLE_ROT_SPRING) * self.DANGLE_ROT_DAMPING
+        self._dangle_right_leg_rot += self._dangle_right_leg_rot_vel
+        
+        # Apply ear physics
         self._dangle_left_ear_vel = (self._dangle_left_ear_vel - self._dangle_left_ear * self.EAR_STRETCH_SPRING) * self.EAR_STRETCH_DAMPING
         self._dangle_left_ear += self._dangle_left_ear_vel
         self._dangle_right_ear_vel = (self._dangle_right_ear_vel - self._dangle_right_ear * self.EAR_STRETCH_SPRING) * self.EAR_STRETCH_DAMPING
         self._dangle_right_ear += self._dangle_right_ear_vel
         
-        # Clamp small values to zero
+        # --- Limb-to-limb collision detection ---
+        if self.LIMB_COLLISION_ENABLED:
+            self._apply_limb_collisions()
+        
+        # Clamp small values to zero (vertical)
         if abs(self._dangle_left_arm) < 0.2 and abs(self._dangle_left_arm_vel) < 0.2:
             self._dangle_left_arm = 0.0
             self._dangle_left_arm_vel = 0.0
@@ -1244,6 +1320,36 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         if abs(self._dangle_right_leg) < 0.2 and abs(self._dangle_right_leg_vel) < 0.2:
             self._dangle_right_leg = 0.0
             self._dangle_right_leg_vel = 0.0
+        
+        # Clamp small values to zero (horizontal)
+        if abs(self._dangle_left_arm_h) < 0.2 and abs(self._dangle_left_arm_h_vel) < 0.2:
+            self._dangle_left_arm_h = 0.0
+            self._dangle_left_arm_h_vel = 0.0
+        if abs(self._dangle_right_arm_h) < 0.2 and abs(self._dangle_right_arm_h_vel) < 0.2:
+            self._dangle_right_arm_h = 0.0
+            self._dangle_right_arm_h_vel = 0.0
+        if abs(self._dangle_left_leg_h) < 0.2 and abs(self._dangle_left_leg_h_vel) < 0.2:
+            self._dangle_left_leg_h = 0.0
+            self._dangle_left_leg_h_vel = 0.0
+        if abs(self._dangle_right_leg_h) < 0.2 and abs(self._dangle_right_leg_h_vel) < 0.2:
+            self._dangle_right_leg_h = 0.0
+            self._dangle_right_leg_h_vel = 0.0
+        
+        # Clamp small values to zero (rotation)
+        if abs(self._dangle_left_arm_rot) < 0.01 and abs(self._dangle_left_arm_rot_vel) < 0.01:
+            self._dangle_left_arm_rot = 0.0
+            self._dangle_left_arm_rot_vel = 0.0
+        if abs(self._dangle_right_arm_rot) < 0.01 and abs(self._dangle_right_arm_rot_vel) < 0.01:
+            self._dangle_right_arm_rot = 0.0
+            self._dangle_right_arm_rot_vel = 0.0
+        if abs(self._dangle_left_leg_rot) < 0.01 and abs(self._dangle_left_leg_rot_vel) < 0.01:
+            self._dangle_left_leg_rot = 0.0
+            self._dangle_left_leg_rot_vel = 0.0
+        if abs(self._dangle_right_leg_rot) < 0.01 and abs(self._dangle_right_leg_rot_vel) < 0.01:
+            self._dangle_right_leg_rot = 0.0
+            self._dangle_right_leg_rot_vel = 0.0
+        
+        # Clamp ears
         if abs(self._dangle_left_ear) < 0.2 and abs(self._dangle_left_ear_vel) < 0.2:
             self._dangle_left_ear = 0.0
             self._dangle_left_ear_vel = 0.0
@@ -2122,11 +2228,19 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             _right_leg_dangle = 0
             _left_arm_dangle = 0
             _right_arm_dangle = 0
+            _left_leg_dangle_h = 0
+            _right_leg_dangle_h = 0
+            _left_arm_dangle_h = 0
+            _right_arm_dangle_h = 0
             if self.current_animation == 'dragging' and self.is_dragging:
                 _left_leg_dangle = int(self._dangle_left_leg)
                 _right_leg_dangle = int(self._dangle_right_leg)
                 _left_arm_dangle = int(self._dangle_left_arm)
                 _right_arm_dangle = int(self._dangle_right_arm)
+                _left_leg_dangle_h = int(self._dangle_left_leg_h)
+                _right_leg_dangle_h = int(self._dangle_right_leg_h)
+                _left_arm_dangle_h = int(self._dangle_left_arm_h)
+                _right_arm_dangle_h = int(self._dangle_right_arm_h)
 
             # --- Draw clothing based on clothing_type ---
             if appearance.clothing:
@@ -2147,31 +2261,33 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         leg_bottom = int(170 * sy + by)
                         left_swing = int(_leg_swing) + _left_leg_dangle
                         right_swing = int(-_leg_swing) + _right_leg_dangle
+                        left_swing_h = _left_leg_dangle_h
+                        right_swing_h = _right_leg_dangle_h
                         # Waistband
                         c.create_rectangle(
                             cx - int(34 * sx), waist_y - int(4 * sy),
                             cx + int(34 * sx), waist_y + int(4 * sy),
                             fill=color, outline=shadow, width=1,
                             tags="equipped_clothing")
-                        # Left leg
+                        # Left leg with both vertical and horizontal dangle
                         c.create_polygon(
                             cx - int(30 * sx), waist_y,
                             cx - int(8 * sx), waist_y,
-                            cx - int(12 * sx), leg_bottom + left_swing,
-                            cx - int(28 * sx), leg_bottom + left_swing,
+                            cx - int(12 * sx) + left_swing_h, leg_bottom + left_swing,
+                            cx - int(28 * sx) + left_swing_h, leg_bottom + left_swing,
                             fill=color, outline=shadow, width=1,
                             tags="equipped_clothing")
-                        # Right leg
+                        # Right leg with both vertical and horizontal dangle
                         c.create_polygon(
                             cx + int(8 * sx), waist_y,
                             cx + int(30 * sx), waist_y,
-                            cx + int(28 * sx), leg_bottom + right_swing,
-                            cx + int(12 * sx), leg_bottom + right_swing,
+                            cx + int(28 * sx) + right_swing_h, leg_bottom + right_swing,
+                            cx + int(12 * sx) + right_swing_h, leg_bottom + right_swing,
                             fill=color, outline=shadow, width=1,
                             tags="equipped_clothing")
                         # Highlight seams
                         c.create_line(
-                            cx, waist_y, cx, leg_bottom,
+                            cx, waist_y, cx + (left_swing_h + right_swing_h) // 2, leg_bottom + (left_swing + right_swing) // 2,
                             fill=highlight, width=1, tags="equipped_clothing")
 
                     # --- Jacket: torso + extended sleeves synced with arms ---
@@ -2198,23 +2314,27 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         c.create_line(
                             cx, bt + int(6 * sy), cx, bb - int(4 * sy),
                             fill=shadow, width=2, tags="equipped_clothing")
-                        # Long sleeves following arm swing + dangle
+                        # Long sleeves following arm swing + dangle (both vertical and horizontal)
                         arm_top = bt + int(4 * sy)
                         arm_len = int(40 * sy)
-                        for side, swing, dangle in [(-1, _arm_swing, _left_arm_dangle), (1, -_arm_swing, _right_arm_dangle)]:
+                        for side, swing, dangle_v, dangle_h in [
+                            (-1, _arm_swing, _left_arm_dangle, _left_arm_dangle_h), 
+                            (1, -_arm_swing, _right_arm_dangle, _right_arm_dangle_h)
+                        ]:
                             arm_cx = cx + side * int(44 * sx)
-                            arm_end_y = arm_top + arm_len + int(swing) + dangle
+                            arm_end_y = arm_top + arm_len + int(swing) + dangle_v
+                            arm_end_x = arm_cx + dangle_h
                             c.create_polygon(
                                 arm_cx - int(10 * sx), arm_top,
                                 arm_cx + int(10 * sx), arm_top,
-                                arm_cx + int(8 * sx), arm_end_y,
-                                arm_cx - int(8 * sx), arm_end_y,
+                                arm_end_x + int(8 * sx), arm_end_y,
+                                arm_end_x - int(8 * sx), arm_end_y,
                                 fill=color, outline=shadow, width=1,
                                 tags="equipped_clothing")
                             # Cuff highlight
                             c.create_line(
-                                arm_cx - int(7 * sx), arm_end_y - int(2 * sy),
-                                arm_cx + int(7 * sx), arm_end_y - int(2 * sy),
+                                arm_end_x - int(7 * sx), arm_end_y - int(2 * sy),
+                                arm_end_x + int(7 * sx), arm_end_y - int(2 * sy),
                                 fill=highlight, width=1, tags="equipped_clothing")
 
                     # --- Dress: flows from neck to below body ---
@@ -2246,6 +2366,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         leg_bottom = int(170 * sy + by)
                         left_swing = int(_leg_swing) + _left_leg_dangle
                         right_swing = int(-_leg_swing) + _right_leg_dangle
+                        left_swing_h = _left_leg_dangle_h
+                        right_swing_h = _right_leg_dangle_h
                         # Torso section
                         c.create_polygon(
                             cx - int(38 * sx), bt,
@@ -2264,25 +2386,29 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                             cx + int(16 * sx), bt + int(10 * sy),
                             start=200, extent=140, style="arc",
                             outline=shadow, width=2, tags="equipped_clothing")
-                        # Pant legs synced with leg swing
-                        for leg_side, leg_sw in [(-1, left_swing), (1, right_swing)]:
+                        # Pant legs synced with leg swing (both vertical and horizontal)
+                        for leg_side, leg_sw, leg_sw_h in [(-1, left_swing, left_swing_h), (1, right_swing, right_swing_h)]:
                             lx = cx + leg_side * int(19 * sx)
                             c.create_polygon(
                                 lx - int(14 * sx), bb,
                                 lx + int(14 * sx), bb,
-                                lx + int(12 * sx), leg_bottom + leg_sw,
-                                lx - int(12 * sx), leg_bottom + leg_sw,
+                                lx + int(12 * sx) + leg_sw_h, leg_bottom + leg_sw,
+                                lx - int(12 * sx) + leg_sw_h, leg_bottom + leg_sw,
                                 fill=color, outline=shadow, width=1,
                                 tags="equipped_clothing")
-                        # Sleeves synced with arm swing + dangle
+                        # Sleeves synced with arm swing + dangle (both vertical and horizontal)
                         arm_top = bt + int(4 * sy)
                         arm_len = int(35 * sy)
-                        for side, swing, dangle in [(-1, _arm_swing, _left_arm_dangle), (1, -_arm_swing, _right_arm_dangle)]:
+                        for side, swing, dangle_v, dangle_h in [
+                            (-1, _arm_swing, _left_arm_dangle, _left_arm_dangle_h), 
+                            (1, -_arm_swing, _right_arm_dangle, _right_arm_dangle_h)
+                        ]:
                             arm_cx = cx + side * int(42 * sx)
-                            arm_end_y = arm_top + arm_len + int(swing) + dangle
+                            arm_end_y = arm_top + arm_len + int(swing) + dangle_v
+                            arm_end_x = arm_cx + dangle_h
                             c.create_oval(
                                 arm_cx - int(10 * sx), arm_top,
-                                arm_cx + int(10 * sx), arm_end_y,
+                                arm_end_x + int(10 * sx), arm_end_y,
                                 fill=color, outline=shadow, width=1,
                                 tags="equipped_clothing")
                         # Centre highlight
@@ -2314,13 +2440,17 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         c.create_line(
                             cx, bt + int(8 * sy), cx, bb - int(4 * sy),
                             fill=highlight, width=1, tags="equipped_clothing")
-                        # Sleeve caps synced with arm swing + dangle
-                        for side, swing, dangle in [(-1, _arm_swing, _left_arm_dangle), (1, -_arm_swing, _right_arm_dangle)]:
+                        # Sleeve caps synced with arm swing + dangle (both vertical and horizontal)
+                        for side, swing, dangle_v, dangle_h in [
+                            (-1, _arm_swing, _left_arm_dangle, _left_arm_dangle_h), 
+                            (1, -_arm_swing, _right_arm_dangle, _right_arm_dangle_h)
+                        ]:
                             sleeve_cx = cx + side * int(40 * sx)
-                            sleeve_offset = int(swing * 0.4) + int(dangle * 0.4)
+                            sleeve_offset = int(swing * 0.4) + int(dangle_v * 0.4)
+                            sleeve_offset_h = int(dangle_h * 0.4)
                             c.create_oval(
-                                sleeve_cx - int(10 * sx), bt + int(2 * sy) + sleeve_offset,
-                                sleeve_cx + int(10 * sx), bt + int(18 * sy) + sleeve_offset,
+                                sleeve_cx - int(10 * sx) + sleeve_offset_h, bt + int(2 * sy) + sleeve_offset,
+                                sleeve_cx + int(10 * sx) + sleeve_offset_h, bt + int(18 * sy) + sleeve_offset,
                                 fill=color, outline=shadow, width=1,
                                 tags="equipped_clothing")
 
@@ -3326,6 +3456,81 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     self.info_label.configure(text=response)
                 self._drag_positions = []
                 return
+
+    
+    def _apply_collision_force(self, limb_name: str, push_x: float, push_y: float):
+        """Apply collision force to a specific limb.
+        
+        Args:
+            limb_name: Name of the limb ('left_arm', 'right_arm', 'left_leg', 'right_leg')
+            push_x: Horizontal push force component
+            push_y: Vertical push force component
+        """
+        if 'arm' in limb_name:
+            if 'left' in limb_name:
+                self._dangle_left_arm_h_vel += push_x
+                self._dangle_left_arm_vel += push_y
+            else:
+                self._dangle_right_arm_h_vel += push_x
+                self._dangle_right_arm_vel += push_y
+        elif 'leg' in limb_name:
+            if 'left' in limb_name:
+                self._dangle_left_leg_h_vel += push_x
+                self._dangle_left_leg_vel += push_y
+            else:
+                self._dangle_right_leg_h_vel += push_x
+                self._dangle_right_leg_vel += push_y
+    
+    def _apply_limb_collisions(self):
+        """Apply collision detection between limbs to prevent overlap.
+        
+        Limbs that are dangling (not grabbed) can collide with each other,
+        pushing apart when they get too close. This creates more realistic
+        physics where limbs interact naturally.
+        """
+        # Define limb positions based on dangle physics
+        # Simplified positions: (x_offset, y_offset) relative to body center
+        limbs = {
+            'left_arm': (-42, 95 + self._dangle_left_arm, self._dangle_left_arm_h),
+            'right_arm': (42, 95 + self._dangle_right_arm, self._dangle_right_arm_h),
+            'left_leg': (-25, 170 + self._dangle_left_leg, self._dangle_left_leg_h),
+            'right_leg': (25, 170 + self._dangle_right_leg, self._dangle_right_leg_h),
+        }
+        
+        # Check collisions between each pair of limbs
+        limb_names = list(limbs.keys())
+        for i in range(len(limb_names)):
+            for j in range(i + 1, len(limb_names)):
+                name1, name2 = limb_names[i], limb_names[j]
+                x1_base, y1, x1_dangle = limbs[name1]
+                x2_base, y2, x2_dangle = limbs[name2]
+                
+                # Calculate actual positions with dangle offsets
+                x1 = x1_base + x1_dangle
+                x2 = x2_base + x2_dangle
+                
+                # Calculate distance between limbs
+                dx = x2 - x1
+                dy = y2 - y1
+                distance = math.sqrt(dx * dx + dy * dy)
+                
+                # If limbs are colliding (too close)
+                if distance < self.LIMB_COLLISION_RADIUS and distance > 0.1:
+                    # Calculate push-apart force
+                    overlap = self.LIMB_COLLISION_RADIUS - distance
+                    force = overlap * self.LIMB_COLLISION_STIFFNESS
+                    
+                    # Normalize direction vector
+                    dx_norm = dx / distance
+                    dy_norm = dy / distance
+                    
+                    # Apply force to push limbs apart
+                    push_x = dx_norm * force * 0.5
+                    push_y = dy_norm * force * 0.5
+                    
+                    # Apply to both limbs in opposite directions
+                    self._apply_collision_force(name1, -push_x, -push_y)
+                    self._apply_collision_force(name2, push_x, push_y)
 
     def _on_drag_end(self, event):
         """Handle end of drag operation."""

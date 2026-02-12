@@ -431,13 +431,13 @@ class PandaCloset:
         # Additional Clothing — Shirts
         'sweater': CustomizationItem(
             'sweater', 'Knit Sweater', CustomizationCategory.CLOTHING,
-            '🧶', 'Cozy and warm', ItemRarity.COMMON, 60, False, False,
+            '👕', 'Cozy and warm', ItemRarity.COMMON, 60, False, False,
             clothing_type='shirt'
         ),
         # Additional Clothing — Dresses
         'toga': CustomizationItem(
-            'toga', 'Ancient Toga', CustomizationCategory.CLOTHING,
-            '🏛️', 'Philosopher panda', ItemRarity.RARE, 250, False, False,
+            'toga', 'Greek Toga', CustomizationCategory.CLOTHING,
+            '👘', 'Ancient Greek wrap', ItemRarity.RARE, 250, False, False,
             clothing_type='dress'
         ),
         # Additional Clothing — Full Body
@@ -449,7 +449,7 @@ class PandaCloset:
         # Additional Clothing — Shirts
         'jersey': CustomizationItem(
             'jersey', 'Sports Jersey', CustomizationCategory.CLOTHING,
-            '🏅', 'Go team panda!', ItemRarity.UNCOMMON, 150, False, False,
+            '👕', 'Go team panda!', ItemRarity.UNCOMMON, 150, False, False,
             clothing_type='shirt'
         ),
 
@@ -517,11 +517,11 @@ class PandaCloset:
         ),
         'pajamas': CustomizationItem(
             'pajamas', 'Cozy Pajamas', CustomizationCategory.CLOTHING,
-            '🩳', 'Sleepy panda vibes', ItemRarity.COMMON, 50, False, False,
+            '👔', 'Sleepy panda vibes', ItemRarity.COMMON, 50, False, False,
             clothing_type='full_body'
         ),
         'sports_jersey': CustomizationItem(
-            'sports_jersey', 'Sports Jersey', CustomizationCategory.CLOTHING,
+            'sports_jersey', 'Basketball Jersey', CustomizationCategory.CLOTHING,
             '🏀', 'Game day ready', ItemRarity.UNCOMMON, 150, False, False,
             clothing_type='shirt'
         ),
@@ -657,7 +657,7 @@ class PandaCloset:
         ),
         'jumpsuit': CustomizationItem(
             'jumpsuit', 'Orange Jumpsuit', CustomizationCategory.CLOTHING,
-            '🟠', 'A bright orange utility jumpsuit', ItemRarity.UNCOMMON, 80, False, False,
+            '👷', 'A bright orange utility jumpsuit', ItemRarity.UNCOMMON, 80, False, False,
             clothing_type='full_body'
         ),
 
