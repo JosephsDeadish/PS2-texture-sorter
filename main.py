@@ -2105,27 +2105,23 @@ class PS2TextureSorter(ctk.CTk):
         btn_frame.pack(pady=20, padx=20, fill="x")
         
         def save_profile():
-            from src.features.profile_manager import OrganizationProfile
-            
             name = name_entry.get().strip()
             if not name:
                 messagebox.showerror("Error", "Profile name is required!")
                 return
             
-            # Create profile
-            profile = OrganizationProfile(
-                name=name,
-                description=desc_entry.get().strip(),
-                game_name=game_name_entry.get().strip(),
-                game_serial=serial_entry.get().strip().upper(),
-                game_region=region_var.get(),
-                style=style_var.get(),
-                naming_pattern=pattern_entry.get().strip(),
-                auto_classify=auto_classify_var.get()
-            )
-            
             try:
-                self.profile_manager.save_profile(profile)
+                # Use create_profile method which handles everything
+                profile = self.profile_manager.create_profile(
+                    name=name,
+                    description=desc_entry.get().strip(),
+                    game_name=game_name_entry.get().strip(),
+                    game_serial=serial_entry.get().strip().upper(),
+                    game_region=region_var.get(),
+                    style=style_var.get(),
+                    naming_pattern=pattern_entry.get().strip(),
+                    auto_classify=auto_classify_var.get()
+                )
                 self.log(f"✅ Profile '{name}' created successfully!")
                 dialog.destroy()
                 self._display_profiles()
@@ -2206,28 +2202,40 @@ class PS2TextureSorter(ctk.CTk):
             btn_frame.pack(pady=20, padx=20, fill="x")
             
             def save_changes():
-                from src.features.profile_manager import OrganizationProfile
-                
                 new_name = name_entry.get().strip()
                 if not new_name:
                     messagebox.showerror("Error", "Profile name is required!")
                     return
                 
-                # Update profile
-                profile.name = new_name
-                profile.description = desc_entry.get().strip()
-                profile.game_name = game_name_entry.get().strip()
-                profile.game_serial = serial_entry.get().strip().upper()
-                profile.game_region = region_var.get()
-                profile.style = style_var.get()
-                profile.naming_pattern = pattern_entry.get().strip()
-                profile.auto_classify = auto_classify_var.get()
-                
                 try:
-                    # If name changed, delete old and save new
+                    # If name changed, we need to create new and delete old
                     if new_name != profile_name:
+                        # Create new profile with updated data
+                        self.profile_manager.create_profile(
+                            name=new_name,
+                            description=desc_entry.get().strip(),
+                            game_name=game_name_entry.get().strip(),
+                            game_serial=serial_entry.get().strip().upper(),
+                            game_region=region_var.get(),
+                            style=style_var.get(),
+                            naming_pattern=pattern_entry.get().strip(),
+                            auto_classify=auto_classify_var.get()
+                        )
+                        # Delete old profile
                         self.profile_manager.delete_profile(profile_name)
-                    self.profile_manager.save_profile(profile)
+                    else:
+                        # Update existing profile
+                        self.profile_manager.update_profile(
+                            name=profile_name,
+                            description=desc_entry.get().strip(),
+                            game_name=game_name_entry.get().strip(),
+                            game_serial=serial_entry.get().strip().upper(),
+                            game_region=region_var.get(),
+                            style=style_var.get(),
+                            naming_pattern=pattern_entry.get().strip(),
+                            auto_classify=auto_classify_var.get()
+                        )
+                    
                     self.log(f"✅ Profile '{new_name}' updated successfully!")
                     dialog.destroy()
                     self._display_profiles()
@@ -2337,7 +2345,6 @@ class PS2TextureSorter(ctk.CTk):
         try:
             from tkinter import filedialog
             import json
-            from src.features.profile_manager import OrganizationProfile
             
             # Ask for file
             filepath = filedialog.askopenfilename(
@@ -2368,25 +2375,30 @@ class PS2TextureSorter(ctk.CTk):
             skipped = 0
             for profile_data in profiles_to_import:
                 try:
-                    # Create profile object
-                    profile = OrganizationProfile(**profile_data)
+                    profile_name = profile_data.get('name', '')
+                    if not profile_name:
+                        skipped += 1
+                        continue
                     
                     # Check if profile already exists
                     existing = self.profile_manager.list_profiles()
-                    if profile.name in existing:
+                    if profile_name in existing:
                         # Ask user what to do
                         response = messagebox.askyesnocancel(
                             "Profile Exists",
-                            f"Profile '{profile.name}' already exists.\n\nOverwrite it?"
+                            f"Profile '{profile_name}' already exists.\n\nOverwrite it?"
                         )
                         if response is None:  # Cancel
                             break
                         elif not response:  # No - skip
                             skipped += 1
                             continue
+                        else:
+                            # Delete existing before importing
+                            self.profile_manager.delete_profile(profile_name)
                     
-                    # Save profile
-                    self.profile_manager.save_profile(profile)
+                    # Create profile using create_profile method
+                    self.profile_manager.create_profile(**profile_data)
                     imported += 1
                     
                 except Exception as e:
