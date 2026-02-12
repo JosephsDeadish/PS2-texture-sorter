@@ -256,8 +256,21 @@ class FileHandler:
                         if output_path is None:
                             output_path = file_path.with_suffix(f'.{target_format}')
                         
+                        # Map format names to PIL format identifiers
+                        format_map = {
+                            'jpg': 'JPEG',
+                            'jpeg': 'JPEG',
+                            'jpe': 'JPEG',
+                            'jfif': 'JPEG',
+                            'tif': 'TIFF',
+                            'tiff': 'TIFF'
+                        }
+                        
+                        # Get proper format name
+                        pil_format = format_map.get(target_format.lower(), target_format.upper())
+                        
                         # Save in target format
-                        img.save(output_path, format=target_format.upper())
+                        img.save(output_path, format=pil_format)
                         result = output_path
                         self.operations_log.append(f"Converted {file_path} to {output_path}")
                 except Exception as e:

@@ -6,7 +6,7 @@ Author: Dead On The Inside / JosephsDeadish
 
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, Union, Tuple
+from typing import Optional, Dict, Any, Union
 import numpy as np
 from PIL import Image
 import cv2
@@ -151,7 +151,7 @@ class PreprocessingPipeline:
             if mode == 'retro':
                 img = self._process_retro_mode(img, min_size_for_upscale)
             elif mode == 'hd':
-                img, alpha_channel = self._process_hd_mode(img, alpha_channel, for_model_input)
+                img = self._process_hd_mode(img)
             else:
                 img = self._process_standard_mode(img, min_size_for_upscale)
             
@@ -229,19 +229,16 @@ class PreprocessingPipeline:
         
         return img
     
-    def _process_hd_mode(self, img: np.ndarray, alpha_channel: Optional[np.ndarray], 
-                         for_model_input: bool = False) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _process_hd_mode(self, img: np.ndarray) -> np.ndarray:
         """
         Process high-resolution texture (HD mode).
         Applies minimal processing to preserve detail.
         
         Args:
             img: Input image
-            alpha_channel: Alpha channel if present
-            for_model_input: Whether preparing for model input
             
         Returns:
-            Tuple of (processed image, alpha channel)
+            Processed image
         """
         logger.debug(f"HD mode: Minimal processing for {img.shape[:2]} texture")
         
@@ -253,10 +250,9 @@ class PreprocessingPipeline:
             logger.debug("HD mode: Gentle color normalization")
             img = self.filters.normalize_colors(img)
         
-        # If preparing for model input, downscale to target size
-        # This happens later in _prepare_for_model
+        # Downscaling for model input happens later in _prepare_for_model
         
-        return img, alpha_channel
+        return img
     
     def _process_standard_mode(self, img: np.ndarray, min_size: int) -> np.ndarray:
         """
