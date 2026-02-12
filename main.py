@@ -748,6 +748,7 @@ class PS2TextureSorter(ctk.CTk):
         self.tab_sort = self.tabview.add("🐼 Sort Textures")
         self.tab_convert = self.tabview.add("🔄 Convert Files")
         self.tab_browser = self.tabview.add("📁 File Browser")
+        self.tab_profiles = self.tabview.add("🎮 Game Profiles")
         self.tab_notepad = self.tabview.add("📝 Notepad")
         self.tab_about = self.tabview.add("ℹ️ About")
         
@@ -770,6 +771,7 @@ class PS2TextureSorter(ctk.CTk):
         self.create_sort_tab()
         self.create_convert_tab()
         self.create_browser_tab()
+        self.create_profiles_tab()
         self.create_notepad_tab()
         self.create_about_tab()
         self.create_shop_tab()
@@ -922,6 +924,7 @@ class PS2TextureSorter(ctk.CTk):
         # Temporarily reassign tab frame references so create_*_tab builds into container
         tab_creators = {
             "📁 File Browser": ('tab_browser', self.create_browser_tab),
+            "🎮 Game Profiles": ('tab_profiles', self.create_profiles_tab),
             "ℹ️ About": ('tab_about', self.create_about_tab),
             "🏆 Achievements": None,
             "🛒 Shop": ('tab_shop', self.create_shop_tab),
@@ -1902,6 +1905,502 @@ class PS2TextureSorter(ctk.CTk):
         # Apply tooltips to browser tab widgets
         self._apply_browser_tooltips(browser_browse_btn, browser_refresh_btn, 
                                      search_entry, browser_show_all_cb)
+    
+    def create_profiles_tab(self):
+        """Create game profiles editor tab"""
+        # Header
+        header_frame = ctk.CTkFrame(self.tab_profiles)
+        header_frame.pack(fill="x", pady=10, padx=10)
+        
+        ctk.CTkLabel(header_frame, text="🎮 Game Profiles Manager",
+                    font=("Arial Bold", 18)).pack(side="left", padx=10)
+        
+        if not self.profile_manager:
+            info_frame = ctk.CTkFrame(self.tab_profiles)
+            info_frame.pack(pady=50, padx=50, fill="both", expand=True)
+            ctk.CTkLabel(info_frame,
+                        text="Profile Manager not available\n\nPlease check your installation.",
+                        font=("Arial", 14)).pack(expand=True)
+            return
+        
+        # Toolbar with buttons
+        toolbar = ctk.CTkFrame(header_frame)
+        toolbar.pack(side="right", padx=10)
+        
+        new_btn = ctk.CTkButton(toolbar, text="➕ New Profile", width=120,
+                               command=self._create_new_profile)
+        new_btn.pack(side="left", padx=5)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(new_btn, "Create a new game organization profile"))
+        
+        import_btn = ctk.CTkButton(toolbar, text="📥 Import", width=100,
+                                   command=self._import_profiles)
+        import_btn.pack(side="left", padx=5)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(import_btn, "Import profiles from JSON file"))
+        
+        export_btn = ctk.CTkButton(toolbar, text="📤 Export All", width=100,
+                                   command=self._export_all_profiles)
+        export_btn.pack(side="left", padx=5)
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(export_btn, "Export all profiles to JSON file"))
+        
+        # Profiles list
+        self.profiles_scroll = ctk.CTkScrollableFrame(self.tab_profiles, width=1000, height=500)
+        self.profiles_scroll.pack(padx=20, pady=10, fill="both", expand=True)
+        
+        # Display profiles
+        self._display_profiles()
+    
+    def _display_profiles(self):
+        """Display all game profiles"""
+        # Update before clearing to prevent screen tearing
+        self.profiles_scroll.update_idletasks()
+        
+        # Clear current profiles
+        for widget in self.profiles_scroll.winfo_children():
+            widget.destroy()
+        
+        # Get all profiles
+        try:
+            profiles = self.profile_manager.list_profiles()
+        except Exception as e:
+            logger.error(f"Error listing profiles: {e}")
+            ctk.CTkLabel(self.profiles_scroll,
+                        text=f"Error loading profiles: {e}",
+                        font=("Arial", 12)).pack(pady=20)
+            return
+        
+        if not profiles:
+            ctk.CTkLabel(self.profiles_scroll,
+                        text="No profiles found. Click 'New Profile' to create one.",
+                        font=("Arial", 14)).pack(pady=50)
+            self.profiles_scroll.update_idletasks()
+            return
+        
+        # Display each profile
+        for profile_name in sorted(profiles):
+            try:
+                profile = self.profile_manager.load_profile(profile_name)
+                if not profile:
+                    continue
+                
+                profile_frame = ctk.CTkFrame(self.profiles_scroll)
+                profile_frame.pack(fill="x", padx=10, pady=5)
+                
+                # Profile info
+                info_frame = ctk.CTkFrame(profile_frame)
+                info_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+                
+                # Profile name and game name
+                name_text = f"📋 {profile.name}"
+                if profile.game_name:
+                    name_text += f" ({profile.game_name})"
+                
+                name_lbl = ctk.CTkLabel(info_frame, text=name_text,
+                            font=("Arial Bold", 14))
+                name_lbl.pack(anchor="w")
+                
+                # Description
+                if profile.description:
+                    desc_lbl = ctk.CTkLabel(info_frame, text=profile.description,
+                                font=("Arial", 11), text_color="gray")
+                    desc_lbl.pack(anchor="w")
+                
+                # Game serial and region
+                details = []
+                if profile.game_serial:
+                    details.append(f"Serial: {profile.game_serial}")
+                if profile.game_region:
+                    details.append(f"Region: {profile.game_region}")
+                if profile.style:
+                    details.append(f"Style: {profile.style}")
+                
+                if details:
+                    details_lbl = ctk.CTkLabel(info_frame, text=" • ".join(details),
+                                font=("Arial", 10), text_color="#888888")
+                    details_lbl.pack(anchor="w", pady=(2, 0))
+                
+                # Buttons
+                btn_frame = ctk.CTkFrame(profile_frame)
+                btn_frame.pack(side="right", padx=10, pady=10)
+                
+                edit_btn = ctk.CTkButton(btn_frame, text="✏️ Edit", width=80,
+                                        command=lambda p=profile_name: self._edit_profile(p))
+                edit_btn.pack(side="left", padx=5)
+                
+                export_btn = ctk.CTkButton(btn_frame, text="📤 Export", width=80,
+                                           command=lambda p=profile_name: self._export_single_profile(p))
+                export_btn.pack(side="left", padx=5)
+                
+                delete_btn = ctk.CTkButton(btn_frame, text="🗑️ Delete", width=80,
+                                           fg_color="#cc0000", hover_color="#990000",
+                                           command=lambda p=profile_name: self._delete_profile(p))
+                delete_btn.pack(side="left", padx=5)
+                
+            except Exception as e:
+                logger.error(f"Error displaying profile {profile_name}: {e}")
+                continue
+        
+        # Update scroll region after all widgets are added
+        self.profiles_scroll.update_idletasks()
+    
+    def _create_new_profile(self):
+        """Create a new game profile"""
+        # Create a dialog for new profile
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Create New Profile")
+        dialog.geometry("600x700")
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # Profile name
+        ctk.CTkLabel(dialog, text="Profile Name:", font=("Arial Bold", 12)).pack(pady=(20, 5), padx=20, anchor="w")
+        name_entry = ctk.CTkEntry(dialog, width=550, placeholder_text="e.g., God of War Custom")
+        name_entry.pack(padx=20, pady=5)
+        
+        # Game name
+        ctk.CTkLabel(dialog, text="Game Name (optional):", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+        game_name_entry = ctk.CTkEntry(dialog, width=550, placeholder_text="e.g., God of War")
+        game_name_entry.pack(padx=20, pady=5)
+        
+        # Description
+        ctk.CTkLabel(dialog, text="Description:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+        desc_entry = ctk.CTkEntry(dialog, width=550, placeholder_text="Brief description of this profile")
+        desc_entry.pack(padx=20, pady=5)
+        
+        # Game serial
+        ctk.CTkLabel(dialog, text="Game Serial (optional):", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+        serial_entry = ctk.CTkEntry(dialog, width=550, placeholder_text="e.g., SLUS-20778")
+        serial_entry.pack(padx=20, pady=5)
+        
+        # Game region
+        ctk.CTkLabel(dialog, text="Region:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+        region_var = ctk.StringVar(value="NTSC-U")
+        region_menu = ctk.CTkOptionMenu(dialog, variable=region_var, width=550,
+                                        values=["NTSC-U", "NTSC-J", "PAL", "NTSC-K"])
+        region_menu.pack(padx=20, pady=5)
+        
+        # Organization style
+        ctk.CTkLabel(dialog, text="Organization Style:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+        style_var = ctk.StringVar(value="by_category")
+        style_menu = ctk.CTkOptionMenu(dialog, variable=style_var, width=550,
+                                       values=["by_category", "by_type", "by_size", "flat", "custom"])
+        style_menu.pack(padx=20, pady=5)
+        
+        # Naming pattern
+        ctk.CTkLabel(dialog, text="Naming Pattern:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+        pattern_entry = ctk.CTkEntry(dialog, width=550, placeholder_text="{category}/{name}")
+        pattern_entry.insert(0, "{category}/{name}")
+        pattern_entry.pack(padx=20, pady=5)
+        
+        # Auto classify
+        auto_classify_var = ctk.BooleanVar(value=True)
+        auto_classify_cb = ctk.CTkCheckBox(dialog, text="Enable auto-classification", 
+                                           variable=auto_classify_var)
+        auto_classify_cb.pack(pady=10, padx=20, anchor="w")
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(dialog)
+        btn_frame.pack(pady=20, padx=20, fill="x")
+        
+        def save_profile():
+            from src.features.profile_manager import OrganizationProfile
+            
+            name = name_entry.get().strip()
+            if not name:
+                messagebox.showerror("Error", "Profile name is required!")
+                return
+            
+            # Create profile
+            profile = OrganizationProfile(
+                name=name,
+                description=desc_entry.get().strip(),
+                game_name=game_name_entry.get().strip(),
+                game_serial=serial_entry.get().strip().upper(),
+                game_region=region_var.get(),
+                style=style_var.get(),
+                naming_pattern=pattern_entry.get().strip(),
+                auto_classify=auto_classify_var.get()
+            )
+            
+            try:
+                self.profile_manager.save_profile(profile)
+                self.log(f"✅ Profile '{name}' created successfully!")
+                dialog.destroy()
+                self._display_profiles()
+            except Exception as e:
+                logger.error(f"Error saving profile: {e}")
+                messagebox.showerror("Error", f"Failed to save profile: {e}")
+        
+        ctk.CTkButton(btn_frame, text="Save", width=120, command=save_profile).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text="Cancel", width=120, command=dialog.destroy).pack(side="right", padx=5)
+    
+    def _edit_profile(self, profile_name):
+        """Edit an existing profile"""
+        try:
+            profile = self.profile_manager.load_profile(profile_name)
+            if not profile:
+                messagebox.showerror("Error", f"Profile '{profile_name}' not found!")
+                return
+            
+            # Create edit dialog (similar to create)
+            dialog = ctk.CTkToplevel(self)
+            dialog.title(f"Edit Profile: {profile_name}")
+            dialog.geometry("600x700")
+            dialog.transient(self)
+            dialog.grab_set()
+            
+            # Profile name
+            ctk.CTkLabel(dialog, text="Profile Name:", font=("Arial Bold", 12)).pack(pady=(20, 5), padx=20, anchor="w")
+            name_entry = ctk.CTkEntry(dialog, width=550)
+            name_entry.insert(0, profile.name)
+            name_entry.pack(padx=20, pady=5)
+            
+            # Game name
+            ctk.CTkLabel(dialog, text="Game Name:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+            game_name_entry = ctk.CTkEntry(dialog, width=550)
+            game_name_entry.insert(0, profile.game_name or "")
+            game_name_entry.pack(padx=20, pady=5)
+            
+            # Description
+            ctk.CTkLabel(dialog, text="Description:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+            desc_entry = ctk.CTkEntry(dialog, width=550)
+            desc_entry.insert(0, profile.description or "")
+            desc_entry.pack(padx=20, pady=5)
+            
+            # Game serial
+            ctk.CTkLabel(dialog, text="Game Serial:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+            serial_entry = ctk.CTkEntry(dialog, width=550)
+            serial_entry.insert(0, profile.game_serial or "")
+            serial_entry.pack(padx=20, pady=5)
+            
+            # Game region
+            ctk.CTkLabel(dialog, text="Region:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+            region_var = ctk.StringVar(value=profile.game_region or "NTSC-U")
+            region_menu = ctk.CTkOptionMenu(dialog, variable=region_var, width=550,
+                                            values=["NTSC-U", "NTSC-J", "PAL", "NTSC-K"])
+            region_menu.pack(padx=20, pady=5)
+            
+            # Organization style
+            ctk.CTkLabel(dialog, text="Organization Style:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+            style_var = ctk.StringVar(value=profile.style or "by_category")
+            style_menu = ctk.CTkOptionMenu(dialog, variable=style_var, width=550,
+                                           values=["by_category", "by_type", "by_size", "flat", "custom"])
+            style_menu.pack(padx=20, pady=5)
+            
+            # Naming pattern
+            ctk.CTkLabel(dialog, text="Naming Pattern:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
+            pattern_entry = ctk.CTkEntry(dialog, width=550)
+            pattern_entry.insert(0, profile.naming_pattern or "{category}/{name}")
+            pattern_entry.pack(padx=20, pady=5)
+            
+            # Auto classify
+            auto_classify_var = ctk.BooleanVar(value=profile.auto_classify)
+            auto_classify_cb = ctk.CTkCheckBox(dialog, text="Enable auto-classification", 
+                                               variable=auto_classify_var)
+            auto_classify_cb.pack(pady=10, padx=20, anchor="w")
+            
+            # Buttons
+            btn_frame = ctk.CTkFrame(dialog)
+            btn_frame.pack(pady=20, padx=20, fill="x")
+            
+            def save_changes():
+                from src.features.profile_manager import OrganizationProfile
+                
+                new_name = name_entry.get().strip()
+                if not new_name:
+                    messagebox.showerror("Error", "Profile name is required!")
+                    return
+                
+                # Update profile
+                profile.name = new_name
+                profile.description = desc_entry.get().strip()
+                profile.game_name = game_name_entry.get().strip()
+                profile.game_serial = serial_entry.get().strip().upper()
+                profile.game_region = region_var.get()
+                profile.style = style_var.get()
+                profile.naming_pattern = pattern_entry.get().strip()
+                profile.auto_classify = auto_classify_var.get()
+                
+                try:
+                    # If name changed, delete old and save new
+                    if new_name != profile_name:
+                        self.profile_manager.delete_profile(profile_name)
+                    self.profile_manager.save_profile(profile)
+                    self.log(f"✅ Profile '{new_name}' updated successfully!")
+                    dialog.destroy()
+                    self._display_profiles()
+                except Exception as e:
+                    logger.error(f"Error updating profile: {e}")
+                    messagebox.showerror("Error", f"Failed to update profile: {e}")
+            
+            ctk.CTkButton(btn_frame, text="Save Changes", width=120, command=save_changes).pack(side="left", padx=5)
+            ctk.CTkButton(btn_frame, text="Cancel", width=120, command=dialog.destroy).pack(side="right", padx=5)
+            
+        except Exception as e:
+            logger.error(f"Error loading profile for editing: {e}")
+            messagebox.showerror("Error", f"Failed to load profile: {e}")
+    
+    def _delete_profile(self, profile_name):
+        """Delete a profile"""
+        confirm = messagebox.askyesno(
+            "Confirm Delete",
+            f"Are you sure you want to delete profile '{profile_name}'?\n\nThis action cannot be undone."
+        )
+        
+        if confirm:
+            try:
+                self.profile_manager.delete_profile(profile_name)
+                self.log(f"🗑️ Profile '{profile_name}' deleted.")
+                self._display_profiles()
+            except Exception as e:
+                logger.error(f"Error deleting profile: {e}")
+                messagebox.showerror("Error", f"Failed to delete profile: {e}")
+    
+    def _export_single_profile(self, profile_name):
+        """Export a single profile to JSON"""
+        try:
+            from tkinter import filedialog
+            
+            # Ask for save location
+            default_filename = f"{profile_name.replace(' ', '_')}.json"
+            filepath = filedialog.asksaveasfilename(
+                title="Export Profile",
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                initialfile=default_filename
+            )
+            
+            if not filepath:
+                return
+            
+            # Export profile
+            self.profile_manager.export_profile(profile_name, Path(filepath))
+            self.log(f"📤 Profile '{profile_name}' exported to {filepath}")
+            messagebox.showinfo("Success", f"Profile exported successfully!")
+            
+        except Exception as e:
+            logger.error(f"Error exporting profile: {e}")
+            messagebox.showerror("Error", f"Failed to export profile: {e}")
+    
+    def _export_all_profiles(self):
+        """Export all profiles to a single JSON file"""
+        try:
+            from tkinter import filedialog
+            import json
+            from datetime import datetime
+            
+            # Ask for save location
+            default_filename = f"ps2_profiles_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            filepath = filedialog.asksaveasfilename(
+                title="Export All Profiles",
+                defaultextension=".json",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                initialfile=default_filename
+            )
+            
+            if not filepath:
+                return
+            
+            # Get all profiles
+            profiles = self.profile_manager.list_profiles()
+            export_data = {
+                'export_date': datetime.now().isoformat(),
+                'export_version': '1.0',
+                'profiles': []
+            }
+            
+            for profile_name in profiles:
+                try:
+                    profile = self.profile_manager.load_profile(profile_name)
+                    if profile:
+                        from dataclasses import asdict
+                        export_data['profiles'].append(asdict(profile))
+                except Exception as e:
+                    logger.error(f"Error loading profile {profile_name}: {e}")
+                    continue
+            
+            # Save to file
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(export_data, f, indent=2, ensure_ascii=False)
+            
+            self.log(f"📤 {len(export_data['profiles'])} profiles exported to {filepath}")
+            messagebox.showinfo("Success", f"Exported {len(export_data['profiles'])} profiles successfully!")
+            
+        except Exception as e:
+            logger.error(f"Error exporting profiles: {e}")
+            messagebox.showerror("Error", f"Failed to export profiles: {e}")
+    
+    def _import_profiles(self):
+        """Import profiles from JSON file"""
+        try:
+            from tkinter import filedialog
+            import json
+            from src.features.profile_manager import OrganizationProfile
+            
+            # Ask for file
+            filepath = filedialog.askopenfilename(
+                title="Import Profiles",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+            )
+            
+            if not filepath:
+                return
+            
+            # Load file
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Check if it's a bulk export or single profile
+            if 'profiles' in data and isinstance(data['profiles'], list):
+                # Bulk import
+                profiles_to_import = data['profiles']
+            elif 'name' in data:
+                # Single profile
+                profiles_to_import = [data]
+            else:
+                messagebox.showerror("Error", "Invalid profile file format!")
+                return
+            
+            # Import each profile
+            imported = 0
+            skipped = 0
+            for profile_data in profiles_to_import:
+                try:
+                    # Create profile object
+                    profile = OrganizationProfile(**profile_data)
+                    
+                    # Check if profile already exists
+                    existing = self.profile_manager.list_profiles()
+                    if profile.name in existing:
+                        # Ask user what to do
+                        response = messagebox.askyesnocancel(
+                            "Profile Exists",
+                            f"Profile '{profile.name}' already exists.\n\nOverwrite it?"
+                        )
+                        if response is None:  # Cancel
+                            break
+                        elif not response:  # No - skip
+                            skipped += 1
+                            continue
+                    
+                    # Save profile
+                    self.profile_manager.save_profile(profile)
+                    imported += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error importing profile: {e}")
+                    skipped += 1
+                    continue
+            
+            self.log(f"📥 Imported {imported} profiles, skipped {skipped}")
+            messagebox.showinfo("Success", f"Imported {imported} profiles successfully!\nSkipped: {skipped}")
+            self._display_profiles()
+            
+        except Exception as e:
+            logger.error(f"Error importing profiles: {e}")
+            messagebox.showerror("Error", f"Failed to import profiles: {e}")
     
     def browser_select_directory(self):
         """Select directory or archive for file browser"""
