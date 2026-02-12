@@ -32,11 +32,15 @@ class TextureClassifier:
     # Classification confidence thresholds
     HIGH_CONFIDENCE_THRESHOLD = 0.7  # Threshold for accepting filename-based classification
     
-    def __init__(self, config=None, model_manager=None):
+    def __init__(self, config=None, model_manager=None, game_profile=None):
         self.config = config
         self.categories = ALL_CATEGORIES
         self.classification_cache = {}
         self.model_manager = model_manager
+        
+        # Game-specific texture profile (NEW)
+        self.game_profile = game_profile or {}
+        self.game_specific_keywords = self._load_game_keywords()
         
         # Get AI preferences from config
         if config:
@@ -46,6 +50,38 @@ class TextureClassifier:
         else:
             self.prefer_image_content = True
             self.use_ai = True
+    
+    def _load_game_keywords(self) -> dict:
+        """
+        Load game-specific keyword mappings from texture profile.
+        
+        Returns:
+            Dictionary mapping keywords to categories
+        """
+        keywords = {}
+        if self.game_profile:
+            # Extract common prefixes from profile
+            common_prefixes = self.game_profile.get('common_prefixes', [])
+            common_categories = self.game_profile.get('common_categories', [])
+            
+            # Map prefixes to categories if available
+            for prefix in common_prefixes:
+                # This is a simple mapping - can be enhanced
+                keywords[prefix.lower()] = common_categories[0] if common_categories else None
+        
+        return keywords
+    
+    def set_game_profile(self, game_profile: dict):
+        """
+        Update the game-specific texture profile.
+        
+        Args:
+            game_profile: Dictionary with game texture profile settings
+        """
+        self.game_profile = game_profile
+        self.game_specific_keywords = self._load_game_keywords()
+        # Clear cache when profile changes
+        self.classification_cache.clear()
     
     def classify_texture(self, file_path: Path, use_image_analysis=True) -> Tuple[str, float]:
         """
@@ -133,6 +169,28 @@ class TextureClassifier:
         # Also try splitting on underscores and numbers to match individual parts
         # This helps with names like "char_head_skin_01" -> matches "head", "skin"
         parts = re.split(r'[_\-\s]+', cleaned)
+        
+        # NEW: Check game-specific keywords first (higher priority)
+        if self.game_specific_keywords:
+            for keyword, category in self.game_specific_keywords.items():
+                if category:  # Only if mapped to a category
+                    for name in names_to_check:
+                        if keyword in name:
+                            # High confidence for game-specific matches
+                            score = 0.9
+                            if name.startswith(keyword):
+                                score = 1.0
+                            if score > best_score:
+                                best_score = score
+                                best_match = category
+                    
+                    # Check parts
+                    for part in parts:
+                        if part and keyword == part:
+                            score = 0.95
+                            if score > best_score:
+                                best_score = score
+                                best_match = category
         
         # Check each category's keywords
         for category_id, category_info in self.categories.items():

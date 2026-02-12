@@ -6065,6 +6065,15 @@ Built with:
                 self.log("⚠️ No texture files found in input directory")
                 return
             
+            # Apply game-specific texture profile if available (NEW)
+            if hasattr(self, 'current_game_info') and self.current_game_info:
+                texture_profile = self.current_game_info.get('texture_profile', {})
+                if texture_profile:
+                    self.classifier.set_game_profile(texture_profile)
+                    game_title = self.current_game_info.get('title', 'Unknown')
+                    self.log(f"🎮 Using texture profile for: {game_title}")
+                    logger.info(f"Applied game profile for {game_title}")
+            
             # Classify textures
             logger.info(f"Starting classification of {total} textures")
             self.update_progress(0.1, "Classifying textures...")
