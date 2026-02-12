@@ -1911,7 +1911,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     color = self._color_for_emoji(clothing_item.emoji, '#4169E1')
                     shadow = self._shade_color(color, -30)
                     highlight = self._shade_color(color, 40)
-                    ctype = getattr(clothing_item, 'clothing_type', '') or 'shirt'
+                    ctype = clothing_item.clothing_type or 'shirt'
 
                     bt = int(82 * sy + by)   # body top (below neck)
                     bb = int(152 * sy + by)  # body bottom

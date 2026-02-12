@@ -59,7 +59,7 @@ class CustomizationItem:
     cost: int = 0
     unlocked: bool = False
     equipped: bool = False
-    clothing_type: str = ""
+    clothing_type: str = ""  # One of: shirt, pants, jacket, dress, full_body, other
 
 
 class PandaAppearance:
