@@ -2226,11 +2226,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
 
             # --- Draw accessories with type-specific positioning ---
             if appearance.accessories:
-                # Use computed arm swing for wrist accessory sync
-                # Include dangle physics for proper sync during drag
-                # Note: arm_dangle is added to BOTH arms because it represents whole-body
-                # inertial motion, not individual limb movement. The swing is opposite for
-                # symmetry, but the dangle is the same for both sides.
+                # Include dangle physics for drag sync. Dangle represents whole-body
+                # motion, applied equally to both arms; swing provides left/right symmetry.
                 arm_dangle = int(self._dangle_arm)
                 arm_dangle_h = int(self._dangle_arm_h)
                 la_swing = _arm_swing + arm_dangle
@@ -2353,18 +2350,17 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     shadow = self._shade_color(color, -30)
                     highlight = self._shade_color(color, 40)
                     foot_base = int(170 * sy + by)
-                    # Include dangle physics for proper sync during drag
-                    # Note: leg_dangle is added to BOTH legs because it represents whole-body
-                    # inertial motion. The swing is opposite for symmetry, but dangle is same.
+                    # Include dangle physics for drag sync. Dangle represents whole-body
+                    # motion applied equally to both legs; swing provides left/right symmetry.
                     leg_dangle = int(self._dangle_leg)
                     leg_dangle_h = int(self._dangle_leg_h)
                     left_shoe_swing = int(_leg_swing) + leg_dangle
                     right_shoe_swing = int(-_leg_swing) + leg_dangle
 
-                    for shoe_cx, shoe_swing, h_offset in [(cx - int(25 * sx), left_shoe_swing, leg_dangle_h),
-                                                           (cx + int(25 * sx), right_shoe_swing, leg_dangle_h)]:
+                    for shoe_cx, shoe_swing in [(cx - int(25 * sx), left_shoe_swing),
+                                                 (cx + int(25 * sx), right_shoe_swing)]:
                         shoe_y = foot_base + shoe_swing
-                        shoe_x = shoe_cx + h_offset
+                        shoe_x = shoe_cx + leg_dangle_h
                         # Shoe body
                         c.create_oval(
                             shoe_x - int(15 * sx), shoe_y,
