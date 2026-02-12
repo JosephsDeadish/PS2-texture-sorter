@@ -488,18 +488,25 @@ def test_body_part_detection_with_x():
     # Body region, center → should return 'body'
     part = panda.get_body_part_at_position(0.4, 0.5)
     assert part == 'body', f"Center body should be 'body', got {part}"
-    # Body region, far left → should return 'arms'
+    # Body region, far left → should return 'left_arm'
     part = panda.get_body_part_at_position(0.4, 0.1)
-    assert part == 'arms', f"Left side body should be 'arms', got {part}"
-    # Body region, far right → should return 'arms'
+    assert part == 'left_arm', f"Left side body should be 'left_arm', got {part}"
+    # Body region, far right → should return 'right_arm'
     part = panda.get_body_part_at_position(0.4, 0.9)
-    assert part == 'arms', f"Right side body should be 'arms', got {part}"
-    # Head is always head regardless of X
+    assert part == 'right_arm', f"Right side body should be 'right_arm', got {part}"
+    # Head is always head regardless of X (except for ears)
+    part = panda.get_body_part_at_position(0.2, 0.5)
+    assert part == 'head', f"Top center should be 'head', got {part}"
+    # Legs - left and right
+    part = panda.get_body_part_at_position(0.9, 0.3)
+    assert part == 'left_leg', f"Bottom left should be 'left_leg', got {part}"
+    part = panda.get_body_part_at_position(0.9, 0.7)
+    assert part == 'right_leg', f"Bottom right should be 'right_leg', got {part}"
+    # Ears
     part = panda.get_body_part_at_position(0.1, 0.1)
-    assert part == 'head', f"Top left should be 'head', got {part}"
-    # Legs are always legs regardless of X
-    part = panda.get_body_part_at_position(0.9, 0.5)
-    assert part == 'legs', f"Bottom center should be 'legs', got {part}"
+    assert part == 'left_ear', f"Top left should be 'left_ear', got {part}"
+    part = panda.get_body_part_at_position(0.1, 0.9)
+    assert part == 'right_ear', f"Top right should be 'right_ear', got {part}"
     print("✓ Body part detection with X-axis works correctly")
 
 
@@ -572,6 +579,80 @@ def test_eating_sequence_constants():
         print("⚠ Skipping eating sequence test (GUI not available)")
 
 
+def test_individual_limb_drag_responses():
+    """Test that individual limbs have specific drag responses."""
+    panda = PandaCharacter()
+    
+    # Test left arm drag
+    response = panda.on_drag(grabbed_part='left_arm')
+    assert response in panda.LEFT_ARM_DRAG_RESPONSES, \
+        f"Left arm drag should use LEFT_ARM_DRAG_RESPONSES, got {response}"
+    
+    # Test right arm drag
+    response = panda.on_drag(grabbed_part='right_arm')
+    assert response in panda.RIGHT_ARM_DRAG_RESPONSES, \
+        f"Right arm drag should use RIGHT_ARM_DRAG_RESPONSES"
+    
+    # Test left leg drag
+    response = panda.on_drag(grabbed_part='left_leg')
+    assert response in panda.LEFT_LEG_DRAG_RESPONSES, \
+        f"Left leg drag should use LEFT_LEG_DRAG_RESPONSES"
+    
+    # Test right leg drag
+    response = panda.on_drag(grabbed_part='right_leg')
+    assert response in panda.RIGHT_LEG_DRAG_RESPONSES, \
+        f"Right leg drag should use RIGHT_LEG_DRAG_RESPONSES"
+    
+    # Test left ear drag
+    response = panda.on_drag(grabbed_part='left_ear')
+    assert response in panda.LEFT_EAR_DRAG_RESPONSES, \
+        f"Left ear drag should use LEFT_EAR_DRAG_RESPONSES"
+    
+    # Test right ear drag
+    response = panda.on_drag(grabbed_part='right_ear')
+    assert response in panda.RIGHT_EAR_DRAG_RESPONSES, \
+        f"Right ear drag should use RIGHT_EAR_DRAG_RESPONSES"
+    
+    print("✓ Individual limb drag responses work correctly")
+
+
+def test_nose_and_eye_click_responses():
+    """Test that nose and eyes have specific click responses."""
+    panda = PandaCharacter()
+    
+    # Test nose click
+    response = panda.on_body_part_click('nose')
+    assert response in panda.BODY_PART_CLICK_RESPONSES['nose'], \
+        f"Nose click should use nose-specific responses"
+    
+    # Test left eye click
+    response = panda.on_body_part_click('left_eye')
+    assert response in panda.BODY_PART_CLICK_RESPONSES['left_eye'], \
+        f"Left eye click should use left_eye-specific responses"
+    
+    # Test right eye click
+    response = panda.on_body_part_click('right_eye')
+    assert response in panda.BODY_PART_CLICK_RESPONSES['right_eye'], \
+        f"Right eye click should use right_eye-specific responses"
+    
+    print("✓ Nose and eye click responses work correctly")
+
+
+def test_individual_ear_detection():
+    """Test that individual ears can be detected."""
+    panda = PandaCharacter()
+    
+    # Top left corner should be left ear
+    part = panda.get_body_part_at_position(0.05, 0.05)
+    assert part == 'left_ear', f"Top left corner should be 'left_ear', got {part}"
+    
+    # Top right corner should be right ear
+    part = panda.get_body_part_at_position(0.05, 0.95)
+    assert part == 'right_ear', f"Top right corner should be 'right_ear', got {part}"
+    
+    print("✓ Individual ear detection works correctly")
+
+
 if __name__ == "__main__":
     print("Testing Panda Character Improvements...")
     print("-" * 50)
@@ -617,6 +698,10 @@ if __name__ == "__main__":
         test_kick_toy_response()
         test_walk_to_food_responses()
         test_eating_sequence_constants()
+        # New tests for individual limb dragging
+        test_individual_limb_drag_responses()
+        test_nose_and_eye_click_responses()
+        test_individual_ear_detection()
 
         print("-" * 50)
         print("✅ All panda improvement tests passed!")
