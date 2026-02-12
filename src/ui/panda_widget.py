@@ -2396,8 +2396,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             comment = random.choice(self.AUTO_WALK_COMMENTS)
             self.info_label.configure(text=comment)
             
-            # Use walking animation
-            self._set_animation_no_cancel('carrying')
+            # Use a walking-style animation (varies for visual interest)
+            walk_anims = ['waving', 'dancing', 'stretching', 'tail_wag']
+            self._set_animation_no_cancel(random.choice(walk_anims))
             
             # Start walking
             self._auto_walk_tick()
