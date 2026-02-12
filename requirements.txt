@@ -36,6 +36,9 @@ annoy>=1.17.0  # Approximate nearest neighbors
 basicsr>=1.4.2  # Real-ESRGAN and super-resolution models
 realesrgan>=0.3.0  # Real-ESRGAN upscaling
 
+# OCR for UI text detection
+pytesseract>=0.3.10  # Python wrapper for Tesseract OCR
+
 # File Operations
 send2trash>=1.8.2
 watchdog>=3.0.0
