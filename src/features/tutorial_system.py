@@ -860,6 +860,320 @@ _PANDA_TOOLTIPS = {
             "Cherry-pick your sounds like the picky bastard you are."
         ]
     },
+    # Closet subcategory tooltips
+    'closet_all_clothing': {
+        'normal': [
+            "Browse all owned clothing items",
+            "View every clothing item in your collection",
+            "See shirts, pants, jackets, and more — all in one view",
+        ],
+        'vulgar': [
+            "Every piece of clothing. Fashion overload incoming.",
+            "All the clothes. Browse 'em all, you fashionista.",
+            "Your panda's entire wardrobe in one scrollable nightmare.",
+            "All clothing. Because subcategories are for quitters.",
+        ]
+    },
+    'closet_shirts': {
+        'normal': [
+            "Browse shirts and tops for your panda",
+            "View your collection of tops and tees",
+            "Shirts that fit perfectly on your panda's torso",
+        ],
+        'vulgar': [
+            "Shirts. The torso region. Chest coverage.",
+            "Tops and tees. Basic but essential bear fashion.",
+            "Shirt shopping for a panda. What a world.",
+            "Browse tops. Your panda's chest needs some love.",
+        ]
+    },
+    'closet_pants': {
+        'normal': [
+            "Browse pants and bottoms for your panda",
+            "View your collection of pants and trousers",
+            "Pants that follow your panda's leg movements",
+        ],
+        'vulgar': [
+            "Pants! Give your panda some dignity.",
+            "Leg coverings. Because naked panda legs are weird.",
+            "Trousers that move with the bear's legs. Science!",
+            "Pants shopping. Your panda's been exposed long enough.",
+        ]
+    },
+    'closet_jackets': {
+        'normal': [
+            "Browse jackets, hoodies, and coats",
+            "View your collection of outerwear",
+            "Jackets with sleeves that move with arm animations",
+        ],
+        'vulgar': [
+            "Jackets. Because pandas get cold. Probably.",
+            "Outerwear for your bear. Hoodies, coats, the works.",
+            "Layer up! Sleeves move with the arms. Fancy, right?",
+            "Jacket section. Cool panda vibes incoming.",
+        ]
+    },
+    'closet_dresses': {
+        'normal': [
+            "Browse dresses, robes, and gowns",
+            "View your collection of dresses and robes",
+            "Elegant garments that flow from neck to below the body",
+        ],
+        'vulgar': [
+            "Dresses and robes. Fancy bear time!",
+            "Flowing garments for the classy panda.",
+            "Dress-up time. Your panda is red-carpet ready.",
+            "Gowns and robes. Panda couture at its finest.",
+        ]
+    },
+    'closet_full_outfits': {
+        'normal': [
+            "Browse full-body outfits and costumes",
+            "View complete outfit sets that cover the entire body",
+            "Full costumes with torso, legs, and sleeve coverage",
+        ],
+        'vulgar': [
+            "Full body costumes. Total panda transformation.",
+            "Complete outfits. One-stop shopping for bear fashion.",
+            "Full suit mode. Torso, legs, sleeves — the whole deal.",
+            "Costume shop. Your panda becomes someone else entirely.",
+        ]
+    },
+    # UI settings tooltips
+    'ui_language': {
+        'normal': [
+            "Choose the display language for the application",
+            "Switch between available language translations",
+            "Set your preferred interface language",
+        ],
+        'vulgar': [
+            "Language picker. Sprechen sie panda?",
+            "Change language. Won't fix your grammar though.",
+            "International mode. Pick a language, any language.",
+            "Language selector. For the worldly panda enthusiast.",
+        ]
+    },
+    'ui_font_size': {
+        'normal': [
+            "Adjust the size of text throughout the application",
+            "Make text larger or smaller for better readability",
+            "Change the font size for all UI elements",
+        ],
+        'vulgar': [
+            "Font size. For people who refuse to wear glasses.",
+            "Make text bigger or smaller. We won't judge your eyes.",
+            "Text size slider. From 'ant writing' to 'billboard'.",
+            "Font size. Squint less, enjoy more.",
+        ]
+    },
+    'ui_animations': {
+        'normal': [
+            "Enable or disable UI animations and transitions",
+            "Toggle smooth animation effects in the interface",
+            "Control whether the UI uses animated transitions",
+        ],
+        'vulgar': [
+            "Toggle animations. Smooth or instant. Your call.",
+            "UI animations on or off. Performance vs. pretty.",
+            "Animation switch. For the impatient.",
+            "Smooth transitions toggle. Fancy or fast?",
+        ]
+    },
+    'ui_transparency': {
+        'normal': [
+            "Adjust the window transparency level",
+            "Make the application window more or less transparent",
+            "Control the opacity of the application window",
+        ],
+        'vulgar': [
+            "Window transparency. See-through panda time.",
+            "Opacity slider. From solid to ghost mode.",
+            "Make the window transparent. Stealth sorting.",
+            "Transparency control. X-ray vision for your desktop.",
+        ]
+    },
+    'ui_compact_mode': {
+        'normal': [
+            "Switch to a compact layout with smaller panels",
+            "Use a condensed view to save screen space",
+            "Enable compact mode for a more efficient layout",
+        ],
+        'vulgar': [
+            "Compact mode. Squeeze everything smaller.",
+            "Small layout for tiny screens and big dreams.",
+            "Compact view. More room for activities!",
+            "Efficiency mode. Less padding, more action.",
+        ]
+    },
+    'ui_auto_save': {
+        'normal': [
+            "Automatically save settings when changes are made",
+            "Enable automatic saving of preferences",
+            "Settings are saved without manual intervention",
+        ],
+        'vulgar': [
+            "Auto-save. Because you'll forget to save. We know.",
+            "Automatic saving. One less thing to worry about.",
+            "Set it and forget it. Settings save themselves.",
+            "Auto-save toggle. Manual saving is for cavemen.",
+        ]
+    },
+    'ui_confirm_exit': {
+        'normal': [
+            "Ask for confirmation before closing the application",
+            "Show a dialog when you try to exit the app",
+            "Prevent accidental exits with a confirmation prompt",
+        ],
+        'vulgar': [
+            "Exit confirmation. The app clings to you like a needy ex.",
+            "'Are you sure?' dialog. For the indecisive among us.",
+            "Prevent rage-quitting by accident. You're welcome.",
+            "Exit safety net. Because misclicks are embarrassing.",
+        ]
+    },
+    'ui_startup_tab': {
+        'normal': [
+            "Choose which tab opens when the app starts",
+            "Set your preferred starting tab",
+            "Select the default tab shown on application launch",
+        ],
+        'vulgar': [
+            "Startup tab. Skip the intro, go straight to work.",
+            "Pick which tab loads first. First impressions matter.",
+            "Default tab selector. Speed-run your workflow.",
+            "Launch tab. Because clicking twice is unacceptable.",
+        ]
+    },
+    'panda_name': {
+        'normal': [
+            "Set a custom name for your panda companion",
+            "Give your panda a personalized name",
+            "Type a name for your panda — it appears in messages",
+        ],
+        'vulgar': [
+            "Name your panda. 'Sir Chomps-a-Lot' is taken.",
+            "Panda naming ceremony. Choose wisely. Or not.",
+            "Type a name. Your bear deserves an identity.",
+            "Name your virtual bear. This is peak entertainment.",
+        ]
+    },
+    'panda_gender': {
+        'normal': [
+            "Choose your panda's gender identity",
+            "Set the gender for your panda companion",
+            "Select a gender — affects pronouns in speech bubbles",
+        ],
+        'vulgar': [
+            "Panda gender. They/them is valid for bears too.",
+            "Gender selection. Progressive pandas unite!",
+            "Pick your bear's identity. We don't judge.",
+            "Gender picker. It's 2024, even bears get to choose.",
+        ]
+    },
+    'panda_auto_walk': {
+        'normal': [
+            "Enable or disable automatic panda walking",
+            "Let your panda wander around on its own",
+            "Toggle autonomous panda movement",
+        ],
+        'vulgar': [
+            "Auto-walk. Your panda is a free spirit.",
+            "Let the bear roam. Free-range panda mode.",
+            "Walking toggle. Restless bear syndrome.",
+            "Your panda walks on its own. Deal with it.",
+        ]
+    },
+    'panda_speech_bubbles': {
+        'normal': [
+            "Show or hide speech bubbles above the panda",
+            "Toggle text bubbles for panda commentary",
+            "Enable speech bubbles for panda messages",
+        ],
+        'vulgar': [
+            "Speech bubbles. Your panda never shuts up.",
+            "Toggle commentary. The bear has opinions.",
+            "Text bubbles on or off. Silence is golden.",
+            "Show/hide the panda's hot takes.",
+        ]
+    },
+    'panda_idle_animations': {
+        'normal': [
+            "Enable or disable idle animations",
+            "Toggle small animations when the panda is idle",
+            "Your panda stretches and yawns when not interacting",
+        ],
+        'vulgar': [
+            "Idle animations. Your panda does cute stuff when bored.",
+            "Watch your bear yawn and stretch. Riveting content.",
+            "Idle mode animations. Because pandas need hobbies.",
+            "Toggle idle animations. Less movement, less distraction.",
+        ]
+    },
+    'panda_drag_enabled': {
+        'normal': [
+            "Allow dragging the panda around the screen",
+            "Enable click-and-drag panda movement",
+            "Toggle the ability to pick up and move your panda",
+        ],
+        'vulgar': [
+            "Drag mode. Yeet the panda across the screen.",
+            "Pick up and fling your bear. Totally ethical.",
+            "Drag toggle. Grab, move, release. Repeat.",
+            "Enable dragging. Your panda is now a cursor toy.",
+        ]
+    },
+    'perf_thread_count': {
+        'normal': [
+            "Number of threads used for texture processing",
+            "Control how many parallel threads are used",
+            "Adjust thread count for processing performance",
+        ],
+        'vulgar': [
+            "Thread count. More threads = faster. Maybe hotter CPU.",
+            "How many threads to throw at the problem.",
+            "Processing threads. Don't go nuclear.",
+            "Thread slider. Your CPU's workout intensity.",
+        ]
+    },
+    'perf_cache_size': {
+        'normal': [
+            "Maximum memory used for caching processed textures",
+            "Larger cache means faster repeated operations",
+            "Control memory allocation for texture caching",
+        ],
+        'vulgar': [
+            "Cache size. Feed the RAM monster.",
+            "Memory cache slider. More RAM, more speed, more heat.",
+            "Cache allocation. Greedy or conservative. Pick one.",
+            "How much memory to hoard. Digital dragon vibes.",
+        ]
+    },
+    'profile_save': {
+        'normal': [
+            "Save your current settings as a profile",
+            "Create a named settings snapshot",
+            "Store your configuration for later use",
+        ],
+        'vulgar': [
+            "Save profile. Insurance against future stupidity.",
+            "Create a settings backup. You'll need it.",
+            "Save now. You know you'll mess something up later.",
+            "Profile snapshot. Future you will thank present you.",
+        ]
+    },
+    'profile_load': {
+        'normal': [
+            "Load a previously saved settings profile",
+            "Restore settings from a saved profile",
+            "Switch to a different saved configuration",
+        ],
+        'vulgar': [
+            "Load profile. Time travel for settings.",
+            "Restore a saved config. Undo your disasters.",
+            "Load a profile. Instant settings swap!",
+            "Switch configs. For the indecisive.",
+        ]
+    },
 }
 
 
@@ -1450,6 +1764,18 @@ class TooltipVerbosityManager:
             'closet_equip': "Equip this item on your panda",
             'closet_unequip': "Remove this item from your panda",
             'closet_appearance': "Your panda's current outfit summary",
+            # Closet subcategory tooltips
+            'closet_all_clothing': "Browse all owned clothing items",
+            'closet_shirts': "Browse shirts and tops for your panda",
+            'closet_pants': "Browse pants and bottoms for your panda",
+            'closet_jackets': "Browse jackets, hoodies, and coats",
+            'closet_dresses': "Browse dresses, robes, and gowns",
+            'closet_full_outfits': "Browse full-body outfits and costumes",
+            'closet_fur_style': "Change your panda's fur pattern and style",
+            'closet_fur_color': "Pick a fur color for your panda",
+            'closet_hats': "Try on hats — equip or unequip from here",
+            'closet_shoes': "Choose shoes for your panda to wear",
+            'closet_accessories': "Accessorize your panda with fun items",
             # Achievement tooltips
             'achievement_claim': "Claim the reward for this completed achievement",
             'achievement_claim_all': "Claim all available achievement rewards at once",
@@ -1458,6 +1784,53 @@ class TooltipVerbosityManager:
             'shop_price': "The cost in Bamboo Bucks to purchase this item",
             'shop_level_req': "The user level required to unlock this item for purchase",
             'shop_item_name': "Click for more details about this item",
+            'shop_outfits_cat': "Browse panda outfits available for purchase",
+            'shop_clothes_cat': "Browse clothing items available for purchase",
+            'shop_accessories_cat': "Browse accessories available for purchase",
+            'shop_cursors_cat': "Browse custom cursors available for purchase",
+            'shop_cursor_trails_cat': "Browse cursor trail effects for purchase",
+            'shop_themes_cat': "Browse application themes for purchase",
+            'shop_food_cat': "Browse food items to feed your panda",
+            'shop_toys_cat': "Browse toys and play items for your panda",
+            'shop_upgrades_cat': "Browse upgrades to enhance your experience",
+            'shop_special_cat': "Browse special limited items",
+            # UI settings tooltips
+            'ui_language': "Choose the display language for the application",
+            'ui_font_size': "Adjust the size of text throughout the application",
+            'ui_animations': "Enable or disable UI animations and transitions",
+            'ui_transparency': "Adjust the window transparency level",
+            'ui_compact_mode': "Switch to a compact layout with smaller panels",
+            'ui_auto_save': "Automatically save settings when changes are made",
+            'ui_confirm_exit': "Ask for confirmation before closing the application",
+            'ui_startup_tab': "Choose which tab opens when the app starts",
+            'ui_sidebar_position': "Choose whether the sidebar appears on the left or right",
+            'ui_show_statusbar': "Show or hide the status bar at the bottom",
+            # Panda settings tooltips
+            'panda_name': "Set a custom name for your panda companion",
+            'panda_gender': "Choose your panda's gender identity",
+            'panda_mood_display': "Shows your panda's current mood state",
+            'panda_auto_walk': "Enable or disable automatic panda walking",
+            'panda_speech_bubbles': "Show or hide speech bubbles above the panda",
+            'panda_interaction_sounds': "Enable sounds when interacting with the panda",
+            'panda_idle_animations': "Enable or disable idle animations",
+            'panda_drag_enabled': "Allow dragging the panda around the screen",
+            # Performance settings tooltips
+            'perf_thread_count': "Number of threads used for texture processing",
+            'perf_cache_size': "Maximum memory used for caching processed textures",
+            'perf_batch_size': "Number of textures processed at once during sorting",
+            'perf_preview_quality': "Quality level for texture preview thumbnails",
+            # Profile tooltips
+            'profile_save': "Save your current settings as a profile",
+            'profile_load': "Load a previously saved settings profile",
+            'profile_delete': "Delete a saved settings profile",
+            'profile_export': "Export your profile settings to a file",
+            'profile_import': "Import profile settings from a file",
+            # Statistics tooltips
+            'stats_textures_sorted': "Total number of textures you have sorted",
+            'stats_time_spent': "Total time spent using the application",
+            'stats_panda_interactions': "Total number of panda interactions",
+            'stats_achievements_earned': "Number of achievements you have earned",
+            'stats_currency_earned': "Total Bamboo Bucks earned across all time",
         }
         
         # Merge tooltip variants from the inlined tooltip definitions
@@ -1918,6 +2291,225 @@ class TooltipVerbosityManager:
                 "Click to restore all hotkeys to factory defaults. "
                 "Useful if you've messed up your shortcuts!",
             ],
+            # Closet subcategory tooltips
+            'closet_all_clothing': [
+                "See every clothing item you own — shirts, pants, jackets, and more!",
+                "All clothing in one place. Use the subcategory buttons to narrow down.",
+            ],
+            'closet_shirts': [
+                "Tops, tees, and sweaters — browse your shirt collection here!",
+                "Shirts and tops. Pick one to dress up your panda's torso.",
+            ],
+            'closet_pants': [
+                "Pants, trousers, and bottoms — keep those panda legs covered!",
+                "Browse bottom-wear. Your panda deserves proper pants.",
+            ],
+            'closet_jackets': [
+                "Jackets, hoodies, and coats — perfect for chilly panda days!",
+                "Outerwear for your panda. Stylish AND warm.",
+            ],
+            'closet_dresses': [
+                "Dresses, robes, and flowing garments — elegant panda fashion!",
+                "Browse dresses and robes. Fancy panda time!",
+            ],
+            'closet_full_outfits': [
+                "Full-body outfits and costumes — one piece covers everything!",
+                "Complete outfits. Put your panda in a full costume!",
+            ],
+            'closet_fur_style': [
+                "Your panda's fur pattern and texture. Pick a look!",
+                "Different fur styles change how your panda's body looks.",
+            ],
+            'closet_fur_color': [
+                "Choose a color for your panda's fur. Lots of options!",
+                "Fur colors range from classic black & white to galaxy patterns.",
+            ],
+            'closet_hats': [
+                "Hats sit on top of your panda's head. Try them on!",
+                "Browse your hat collection — from beanies to crowns.",
+            ],
+            'closet_shoes': [
+                "Shoes go on your panda's feet and follow their steps!",
+                "Footwear that moves with your panda during animations.",
+            ],
+            'closet_accessories': [
+                "Accessories like scarves, bracelets, and pendants!",
+                "Extra items to decorate your panda companion.",
+            ],
+            # Shop subcategory tooltips
+            'shop_outfits_cat': [
+                "Panda outfits available for purchase. Dress to impress!",
+                "Buy full outfits for your panda companion here.",
+            ],
+            'shop_clothes_cat': [
+                "Individual clothing pieces — shirts, pants, jackets, and more!",
+                "Browse and buy clothing items for your panda's closet.",
+            ],
+            'shop_accessories_cat': [
+                "Accessories, jewelry, and decorative items for sale!",
+                "Buy accessories to add flair to your panda.",
+            ],
+            'shop_cursors_cat': [
+                "Custom mouse cursors to personalize your experience!",
+                "Replace the default cursor with fun alternatives.",
+            ],
+            'shop_cursor_trails_cat': [
+                "Cursor trail effects that follow your mouse!",
+                "Add sparkly trails to your cursor movements.",
+            ],
+            'shop_themes_cat': [
+                "Application color themes — change the entire look!",
+                "Buy new themes to customize the app's appearance.",
+            ],
+            'shop_food_cat': [
+                "Food items to feed your panda and boost happiness!",
+                "Buy snacks and meals to keep your panda fed.",
+            ],
+            'shop_toys_cat': [
+                "Toys for your panda to play with!",
+                "Buy fun toys and watch your panda interact with them.",
+            ],
+            'shop_upgrades_cat': [
+                "Upgrades to enhance your sorting and app experience!",
+                "Buy improvements that make the app even better.",
+            ],
+            'shop_special_cat': [
+                "Special limited items — rare finds and exclusives!",
+                "Unique items that may not be available forever.",
+            ],
+            # UI settings tooltips
+            'ui_language': [
+                "Pick a language for all menus and text in the app.",
+                "Change the display language. Choose from available translations.",
+            ],
+            'ui_font_size': [
+                "Make text bigger or smaller throughout the application.",
+                "Adjust font size for better readability.",
+            ],
+            'ui_animations': [
+                "Turn UI animations on or off. Off may improve performance.",
+                "Enable or disable smooth transitions and animation effects.",
+            ],
+            'ui_transparency': [
+                "Make the window more or less see-through.",
+                "Adjust how transparent the application window is.",
+            ],
+            'ui_compact_mode': [
+                "Switch to a smaller, more condensed layout.",
+                "Compact mode saves screen space by shrinking panels.",
+            ],
+            'ui_auto_save': [
+                "Your settings will be saved automatically when changed.",
+                "No need to click Save — changes apply instantly.",
+            ],
+            'ui_confirm_exit': [
+                "When enabled, the app asks 'Are you sure?' before closing.",
+                "Prevent accidental exits with a confirmation dialog.",
+            ],
+            'ui_startup_tab': [
+                "Choose which tab opens first when you start the app.",
+                "Set your preferred starting tab — Sort, Browse, etc.",
+            ],
+            'ui_sidebar_position': [
+                "Move the sidebar to the left or right side of the window.",
+                "Customize which side the navigation sidebar appears on.",
+            ],
+            'ui_show_statusbar': [
+                "Show or hide the bar at the bottom of the window.",
+                "The status bar shows progress and system information.",
+            ],
+            # Panda settings tooltips
+            'panda_name': [
+                "Give your panda a custom name! It appears in speech bubbles.",
+                "Type a name for your panda companion.",
+            ],
+            'panda_gender': [
+                "Choose your panda's gender — affects pronouns in messages.",
+                "Set your panda's gender identity.",
+            ],
+            'panda_mood_display': [
+                "Shows whether your panda is happy, tired, excited, etc.",
+                "Your panda's mood changes based on your interactions!",
+            ],
+            'panda_auto_walk': [
+                "Your panda will occasionally walk around on its own.",
+                "Enable automatic panda movement across the screen.",
+            ],
+            'panda_speech_bubbles': [
+                "Speech bubbles appear when your panda has something to say.",
+                "Show or hide the text bubbles above your panda.",
+            ],
+            'panda_interaction_sounds': [
+                "Play sounds when you pet, click, or interact with the panda.",
+                "Audio feedback for panda interactions.",
+            ],
+            'panda_idle_animations': [
+                "Your panda plays small animations when idle — stretching, yawning.",
+                "Enable cute idle animations for when you're not interacting.",
+            ],
+            'panda_drag_enabled': [
+                "Click and drag to move your panda around the screen.",
+                "When enabled, you can pick up and move your panda.",
+            ],
+            # Performance settings tooltips
+            'perf_thread_count': [
+                "More threads = faster processing, but uses more CPU.",
+                "Set how many parallel threads are used for sorting.",
+            ],
+            'perf_cache_size': [
+                "Larger cache = faster repeated operations, more memory used.",
+                "Controls how much memory is used for texture caching.",
+            ],
+            'perf_batch_size': [
+                "How many textures are processed in each batch.",
+                "Larger batches are faster but use more memory.",
+            ],
+            'perf_preview_quality': [
+                "Higher quality previews look better but load slower.",
+                "Adjust thumbnail quality for texture previews.",
+            ],
+            # Profile tooltips
+            'profile_save': [
+                "Save all your current settings as a named profile.",
+                "Create a profile to quickly switch between configurations.",
+            ],
+            'profile_load': [
+                "Load a saved profile to restore its settings.",
+                "Switch to a different saved configuration.",
+            ],
+            'profile_delete': [
+                "Permanently remove a saved profile.",
+                "Delete a profile you no longer need.",
+            ],
+            'profile_export': [
+                "Save your profile to a file to share or back up.",
+                "Export settings to a portable file.",
+            ],
+            'profile_import': [
+                "Load settings from an exported profile file.",
+                "Import a profile from someone else or a backup.",
+            ],
+            # Statistics tooltips
+            'stats_textures_sorted': [
+                "The total number of texture files you've organized.",
+                "Your lifetime sorting count across all sessions.",
+            ],
+            'stats_time_spent': [
+                "How long you've used the app in total.",
+                "Your cumulative time spent in the application.",
+            ],
+            'stats_panda_interactions': [
+                "Every click, pet, feed, and poke counted!",
+                "Total times you've interacted with your panda.",
+            ],
+            'stats_achievements_earned': [
+                "How many achievements you've completed so far.",
+                "Your achievement completion count.",
+            ],
+            'stats_currency_earned': [
+                "All the Bamboo Bucks you've ever earned.",
+                "Your lifetime earnings in the app's currency.",
+            ],
         }
     
     def _get_vulgar_panda_tooltips(self) -> Dict[str, Any]:
@@ -2287,6 +2879,331 @@ class TooltipVerbosityManager:
                 "Reset everything. Start fresh. Embrace the defaults.",
                 "Nuclear option for hotkeys. Resets EVERYTHING.",
                 "Defaults button. For when your custom bindings are a disaster.",
+            ],
+            # Closet subcategory tooltips
+            'closet_all_clothing': [
+                "Everything your panda can wear. Fashion overload incoming.",
+                "All the clothes. Every. Single. One. You're welcome.",
+                "Browse the entire wardrobe. Decision paralysis in 3… 2… 1…",
+                "All clothing items. Because scrolling is your cardio.",
+            ],
+            'closet_shirts': [
+                "Shirts. Tops. The things that go on the chest area.",
+                "Browse tees and tops. Your panda's torso deserves love too.",
+                "T-shirts, sweaters, and more. Basic but essential.",
+                "Shirt shopping for a cartoon bear. What a time to be alive.",
+            ],
+            'closet_pants': [
+                "Pants! Because nobody wants a pantsless panda. Or do they?",
+                "Bottoms. Trousers. Leg coverings. You know what pants are.",
+                "Browse pants for your panda. Decency is optional but encouraged.",
+                "Leg fashion. Your panda's gams deserve some coverage.",
+            ],
+            'closet_jackets': [
+                "Jackets. Hoodies. The cool outerwear section.",
+                "Layer up! Jackets make your panda look extra badass.",
+                "Outerwear for the fashionable panda. Stay warm, look cool.",
+                "Coats and hoodies. Because pandas get cold too. Probably.",
+            ],
+            'closet_dresses': [
+                "Dresses and robes. Fancy panda time, baby!",
+                "Flowing garments for the classy panda in your life.",
+                "Dress your bear in a dress. Poetry in motion.",
+                "Elegant wear. Your panda is ready for the red carpet.",
+            ],
+            'closet_full_outfits': [
+                "Full body costumes. Transform your panda entirely!",
+                "One-piece wonders. Suits, spacesuits, costumes — the works.",
+                "Complete outfits. No mixing and matching required.",
+                "Full costume mode. Your panda becomes someone else entirely.",
+            ],
+            'closet_fur_style': [
+                "Fur patterns. Make your panda's coat unique AF.",
+                "Change the fur style. Fluffy, sleek, or completely wild.",
+                "Fur customization. Because plain old panda fur is boring.",
+                "Pattern picker. Your panda's fashion starts with the fur.",
+            ],
+            'closet_fur_color': [
+                "Fur colors. Galaxy panda? Shadow panda? Go crazy.",
+                "Paint your panda a new color. Rules don't apply here.",
+                "Color picker for fur. Normal colors are overrated.",
+                "Recolor your panda. Because nature's palette was too limiting.",
+            ],
+            'closet_hats': [
+                "Hats. For when your panda's bald spot needs covering.",
+                "Head accessories. Crowns, caps, and chaotic headgear.",
+                "Hat rack. Put something on that head!",
+                "Browse hats. Your panda is one hat away from perfection.",
+            ],
+            'closet_shoes': [
+                "Shoes. Your panda's been walking barefoot this whole time.",
+                "Footwear that moves with your panda's steps. Technology!",
+                "Shoe shopping. For a bear. In a texture sorter. Normal.",
+                "Pick some kicks. Your panda's feet will thank you.",
+            ],
+            'closet_accessories': [
+                "Bling, baubles, and miscellaneous flair.",
+                "Accessories. The cherry on top of your panda's look.",
+                "Extra bits and bobs. Because more is more.",
+                "Accessory aisle. Scarves, bracelets, pendants — go nuts.",
+            ],
+            # Shop subcategory tooltips
+            'shop_outfits_cat': [
+                "Outfits for sale. Dress your panda or regret not doing so.",
+                "Buy outfits. Your panda's wardrobe expansion starts here.",
+                "Outfit shopping. Retail therapy but with Bamboo Bucks.",
+                "Panda outfits. Because naked pandas are so last season.",
+            ],
+            'shop_clothes_cat': [
+                "Individual clothing pieces. Mix and match, baby!",
+                "Shirts, pants, jackets — à la carte panda fashion.",
+                "Buy clothes piece by piece. Build the perfect outfit.",
+                "Clothing aisle. Your panda's dream wardrobe awaits.",
+            ],
+            'shop_accessories_cat': [
+                "Accessories. The fancy extras your panda deserves.",
+                "Buy bling for your bear. Sunglasses, scarves, the works.",
+                "Accessory shop. Small items, big impact.",
+                "Decorative bits. Make your panda sparkle.",
+            ],
+            'shop_cursors_cat': [
+                "Custom cursors. Because the default arrow is basic.",
+                "Cursor shop. Point at things with style.",
+                "Buy new cursors. Your mouse deserves better.",
+                "Cursor skins. Yes, that's a thing. And it's awesome.",
+            ],
+            'shop_cursor_trails_cat': [
+                "Cursor trails. Leave sparkles wherever you go!",
+                "Trail effects. Make every mouse movement magical.",
+                "Buy trails. Your cursor will be fabulous.",
+                "Sparkle shop. Trail effects for the extra in you.",
+            ],
+            'shop_themes_cat': [
+                "Themes. Reskin the entire damn app.",
+                "Color schemes for sale. Make everything pretty. Or ugly.",
+                "Theme shop. Dark mode not enough? Buy more options.",
+                "Visual makeover section. Change all the colors at once.",
+            ],
+            'shop_food_cat': [
+                "Food for the panda. They're always hungry. Always.",
+                "Buy snacks. Feed the bear. Simple concept.",
+                "Panda food. Because a hungry panda is a grumpy panda.",
+                "Snack shop. Your panda's stomach is a bottomless pit.",
+            ],
+            'shop_toys_cat': [
+                "Toys! Buy stuff for your panda to play with.",
+                "Toy aisle. Balls, plushies, and other distractions.",
+                "Entertainment section. Keep your panda amused.",
+                "Buy toys. Watch your panda lose its tiny mind with joy.",
+            ],
+            'shop_upgrades_cat': [
+                "Upgrades. Make the app even better. If that's possible.",
+                "Buy improvements. Level up your experience.",
+                "Enhancement shop. Boost your sorting game.",
+                "Upgrade aisle. For the power users and optimization nerds.",
+            ],
+            'shop_special_cat': [
+                "Special items. Rare, limited, and probably overpriced.",
+                "Exclusive stuff. Get it before it's gone!",
+                "Limited edition section. FOMO fuel.",
+                "Special items for special people. That's you. Probably.",
+            ],
+            # UI settings tooltips
+            'ui_language': [
+                "Language picker. Parlez-vous sorting?",
+                "Change the language. This won't fix your grammar though.",
+                "International mode. Pick your tongue.",
+                "Language selector. For the cosmopolitan panda enthusiast.",
+            ],
+            'ui_font_size': [
+                "Font size. Big letters or squint mode. Your choice.",
+                "Make text bigger or smaller. We don't judge your eyesight.",
+                "Resize the text. Accessibility meets vanity.",
+                "Font size slider. From 'ant writing' to 'billboard mode'.",
+            ],
+            'ui_animations': [
+                "Toggle animations. Smooth or snappy, pick your vibe.",
+                "Animations on or off. Performance vs. pretty.",
+                "UI motion toggle. Less movement = more productivity. Maybe.",
+                "Animation switch. For the 'I want it now' crowd.",
+            ],
+            'ui_transparency': [
+                "Window transparency. See-through mode for multitaskers.",
+                "Ghost mode. Make the window partially transparent.",
+                "Transparency slider. From solid to 'where did my app go?'",
+                "Adjust opacity. X-ray vision for your desktop.",
+            ],
+            'ui_compact_mode': [
+                "Compact mode. More screen space, less visual noise.",
+                "Squeeze everything smaller. Claustrophobia simulator.",
+                "Compact layout for efficiency nerds.",
+                "Small mode. Big results. Hopefully.",
+            ],
+            'ui_auto_save': [
+                "Auto-save. Because manually saving is so 2005.",
+                "Settings save themselves. You're welcome, lazy person.",
+                "Automatic saving. One less button to click.",
+                "Set it and forget it. Auto-save handles the rest.",
+            ],
+            'ui_confirm_exit': [
+                "Exit confirmation. The app doesn't want you to leave.",
+                "'Are you sure?' dialog. For the indecisive.",
+                "Prevents rage-quitting by accident. You're welcome.",
+                "Exit safety net. Because misclicks happen to everyone.",
+            ],
+            'ui_startup_tab': [
+                "Pick which tab greets you on launch. First impressions matter.",
+                "Startup tab. Skip the boring intro and go straight to work.",
+                "Default tab selector. Load your favorite section first.",
+                "Launch directly into your preferred tab. Efficiency!",
+            ],
+            'ui_sidebar_position': [
+                "Left or right sidebar. Choose your orientation.",
+                "Sidebar position. Left-handers unite! Or don't. Whatever.",
+                "Put the sidebar where you want it. Freedom!",
+                "Move the navigation panel. Left, right, dealer's choice.",
+            ],
+            'ui_show_statusbar': [
+                "Show or hide the bottom bar. It has info. Sometimes useful.",
+                "Status bar toggle. That strip at the bottom with numbers.",
+                "The status bar. You probably forgot it existed.",
+                "Bottom bar visibility. Hide it for maximum zen.",
+            ],
+            # Panda settings tooltips
+            'panda_name': [
+                "Name your panda. 'Sir Fluffington III' is taken though.",
+                "Give your bear an identity. Choose wisely. Or don't.",
+                "Panda naming ceremony. Make it count!",
+                "Type a name. Your panda's been going by 'Hey You' too long.",
+            ],
+            'panda_gender': [
+                "Panda gender picker. They/them is valid, even for bears.",
+                "Gender selection. Affects nothing except pronouns. Chill.",
+                "Pick your panda's identity. We're progressive here.",
+                "Gender choice. For when your panda needs proper pronouns.",
+            ],
+            'panda_mood_display': [
+                "Current mood: probably judging you. Check for yourself.",
+                "Mood indicator. Spoiler: it's usually hungry.",
+                "Is your panda happy? Check this to find out. Or not.",
+                "Mood display. Emotional state of your virtual bear. Deep.",
+            ],
+            'panda_auto_walk': [
+                "Auto-walk. Your panda wanders around like it owns the place.",
+                "Let the panda roam. Free-range bear, baby!",
+                "Walking toggle. Your panda has places to go. Apparently.",
+                "Auto-walk mode. Sometimes the panda just needs a stroll.",
+            ],
+            'panda_speech_bubbles': [
+                "Speech bubbles. Your panda has opinions. Brace yourself.",
+                "Toggle panda commentary. Some of it's actually funny.",
+                "Show/hide speech bubbles. The panda never shuts up otherwise.",
+                "Text bubbles. Your panda is chatty and you can't stop it.",
+            ],
+            'panda_interaction_sounds': [
+                "Interaction sounds. Boop, squish, and other noises.",
+                "Sound effects when you touch the panda. It's not weird.",
+                "Audio feedback for panda poking. Totally normal behavior.",
+                "Toggle panda sounds. Silence is an option. But why?",
+            ],
+            'panda_idle_animations': [
+                "Idle animations. Your panda does cute things when bored.",
+                "Little animations play when you're not paying attention.",
+                "Idle mode animations. Yawning, stretching, existing.",
+                "Your panda has a life too. Watch it live its best life.",
+            ],
+            'panda_drag_enabled': [
+                "Drag mode. Yeet your panda around the screen.",
+                "Pick up and move the panda. It's surprisingly fun.",
+                "Drag toggle. Grab your bear and put it wherever.",
+                "Enable dragging. Your panda is a paperweight you can move.",
+            ],
+            # Performance settings tooltips
+            'perf_thread_count': [
+                "Thread count. More threads = faster, but your CPU might sweat.",
+                "How many CPU threads to use. Don't go nuclear unless needed.",
+                "Processing threads. Turn it up for speed, down for stability.",
+                "Thread slider. Your CPU's workout routine.",
+            ],
+            'perf_cache_size': [
+                "Cache size. More cache = faster repeats, more RAM usage.",
+                "Memory cache. Feed it RAM and it'll work faster.",
+                "Cache allocation. Balance speed vs. memory like a pro.",
+                "How much memory to hoard. More cache, fewer reloads.",
+            ],
+            'perf_batch_size': [
+                "Batch size. Process more at once or take it slow.",
+                "How many textures to chew through per batch.",
+                "Batch processing size. Bigger = faster but hungrier.",
+                "Texture batch slider. Efficiency vs. memory, round 47.",
+            ],
+            'perf_preview_quality': [
+                "Preview quality. Pretty thumbnails or fast loading. Pick one.",
+                "Thumbnail quality slider. High = pretty, low = fast.",
+                "Preview resolution. Your GPU's opinion on aesthetics.",
+                "How good should previews look? Slide and find out.",
+            ],
+            # Profile tooltips
+            'profile_save': [
+                "Save settings as a profile. For when perfection needs a backup.",
+                "Create a settings snapshot. Insurance against future you.",
+                "Save profile. Because you'll change everything and regret it.",
+                "Backup your settings. You know you'll need this later.",
+            ],
+            'profile_load': [
+                "Load a saved profile. Instant settings swap!",
+                "Switch to a saved configuration. Time travel, sort of.",
+                "Restore a profile. Undo your bad decisions.",
+                "Load profile. Like fast travel but for settings.",
+            ],
+            'profile_delete': [
+                "Delete a profile. Yeet it into the void.",
+                "Remove a saved profile. No going back!",
+                "Profile deletion. For the profiles that didn't spark joy.",
+                "Nuke a saved configuration. Therapeutic, honestly.",
+            ],
+            'profile_export': [
+                "Export your profile. Share your genius with the world.",
+                "Save to file. Portable settings for the nomadic user.",
+                "Export settings. Great for backups or flexing.",
+                "Profile export. Take your setup on the road.",
+            ],
+            'profile_import': [
+                "Import a profile. Use someone else's settings. Genius.",
+                "Load from file. Steal someone's configuration. Legally.",
+                "Import settings. For when someone else did it better.",
+                "Profile import. Skip the setup and use a preset.",
+            ],
+            # Statistics tooltips
+            'stats_textures_sorted': [
+                "How many textures you've sorted. Your life's work. In a number.",
+                "Total sorted textures. Are you impressed yet? You should be.",
+                "Sorting score. The higher the number, the nerdier you are.",
+                "Your texture sorting count. We're keeping track. Always.",
+            ],
+            'stats_time_spent': [
+                "Time spent in the app. Don't do the math, it's depressing.",
+                "Total time. Proof that you have priorities. Questionable ones.",
+                "How long you've been here. Time flies when you're sorting.",
+                "App usage time. No, you can't get those hours back.",
+            ],
+            'stats_panda_interactions': [
+                "Panda interaction count. You touch that bear a LOT.",
+                "Every click, pet, and poke, tracked. Big panda is watching.",
+                "How many times you've bothered the panda. It's a lot.",
+                "Interaction counter. Your panda relationship in numbers.",
+            ],
+            'stats_achievements_earned': [
+                "Achievements unlocked. Your virtual trophy collection.",
+                "Badge count. How many achievements you've earned.",
+                "Achievement score. Are you overachieving? Let's see.",
+                "Your achievement collection. Proof you've been productive.",
+            ],
+            'stats_currency_earned': [
+                "Total Bamboo Bucks earned. Your lifetime earnings.",
+                "All-time currency. You're basically a panda billionaire.",
+                "Money earned. Virtual money, but money nonetheless.",
+                "Bamboo Buck lifetime total. You've been busy!",
             ],
         }
         

@@ -11,7 +11,7 @@ try:
 except ImportError:
     ctk = None
 
-from src.features.panda_closet import PandaCloset, CustomizationCategory, CustomizationItem
+from src.features.panda_closet import PandaCloset, CustomizationCategory, CustomizationItem, ClothingSubCategory
 
 # Try to import tooltip support
 try:
@@ -44,6 +44,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         self.panda_character = panda_character
         self.panda_preview = panda_preview_callback
         self.current_category = CustomizationCategory.FUR_STYLE
+        self._clothing_filter: Optional[str] = None  # Subcategory filter for clothing
         self._tooltips: List = []  # Prevent tooltip garbage collection
         
         # Configure grid
@@ -80,7 +81,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         categories = [
             (CustomizationCategory.FUR_STYLE, "🐼 Fur Style"),
             (CustomizationCategory.FUR_COLOR, "🎨 Fur Color"),
-            (CustomizationCategory.CLOTHING, "👕 Clothing"),
+            (CustomizationCategory.CLOTHING, "👕 All Clothing"),
             (CustomizationCategory.HAT, "🎩 Hats"),
             (CustomizationCategory.SHOES, "👟 Shoes"),
             (CustomizationCategory.ACCESSORY, "✨ Accessories"),
@@ -89,7 +90,7 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         category_tips = {
             CustomizationCategory.FUR_STYLE: "Change your panda's fur pattern and style",
             CustomizationCategory.FUR_COLOR: "Pick a fur color for your panda",
-            CustomizationCategory.CLOTHING: "Browse owned clothing items to equip",
+            CustomizationCategory.CLOTHING: "Browse all owned clothing items to equip",
             CustomizationCategory.HAT: "Try on hats — equip or unequip from here",
             CustomizationCategory.SHOES: "Choose shoes for your panda to wear",
             CustomizationCategory.ACCESSORY: "Accessorize your panda with fun items",
@@ -108,6 +109,38 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             btn.pack(pady=5, fill="x")
             if WidgetTooltip:
                 self._tooltips.append(WidgetTooltip(btn, category_tips.get(category, f"Browse {label} items")))
+
+        # Clothing subcategory buttons
+        clothing_subs = [
+            ("shirt", "👕 Shirts"),
+            ("pants", "👖 Pants"),
+            ("jacket", "🧥 Jackets"),
+            ("dress", "👗 Dresses"),
+            ("full_body", "🤵 Full Outfits"),
+        ]
+        clothing_sub_tips = {
+            "shirt": "Browse shirts and tops for your panda",
+            "pants": "Browse pants and bottoms for your panda",
+            "jacket": "Browse jackets, hoodies, and coats",
+            "dress": "Browse dresses, robes, and gowns",
+            "full_body": "Browse full-body outfits and costumes",
+        }
+        for sub_type, sub_label in clothing_subs:
+            sub_btn = ctk.CTkButton(
+                category_frame,
+                text=f"  {sub_label}",
+                height=24,
+                font=("Arial", 11),
+                command=lambda t=sub_type: self._select_clothing_sub(t)
+            ) if ctk else tk.Button(
+                category_frame,
+                text=f"  {sub_label}",
+                font=("Arial", 9),
+                command=lambda t=sub_type: self._select_clothing_sub(t)
+            )
+            sub_btn.pack(pady=1, fill="x", padx=(10, 0))
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(sub_btn, clothing_sub_tips.get(sub_type, f"Browse {sub_label}")))
         
         # Scrollable content frame
         if ctk:
@@ -169,6 +202,13 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
     def _select_category(self, category: CustomizationCategory):
         """Select a customization category."""
         self.current_category = category
+        self._clothing_filter = None  # Clear subcategory filter
+        self._show_items()
+
+    def _select_clothing_sub(self, clothing_type: str):
+        """Select a clothing subcategory filter (shirt, pants, jacket, etc.)."""
+        self.current_category = CustomizationCategory.CLOTHING
+        self._clothing_filter = clothing_type
         self._show_items()
     
     def _show_items(self):
@@ -182,7 +222,13 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
             widget.destroy()
         
         # Only show unlocked/purchased items — buy from Shop, not here
-        items = self.closet.get_items_by_category(self.current_category, unlocked_only=True)
+        if (self.current_category == CustomizationCategory.CLOTHING
+                and self._clothing_filter):
+            items = self.closet.get_clothing_by_subcategory(
+                self._clothing_filter, unlocked_only=True)
+        else:
+            items = self.closet.get_items_by_category(
+                self.current_category, unlocked_only=True)
         
         if not items:
             no_items_label = ctk.CTkLabel(

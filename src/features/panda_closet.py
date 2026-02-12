@@ -24,6 +24,20 @@ class CustomizationCategory(Enum):
     ACCESSORY = "accessory"
 
 
+class ClothingSubCategory(Enum):
+    """Subcategories for clothing items for better closet/shop organization."""
+    SHIRT = "shirt"
+    PANTS = "pants"
+    JACKET = "jacket"
+    DRESS = "dress"
+    FULL_BODY = "full_body"
+    OTHER = "other"
+
+
+# Mapping from clothing item IDs to their subcategory
+CLOTHING_SUBCATEGORIES: Dict[str, 'ClothingSubCategory'] = {}
+
+
 class ItemRarity(Enum):
     """Rarity levels for customization items."""
     COMMON = "common"
@@ -45,6 +59,7 @@ class CustomizationItem:
     cost: int = 0
     unlocked: bool = False
     equipped: bool = False
+    clothing_type: str = ""  # One of: shirt, pants, jacket, dress, full_body, other
 
 
 class PandaAppearance:
@@ -280,26 +295,33 @@ class PandaCloset:
             '🌌', 'Cosmic space colors', ItemRarity.LEGENDARY, 1500, False, False
         ),
         
-        # Clothing
+        # Clothing — Shirts
         'tshirt': CustomizationItem(
             'tshirt', 'Bamboo T-Shirt', CustomizationCategory.CLOTHING,
-            '👕', 'Casual bamboo tee', ItemRarity.COMMON, 25, False, False
+            '👕', 'Casual bamboo tee', ItemRarity.COMMON, 25, False, False,
+            clothing_type='shirt'
         ),
+        # Clothing — Jackets
         'hoodie': CustomizationItem(
             'hoodie', 'Cozy Hoodie', CustomizationCategory.CLOTHING,
-            '🧥', 'Warm and comfy', ItemRarity.UNCOMMON, 75, False, False
+            '🧥', 'Warm and comfy', ItemRarity.UNCOMMON, 75, False, False,
+            clothing_type='jacket'
         ),
+        # Clothing — Full Body
         'suit': CustomizationItem(
             'suit', 'Business Suit', CustomizationCategory.CLOTHING,
-            '🤵', 'Professional attire', ItemRarity.RARE, 300, False, False
+            '🤵', 'Professional attire', ItemRarity.RARE, 300, False, False,
+            clothing_type='full_body'
         ),
         'kimono': CustomizationItem(
             'kimono', 'Traditional Kimono', CustomizationCategory.CLOTHING,
-            '👘', 'Elegant traditional wear', ItemRarity.EPIC, 600, False, False
+            '👘', 'Elegant traditional wear', ItemRarity.EPIC, 600, False, False,
+            clothing_type='dress'
         ),
         'superhero': CustomizationItem(
             'superhero', 'Superhero Costume', CustomizationCategory.CLOTHING,
-            '🦸', 'Save the world in style', ItemRarity.LEGENDARY, 2000, False, False
+            '🦸', 'Save the world in style', ItemRarity.LEGENDARY, 2000, False, False,
+            clothing_type='full_body'
         ),
         
         # Hats
@@ -382,30 +404,41 @@ class PandaCloset:
             '🧢', 'Warm and casual', ItemRarity.COMMON, 40, False, False
         ),
 
-        # Additional Clothing
+        # Additional Clothing — Jackets
         'raincoat': CustomizationItem(
             'raincoat', 'Raincoat', CustomizationCategory.CLOTHING,
-            '🧥', 'Stay dry and sorted', ItemRarity.UNCOMMON, 100, False, False
+            '🧥', 'Stay dry and sorted', ItemRarity.UNCOMMON, 100, False, False,
+            clothing_type='jacket'
         ),
+        # Additional Clothing — Pants
         'overalls': CustomizationItem(
             'overalls', 'Denim Overalls', CustomizationCategory.CLOTHING,
-            '👖', 'Working panda attire', ItemRarity.COMMON, 50, False, False
+            '👖', 'Working panda attire', ItemRarity.COMMON, 50, False, False,
+            clothing_type='pants'
         ),
+        # Additional Clothing — Shirts
         'sweater': CustomizationItem(
             'sweater', 'Knit Sweater', CustomizationCategory.CLOTHING,
-            '🧶', 'Cozy and warm', ItemRarity.COMMON, 60, False, False
+            '🧶', 'Cozy and warm', ItemRarity.COMMON, 60, False, False,
+            clothing_type='shirt'
         ),
+        # Additional Clothing — Dresses
         'toga': CustomizationItem(
             'toga', 'Ancient Toga', CustomizationCategory.CLOTHING,
-            '🏛️', 'Philosopher panda', ItemRarity.RARE, 250, False, False
+            '🏛️', 'Philosopher panda', ItemRarity.RARE, 250, False, False,
+            clothing_type='dress'
         ),
+        # Additional Clothing — Full Body
         'spacesuit': CustomizationItem(
             'spacesuit', 'Space Suit', CustomizationCategory.CLOTHING,
-            '🚀', 'Ready for launch', ItemRarity.EPIC, 700, False, False
+            '🚀', 'Ready for launch', ItemRarity.EPIC, 700, False, False,
+            clothing_type='full_body'
         ),
+        # Additional Clothing — Shirts
         'jersey': CustomizationItem(
             'jersey', 'Sports Jersey', CustomizationCategory.CLOTHING,
-            '🏅', 'Go team panda!', ItemRarity.UNCOMMON, 150, False, False
+            '🏅', 'Go team panda!', ItemRarity.UNCOMMON, 150, False, False,
+            clothing_type='shirt'
         ),
 
         # Additional Accessories
@@ -457,35 +490,43 @@ class PandaCloset:
         # Shop-synced Clothing
         'dress': CustomizationItem(
             'dress', 'Elegant Dress', CustomizationCategory.CLOTHING,
-            '👗', 'Dressed to impress', ItemRarity.RARE, 200, False, False
+            '👗', 'Dressed to impress', ItemRarity.RARE, 200, False, False,
+            clothing_type='dress'
         ),
         'lab_coat': CustomizationItem(
             'lab_coat', 'Lab Coat', CustomizationCategory.CLOTHING,
-            '🥼', 'Science panda reporting', ItemRarity.UNCOMMON, 120, False, False
+            '🥼', 'Science panda reporting', ItemRarity.UNCOMMON, 120, False, False,
+            clothing_type='jacket'
         ),
         'leather_jacket': CustomizationItem(
             'leather_jacket', 'Leather Jacket', CustomizationCategory.CLOTHING,
-            '🧥', 'Cool and rebellious', ItemRarity.RARE, 250, False, False
+            '🧥', 'Cool and rebellious', ItemRarity.RARE, 250, False, False,
+            clothing_type='jacket'
         ),
         'pajamas': CustomizationItem(
             'pajamas', 'Cozy Pajamas', CustomizationCategory.CLOTHING,
-            '🩳', 'Sleepy panda vibes', ItemRarity.COMMON, 50, False, False
+            '🩳', 'Sleepy panda vibes', ItemRarity.COMMON, 50, False, False,
+            clothing_type='full_body'
         ),
         'sports_jersey': CustomizationItem(
             'sports_jersey', 'Sports Jersey', CustomizationCategory.CLOTHING,
-            '🏀', 'Game day ready', ItemRarity.UNCOMMON, 150, False, False
+            '🏀', 'Game day ready', ItemRarity.UNCOMMON, 150, False, False,
+            clothing_type='shirt'
         ),
         'superhero_cape': CustomizationItem(
             'superhero_cape', 'Superhero Cape', CustomizationCategory.CLOTHING,
-            '🦸‍♂️', 'Up, up, and away!', ItemRarity.EPIC, 500, False, False
+            '🦸‍♂️', 'Up, up, and away!', ItemRarity.EPIC, 500, False, False,
+            clothing_type='jacket'
         ),
         'tuxedo': CustomizationItem(
             'tuxedo', 'Tuxedo', CustomizationCategory.CLOTHING,
-            '🤵', 'Black tie affair', ItemRarity.RARE, 300, False, False
+            '🤵', 'Black tie affair', ItemRarity.RARE, 300, False, False,
+            clothing_type='full_body'
         ),
         'vest': CustomizationItem(
             'vest', 'Stylish Vest', CustomizationCategory.CLOTHING,
-            '🦺', 'Layered look', ItemRarity.COMMON, 60, False, False
+            '🦺', 'Layered look', ItemRarity.COMMON, 60, False, False,
+            clothing_type='shirt'
         ),
 
         # New Fur Colors - Free
@@ -818,7 +859,8 @@ class PandaCloset:
                 rarity=item.rarity,
                 cost=item.cost,
                 unlocked=item.unlocked,
-                equipped=item.equipped
+                equipped=item.equipped,
+                clothing_type=item.clothing_type
             )
     
     def get_item(self, item_id: str) -> Optional[CustomizationItem]:
@@ -842,6 +884,26 @@ class PandaCloset:
         if unlocked_only:
             items = [item for item in items if item.unlocked]
         
+        return sorted(items, key=lambda x: (x.rarity.value, x.name))
+
+    def get_clothing_by_subcategory(self, clothing_type: str,
+                                     unlocked_only: bool = False) -> List[CustomizationItem]:
+        """Get clothing items filtered by subcategory (shirt, pants, jacket, etc.).
+
+        Args:
+            clothing_type: One of 'shirt', 'pants', 'jacket', 'dress', 'full_body', 'other'
+            unlocked_only: Only return unlocked items
+
+        Returns:
+            List of matching clothing items
+        """
+        items = [
+            item for item in self.items.values()
+            if item.category == CustomizationCategory.CLOTHING
+            and (item.clothing_type or 'other') == clothing_type
+        ]
+        if unlocked_only:
+            items = [item for item in items if item.unlocked]
         return sorted(items, key=lambda x: (x.rarity.value, x.name))
     
     def unlock_item(self, item_id: str) -> bool:
@@ -1119,3 +1181,9 @@ class PandaCloset:
                 'unlocked': unlocked
             }
         return counts
+
+
+# Populate the module-level CLOTHING_SUBCATEGORIES mapping from DEFAULT_ITEMS
+for _item_id, _item in PandaCloset.DEFAULT_ITEMS.items():
+    if _item.category == CustomizationCategory.CLOTHING and _item.clothing_type:
+        CLOTHING_SUBCATEGORIES[_item_id] = ClothingSubCategory(_item.clothing_type)
