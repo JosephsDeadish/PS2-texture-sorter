@@ -85,8 +85,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     DRAG_HISTORY_SECONDS = 2.0      # How long to retain drag positions
     SHAKE_DIRECTION_CHANGES = 40    # X direction changes needed for shaking (high to avoid false triggers)
     MIN_SHAKE_MOVEMENT = 12         # Min px movement for a direction change (higher = less sensitive)
+    MIN_SHAKE_VELOCITY = 300        # Min avg speed (px/s) to consider shake (avoids slow-move false trigger)
     MIN_ROTATION_ANGLE = 0.55       # Min angle diff (radians) for spin detection (higher = less sensitive)
     SPIN_CONSISTENCY_THRESHOLD = 0.92  # Required ratio of consistent rotations (higher = stricter)
+    MIN_SPIN_POSITIONS = 16         # Min drag positions to attempt spin detection
+    MIN_SPIN_TOTAL_ANGLE = 3.14159  # Min total angle (radians, ~pi) swept for spin
     
     # Toss physics constants
     TOSS_FRICTION = 0.92            # Velocity decay per frame
@@ -2466,7 +2469,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # Detect fast side-to-side shaking (rapid X direction changes at high speed)
         # Require high average speed to avoid false triggers from slow movement
-        if avg_speed > 300:  # pixels per second — fast motion required for shake
+        if avg_speed > self.MIN_SHAKE_VELOCITY:
             x_direction_changes = 0
             for i in range(2, len(positions)):
                 dx_prev = positions[i-1][0] - positions[i-2][0]
@@ -2486,7 +2489,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Detect circular dragging (consistent angle rotation)
         # Requires enough points to form a real arc, and the path must
         # span a meaningful angle range to distinguish from linear drag
-        if len(positions) >= 16:
+        if len(positions) >= self.MIN_SPIN_POSITIONS:
             angles = []
             cx = sum(p[0] for p in positions) / len(positions)
             cy = sum(p[1] for p in positions) / len(positions)
@@ -2512,8 +2515,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     negative_diffs += 1
             
             total = positive_diffs + negative_diffs
-            # Require at least pi radians of total rotation and high consistency
-            if total > 0 and total_angle > math.pi and (positive_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD or negative_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD):
+            # Require sufficient total rotation and high directional consistency
+            if total > 0 and total_angle > self.MIN_SPIN_TOTAL_ANGLE and (positive_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD or negative_diffs / total > self.SPIN_CONSISTENCY_THRESHOLD):
                 self._last_drag_pattern_time = now
                 self._set_animation_no_cancel('spinning')
                 if self.panda:
