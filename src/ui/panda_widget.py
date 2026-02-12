@@ -3458,6 +3458,29 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 return
 
     
+    def _apply_collision_force(self, limb_name: str, push_x: float, push_y: float):
+        """Apply collision force to a specific limb.
+        
+        Args:
+            limb_name: Name of the limb ('left_arm', 'right_arm', 'left_leg', 'right_leg')
+            push_x: Horizontal push force component
+            push_y: Vertical push force component
+        """
+        if 'arm' in limb_name:
+            if 'left' in limb_name:
+                self._dangle_left_arm_h_vel += push_x
+                self._dangle_left_arm_vel += push_y
+            else:
+                self._dangle_right_arm_h_vel += push_x
+                self._dangle_right_arm_vel += push_y
+        elif 'leg' in limb_name:
+            if 'left' in limb_name:
+                self._dangle_left_leg_h_vel += push_x
+                self._dangle_left_leg_vel += push_y
+            else:
+                self._dangle_right_leg_h_vel += push_x
+                self._dangle_right_leg_vel += push_y
+    
     def _apply_limb_collisions(self):
         """Apply collision detection between limbs to prevent overlap.
         
@@ -3502,32 +3525,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     dy_norm = dy / distance
                     
                     # Apply force to push limbs apart
-                    # Both limbs get pushed, but in opposite directions
-                    push_x = dx_norm * force
-                    push_y = dy_norm * force
+                    push_x = dx_norm * force * 0.5
+                    push_y = dy_norm * force * 0.5
                     
-                    # Apply to limb velocities (horizontal and vertical)
-                    if 'arm' in name1:
-                        self._dangle_left_arm_h_vel -= push_x * 0.5 if 'left' in name1 else 0
-                        self._dangle_right_arm_h_vel -= push_x * 0.5 if 'right' in name1 else 0
-                        vel_attr = '_dangle_left_arm_vel' if 'left' in name1 else '_dangle_right_arm_vel'
-                        setattr(self, vel_attr, getattr(self, vel_attr) - push_y * 0.5)
-                    elif 'leg' in name1:
-                        self._dangle_left_leg_h_vel -= push_x * 0.5 if 'left' in name1 else 0
-                        self._dangle_right_leg_h_vel -= push_x * 0.5 if 'right' in name1 else 0
-                        vel_attr = '_dangle_left_leg_vel' if 'left' in name1 else '_dangle_right_leg_vel'
-                        setattr(self, vel_attr, getattr(self, vel_attr) - push_y * 0.5)
-                    
-                    if 'arm' in name2:
-                        self._dangle_left_arm_h_vel += push_x * 0.5 if 'left' in name2 else 0
-                        self._dangle_right_arm_h_vel += push_x * 0.5 if 'right' in name2 else 0
-                        vel_attr = '_dangle_left_arm_vel' if 'left' in name2 else '_dangle_right_arm_vel'
-                        setattr(self, vel_attr, getattr(self, vel_attr) + push_y * 0.5)
-                    elif 'leg' in name2:
-                        self._dangle_left_leg_h_vel += push_x * 0.5 if 'left' in name2 else 0
-                        self._dangle_right_leg_h_vel += push_x * 0.5 if 'right' in name2 else 0
-                        vel_attr = '_dangle_left_leg_vel' if 'left' in name2 else '_dangle_right_leg_vel'
-                        setattr(self, vel_attr, getattr(self, vel_attr) + push_y * 0.5)
+                    # Apply to both limbs in opposite directions
+                    self._apply_collision_force(name1, -push_x, -push_y)
+                    self._apply_collision_force(name2, push_x, push_y)
 
     def _on_drag_end(self, event):
         """Handle end of drag operation."""
