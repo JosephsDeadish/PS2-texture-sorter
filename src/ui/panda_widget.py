@@ -141,6 +141,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     # Upside-down flip threshold (velocity when dragged by legs)
     UPSIDE_DOWN_VELOCITY_THRESHOLD = 2.0  # Velocity threshold for flip detection
     
+    # Recovery time after falling on face or tipping over (ms)
+    FALL_RECOVERY_TIME_MS = 3000
+    
     # Emoji decorations shown next to the panda for each animation type
     ANIMATION_EMOJIS = {
         'working': ['💼', '⚙️', '📊', '💻', '☕'],
@@ -3253,6 +3256,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Arrived at destination - reset facing to front
             self._is_auto_walking = False
             self._facing_direction = 'front'
+            if self.panda and hasattr(self.panda, 'set_facing'):
+                from src.features.panda_character import PandaFacing
+                self.panda.set_facing(PandaFacing.FRONT)
             self._save_panda_position()
             self.start_animation('idle')
             self._schedule_auto_walk()
@@ -3756,7 +3762,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     response = self.panda.on_tip_over()
                     self.info_label.configure(text=response)
             # Auto-recover after a few seconds
-            self.after(3000, self._recover_from_fall)
+            self.after(self.FALL_RECOVERY_TIME_MS, self._recover_from_fall)
         else:
             self._is_face_down = False
             self._is_on_side = False
@@ -3769,6 +3775,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._is_face_down = False
         self._is_on_side = False
         self._facing_direction = 'front'
+        if self.panda and hasattr(self.panda, 'set_facing'):
+            from src.features.panda_character import PandaFacing
+            self.panda.set_facing(PandaFacing.FRONT)
         self.start_animation('idle')
     
     def _save_panda_position(self):

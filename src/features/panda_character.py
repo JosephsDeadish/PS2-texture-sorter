@@ -1105,7 +1105,6 @@ class PandaCharacter:
     def on_fall_on_face(self) -> str:
         """Handle panda falling on its face."""
         self.fall_count += 1
-        self.facing = PandaFacing.FRONT
         return random.choice(self.FALL_ON_FACE_RESPONSES)
 
     def on_tip_over(self) -> str:
