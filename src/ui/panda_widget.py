@@ -1891,6 +1891,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
 
         Items are drawn with enough detail so they look like the panda is
         actually wearing them, using layered shapes, highlights and shadows.
+        Clothing is rendered based on its ``clothing_type`` (shirt, pants,
+        jacket, dress, full_body) so different garments attach to the
+        correct body parts and follow limb animations.
         """
         if not self.panda_closet:
             return
@@ -1901,52 +1904,200 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             _leg_swing, _arm_swing = self._compute_limb_offsets(
                 self.current_animation, self.animation_frame)
 
-            # --- Draw clothing (shirt / outfit on torso) ---
+            # --- Draw clothing based on clothing_type ---
             if appearance.clothing:
                 clothing_item = self.panda_closet.get_item(appearance.clothing)
                 if clothing_item:
                     color = self._color_for_emoji(clothing_item.emoji, '#4169E1')
-                    # Darken for shadow, lighten for highlight
                     shadow = self._shade_color(color, -30)
                     highlight = self._shade_color(color, 40)
+                    ctype = getattr(clothing_item, 'clothing_type', '') or 'shirt'
 
                     bt = int(82 * sy + by)   # body top (below neck)
                     bb = int(152 * sy + by)  # body bottom
                     mid = (bt + bb) // 2
 
-                    # Main shirt body - follows torso curve
-                    c.create_polygon(
-                        cx - int(38 * sx), bt,                        # left shoulder
-                        cx - int(42 * sx), bt + int(12 * sy),         # left armhole
-                        cx - int(40 * sx), mid,                       # left waist
-                        cx - int(36 * sx), bb,                        # left hem
-                        cx + int(36 * sx), bb,                        # right hem
-                        cx + int(40 * sx), mid,                       # right waist
-                        cx + int(42 * sx), bt + int(12 * sy),         # right armhole
-                        cx + int(38 * sx), bt,                        # right shoulder
-                        fill=color, outline=shadow, width=1,
-                        smooth=True, tags="equipped_clothing")
-
-                    # Collar / neckline
-                    c.create_arc(
-                        cx - int(16 * sx), bt - int(6 * sy),
-                        cx + int(16 * sx), bt + int(10 * sy),
-                        start=200, extent=140, style="arc",
-                        outline=shadow, width=2, tags="equipped_clothing")
-
-                    # Centre highlight stripe
-                    c.create_line(
-                        cx, bt + int(8 * sy), cx, bb - int(4 * sy),
-                        fill=highlight, width=1, tags="equipped_clothing")
-
-                    # Small sleeve caps on shoulders
-                    for side in (-1, 1):
-                        sleeve_cx = cx + side * int(40 * sx)
-                        c.create_oval(
-                            sleeve_cx - int(10 * sx), bt + int(2 * sy),
-                            sleeve_cx + int(10 * sx), bt + int(18 * sy),
+                    # --- Pants: drawn on legs, synced with leg swing ---
+                    if ctype == 'pants':
+                        waist_y = mid
+                        leg_bottom = int(170 * sy + by)
+                        left_swing = int(_leg_swing)
+                        right_swing = int(-_leg_swing)
+                        # Waistband
+                        c.create_rectangle(
+                            cx - int(34 * sx), waist_y - int(4 * sy),
+                            cx + int(34 * sx), waist_y + int(4 * sy),
                             fill=color, outline=shadow, width=1,
                             tags="equipped_clothing")
+                        # Left leg
+                        c.create_polygon(
+                            cx - int(30 * sx), waist_y,
+                            cx - int(8 * sx), waist_y,
+                            cx - int(12 * sx), leg_bottom + left_swing,
+                            cx - int(28 * sx), leg_bottom + left_swing,
+                            fill=color, outline=shadow, width=1,
+                            tags="equipped_clothing")
+                        # Right leg
+                        c.create_polygon(
+                            cx + int(8 * sx), waist_y,
+                            cx + int(30 * sx), waist_y,
+                            cx + int(28 * sx), leg_bottom + right_swing,
+                            cx + int(12 * sx), leg_bottom + right_swing,
+                            fill=color, outline=shadow, width=1,
+                            tags="equipped_clothing")
+                        # Highlight seams
+                        c.create_line(
+                            cx, waist_y, cx, leg_bottom,
+                            fill=highlight, width=1, tags="equipped_clothing")
+
+                    # --- Jacket: torso + extended sleeves synced with arms ---
+                    elif ctype == 'jacket':
+                        # Main jacket body (torso)
+                        c.create_polygon(
+                            cx - int(40 * sx), bt,
+                            cx - int(44 * sx), bt + int(14 * sy),
+                            cx - int(42 * sx), mid,
+                            cx - int(38 * sx), bb,
+                            cx + int(38 * sx), bb,
+                            cx + int(42 * sx), mid,
+                            cx + int(44 * sx), bt + int(14 * sy),
+                            cx + int(40 * sx), bt,
+                            fill=color, outline=shadow, width=1,
+                            smooth=True, tags="equipped_clothing")
+                        # Collar
+                        c.create_arc(
+                            cx - int(18 * sx), bt - int(6 * sy),
+                            cx + int(18 * sx), bt + int(10 * sy),
+                            start=200, extent=140, style="arc",
+                            outline=shadow, width=2, tags="equipped_clothing")
+                        # Centre zipper/buttons
+                        c.create_line(
+                            cx, bt + int(6 * sy), cx, bb - int(4 * sy),
+                            fill=shadow, width=2, tags="equipped_clothing")
+                        # Long sleeves following arm swing
+                        arm_top = bt + int(4 * sy)
+                        arm_len = int(40 * sy)
+                        for side, swing in [(-1, _arm_swing), (1, -_arm_swing)]:
+                            arm_cx = cx + side * int(44 * sx)
+                            arm_end_y = arm_top + arm_len + int(swing)
+                            c.create_polygon(
+                                arm_cx - int(10 * sx), arm_top,
+                                arm_cx + int(10 * sx), arm_top,
+                                arm_cx + int(8 * sx), arm_end_y,
+                                arm_cx - int(8 * sx), arm_end_y,
+                                fill=color, outline=shadow, width=1,
+                                tags="equipped_clothing")
+                            # Cuff highlight
+                            c.create_line(
+                                arm_cx - int(7 * sx), arm_end_y - int(2 * sy),
+                                arm_cx + int(7 * sx), arm_end_y - int(2 * sy),
+                                fill=highlight, width=1, tags="equipped_clothing")
+
+                    # --- Dress: flows from neck to below body ---
+                    elif ctype == 'dress':
+                        dress_bottom = bb + int(12 * sy)
+                        c.create_polygon(
+                            cx - int(28 * sx), bt,
+                            cx - int(38 * sx), mid,
+                            cx - int(44 * sx), dress_bottom,
+                            cx + int(44 * sx), dress_bottom,
+                            cx + int(38 * sx), mid,
+                            cx + int(28 * sx), bt,
+                            fill=color, outline=shadow, width=1,
+                            smooth=True, tags="equipped_clothing")
+                        # Neckline
+                        c.create_arc(
+                            cx - int(14 * sx), bt - int(4 * sy),
+                            cx + int(14 * sx), bt + int(8 * sy),
+                            start=200, extent=140, style="arc",
+                            outline=shadow, width=2, tags="equipped_clothing")
+                        # Waist ribbon
+                        c.create_rectangle(
+                            cx - int(30 * sx), mid - int(3 * sy),
+                            cx + int(30 * sx), mid + int(3 * sy),
+                            fill=highlight, outline='', tags="equipped_clothing")
+
+                    # --- Full body: covers torso + legs + sleeves ---
+                    elif ctype == 'full_body':
+                        leg_bottom = int(170 * sy + by)
+                        left_swing = int(_leg_swing)
+                        right_swing = int(-_leg_swing)
+                        # Torso section
+                        c.create_polygon(
+                            cx - int(38 * sx), bt,
+                            cx - int(42 * sx), bt + int(12 * sy),
+                            cx - int(40 * sx), mid,
+                            cx - int(36 * sx), bb,
+                            cx + int(36 * sx), bb,
+                            cx + int(40 * sx), mid,
+                            cx + int(42 * sx), bt + int(12 * sy),
+                            cx + int(38 * sx), bt,
+                            fill=color, outline=shadow, width=1,
+                            smooth=True, tags="equipped_clothing")
+                        # Collar
+                        c.create_arc(
+                            cx - int(16 * sx), bt - int(6 * sy),
+                            cx + int(16 * sx), bt + int(10 * sy),
+                            start=200, extent=140, style="arc",
+                            outline=shadow, width=2, tags="equipped_clothing")
+                        # Pant legs synced with leg swing
+                        for leg_side, leg_sw in [(-1, left_swing), (1, right_swing)]:
+                            lx = cx + leg_side * int(19 * sx)
+                            c.create_polygon(
+                                lx - int(14 * sx), bb,
+                                lx + int(14 * sx), bb,
+                                lx + int(12 * sx), leg_bottom + leg_sw,
+                                lx - int(12 * sx), leg_bottom + leg_sw,
+                                fill=color, outline=shadow, width=1,
+                                tags="equipped_clothing")
+                        # Sleeves synced with arm swing
+                        arm_top = bt + int(4 * sy)
+                        arm_len = int(35 * sy)
+                        for side, swing in [(-1, _arm_swing), (1, -_arm_swing)]:
+                            arm_cx = cx + side * int(42 * sx)
+                            arm_end_y = arm_top + arm_len + int(swing)
+                            c.create_oval(
+                                arm_cx - int(10 * sx), arm_top,
+                                arm_cx + int(10 * sx), arm_end_y,
+                                fill=color, outline=shadow, width=1,
+                                tags="equipped_clothing")
+                        # Centre highlight
+                        c.create_line(
+                            cx, bt + int(8 * sy), cx, bb - int(4 * sy),
+                            fill=highlight, width=1, tags="equipped_clothing")
+
+                    # --- Default (shirt): torso-only garment ---
+                    else:
+                        # Main shirt body - follows torso curve
+                        c.create_polygon(
+                            cx - int(38 * sx), bt,
+                            cx - int(42 * sx), bt + int(12 * sy),
+                            cx - int(40 * sx), mid,
+                            cx - int(36 * sx), bb,
+                            cx + int(36 * sx), bb,
+                            cx + int(40 * sx), mid,
+                            cx + int(42 * sx), bt + int(12 * sy),
+                            cx + int(38 * sx), bt,
+                            fill=color, outline=shadow, width=1,
+                            smooth=True, tags="equipped_clothing")
+                        # Collar / neckline
+                        c.create_arc(
+                            cx - int(16 * sx), bt - int(6 * sy),
+                            cx + int(16 * sx), bt + int(10 * sy),
+                            start=200, extent=140, style="arc",
+                            outline=shadow, width=2, tags="equipped_clothing")
+                        # Centre highlight stripe
+                        c.create_line(
+                            cx, bt + int(8 * sy), cx, bb - int(4 * sy),
+                            fill=highlight, width=1, tags="equipped_clothing")
+                        # Small sleeve caps on shoulders
+                        for side in (-1, 1):
+                            sleeve_cx = cx + side * int(40 * sx)
+                            c.create_oval(
+                                sleeve_cx - int(10 * sx), bt + int(2 * sy),
+                                sleeve_cx + int(10 * sx), bt + int(18 * sy),
+                                fill=color, outline=shadow, width=1,
+                                tags="equipped_clothing")
 
             # --- Draw hat on top of head ---
             if appearance.hat:
