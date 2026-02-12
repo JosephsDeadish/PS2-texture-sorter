@@ -14,7 +14,9 @@ A professional, single-executable Windows application for automatically sorting 
 
 ### Core Functionality
 - **🤖 Automatic Classification** - 50+ texture categories with AI-powered classification
-- **🔄 Format Conversion** - Bidirectional DDS ↔ PNG conversion with quality preservation
+- **🔄 Format Conversion** - Extended format support: DDS, PNG, JPEG, WEBP, SVG, BMP, TGA, TIFF, GIF, PCX
+- **🎨 HD/4K Support** - NEW: Conditional preprocessing for both PS2 textures AND HD/4K textures
+- **🔍 Keyword Search** - NEW: Search textures by typing keywords like "gun", "character face", etc.
 - **📊 Massive Scale** - Handle 200,000+ textures efficiently with database indexing
 - **🎮 LOD Detection** - Automatically detect and group Level-of-Detail texture sets
 - **🗂️ Smart Organization** - 9+ hierarchical organization presets (Sims style, Neopets style, etc.)
@@ -158,13 +160,40 @@ Settings are stored in: `%USERPROFILE%\.ps2_texture_sorter\config.json`
 - **[README.md](README.md)** - This file: overview and quick start
 - **[BUILD.md](BUILD.md)** - Detailed build instructions for developers
 - **[CODE_SIGNING.md](CODE_SIGNING.md)** - Guide to signing the EXE for Windows SmartScreen
+- **[VISION_MODELS_GUIDE.md](VISION_MODELS_GUIDE.md)** - 🆕 Vision models, HD/4K support, and keyword search
+- **[FORMAT_SUPPORT_GUIDE.md](FORMAT_SUPPORT_GUIDE.md)** - 🆕 Extended format support (SVG, WEBP, etc.)
 - **[PANDA_GUIDE.md](PANDA_GUIDE.md)** - Complete guide to panda features and interactions
 - **[UNLOCKABLES_GUIDE.md](UNLOCKABLES_GUIDE.md)** - Achievement and unlockables system documentation
 - **[UI_CUSTOMIZATION_GUIDE.md](UI_CUSTOMIZATION_GUIDE.md)** - UI theming and customization guide
 - **[QUICKSTART.md](QUICKSTART.md)** - Quick start guide for new users
 - **Built-in Help** - Press F1 anywhere in the application for context-sensitive help
 
-## 🛠️ Development
+## 🆕 What's New
+
+### HD/4K Texture Support
+The preprocessing pipeline now intelligently handles both low-resolution PS2 textures AND high-resolution HD/4K textures:
+- **Retro mode** (< 256px): Upscaling + sharpening for PS2 textures
+- **HD mode** (> 1024px): Minimal processing to preserve detail in HD/4K textures
+- **Consistent embeddings**: Same vision models work across all resolutions
+- See [VISION_MODELS_GUIDE.md](VISION_MODELS_GUIDE.md) for details
+
+### Extended Format Support
+Support for 16+ image formats:
+- **Vector**: SVG (with automatic rasterization)
+- **Modern**: WEBP, TIFF
+- **Standard**: PNG, JPEG, BMP, TGA, GIF, PCX
+- **Game**: DDS (with compression support)
+- See [FORMAT_SUPPORT_GUIDE.md](FORMAT_SUPPORT_GUIDE.md) for details
+
+### Keyword-Based Texture Search
+Search for textures using natural language:
+- Type "gun" to find weapon textures
+- Type "character face" to find portraits
+- Type "metal surface" to find metallic textures
+- Uses CLIP model for semantic understanding
+- Works across all texture resolutions
+
+## 📚 Documentation
 
 ### Project Structure
 
