@@ -416,6 +416,8 @@ class GameTextureSorter(ctk.CTk):
         self.panda_widget = None
         self.widget_collection = None
         self.weapon_collection = None
+        self.travel_system = None
+        self.combat_stats = None
         self.closet_panel = None
         self.current_game_info = None  # Store detected game info
         
@@ -475,6 +477,10 @@ class GameTextureSorter(ctk.CTk):
                 if WEAPON_SYSTEM_AVAILABLE:
                     weapons_path = CONFIG_DIR / 'weapons.json'
                     self.weapon_collection = WeaponCollection(save_path=weapons_path)
+                if TRAVEL_SYSTEM_AVAILABLE:
+                    self.travel_system = TravelSystem()
+                if COMBAT_SYSTEM_AVAILABLE:
+                    self.combat_stats = CombatStats()
                 
                 # Setup tutorial system
                 if TUTORIAL_AVAILABLE:
@@ -6574,15 +6580,15 @@ Built with:
             ctk.CTkLabel(wf, text=f"{status} {weapon.name}",
                          font=("Arial Bold", 13),
                          text_color=rarity_color).pack(side="left", padx=8)
-            ctk.CTkLabel(wf, text=f"ATK: {weapon.stats.attack}  DEF: {weapon.stats.defense}",
+            ctk.CTkLabel(wf, text=f"DMG: {weapon.stats.damage}  SPD: {weapon.stats.attack_speed}",
                          font=("Arial", 11)).pack(side="left", padx=10)
 
             if weapon.unlocked:
-                is_equipped = (equipped == weapon.weapon_id)
+                is_equipped = (equipped_weapon is not None and equipped_weapon.id == weapon.id)
                 btn_text = "✅ Equipped" if is_equipped else "Equip"
                 btn = ctk.CTkButton(wf, text=btn_text, width=80,
                                     state="disabled" if is_equipped else "normal",
-                                    command=lambda wid=weapon.weapon_id: self._equip_weapon(wid))
+                                    command=lambda wid=weapon.id: self._equip_weapon(wid))
                 btn.pack(side="right", padx=5)
 
     def _equip_weapon(self, weapon_id: str):
@@ -6619,11 +6625,11 @@ Built with:
         ctk.CTkLabel(stats_frame, text="Combat Stats",
                      font=("Arial Bold", 14)).pack(pady=5)
 
-        combat_stats = CombatStats()
-        stats_text = (f"❤️ HP: {combat_stats.hp}/{combat_stats.max_hp}  "
-                      f"⚔️ ATK: {combat_stats.attack}  "
-                      f"🛡️ DEF: {combat_stats.defense}  "
-                      f"🎯 SPD: {combat_stats.speed}")
+        combat_stats = self.combat_stats if self.combat_stats else CombatStats()
+        stats_text = (f"❤️ HP: {combat_stats.current_health}/{combat_stats.max_health}  "
+                      f"⚔️ ATK: {combat_stats.attack_power}  "
+                      f"🛡️ DEF: {combat_stats.physical_defense}  "
+                      f"✨ MAG: {combat_stats.magic_power}")
         ctk.CTkLabel(stats_frame, text=stats_text,
                      font=("Arial", 12)).pack(pady=5)
 
@@ -6654,7 +6660,7 @@ Built with:
         ctk.CTkLabel(header_frame, text="🗺️ Travel Hub 🗺️",
                      font=("Arial Bold", 18)).pack(side="left", padx=10)
 
-        if not TRAVEL_SYSTEM_AVAILABLE:
+        if not TRAVEL_SYSTEM_AVAILABLE or not self.travel_system:
             info_frame = ctk.CTkFrame(self.tab_travel_hub)
             info_frame.pack(pady=50, padx=50, fill="both", expand=True)
             ctk.CTkLabel(info_frame,
@@ -6664,12 +6670,20 @@ Built with:
                          font=("Arial", 14)).pack(expand=True)
             return
 
+        # Current location display
+        current_loc = self.travel_system.current_location
+        if current_loc:
+            loc_frame = ctk.CTkFrame(self.tab_travel_hub)
+            loc_frame.pack(fill="x", pady=5, padx=10)
+            ctk.CTkLabel(loc_frame,
+                         text=f"📍 Current Location: {current_loc.icon} {current_loc.name}",
+                         font=("Arial Bold", 14)).pack(pady=8, padx=10)
+
         # Location list
         scroll_frame = ctk.CTkScrollableFrame(self.tab_travel_hub, label_text="Locations")
         scroll_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-        travel_sys = TravelSystem()
-        locations = list(travel_sys.locations.values())
+        locations = list(self.travel_system.locations.values())
         for loc in locations:
             lf = ctk.CTkFrame(scroll_frame)
             lf.pack(fill="x", pady=3, padx=5)
@@ -6678,13 +6692,27 @@ Built with:
                          font=("Arial Bold", 13)).pack(side="left", padx=8)
             ctk.CTkLabel(lf, text=f"Lvl {loc.level_required}+",
                          font=("Arial", 11)).pack(side="left", padx=10)
+            if loc.difficulty:
+                ctk.CTkLabel(lf, text=f"({loc.difficulty.value})",
+                             font=("Arial", 11), text_color="gray").pack(side="left", padx=5)
 
             status = "🔓" if loc.unlocked else "🔒"
             ctk.CTkLabel(lf, text=status,
                          font=("Arial", 14)).pack(side="right", padx=8)
 
             if loc.unlocked:
-                ctk.CTkButton(lf, text="Enter", width=70).pack(side="right", padx=5)
+                ctk.CTkButton(lf, text="Enter", width=70,
+                              command=lambda lid=loc.id: self._travel_to_location(lid)).pack(side="right", padx=5)
+
+    def _travel_to_location(self, location_id: str):
+        """Travel to a location and refresh the travel hub tab."""
+        if self.travel_system:
+            success, message = self.travel_system.travel_to(location_id)
+            logger.info(f"Travel: {message}")
+            # Rebuild travel hub tab
+            for widget in self.tab_travel_hub.winfo_children():
+                widget.destroy()
+            self.create_travel_hub_tab()
 
     def _draw_static_panda(self, canvas, w, h):
         """Draw a static panda on a preview canvas matching the live panda_widget style."""
