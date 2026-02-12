@@ -347,8 +347,9 @@ Version: {APP_VERSION}
         
         # Progress callback
         def progress(current, total):
-            if not args.quiet:
-                print(f"\rProgress: {current}/{total} ({100*current//total}%)", end='')
+            if not args.quiet and total > 0:
+                percentage = (100 * current // total) if total > 0 else 0
+                print(f"\rProgress: {current}/{total} ({percentage}%)", end='')
         
         # Process batch
         results = self.corrector.process_batch(

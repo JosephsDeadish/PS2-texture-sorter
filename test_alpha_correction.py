@@ -14,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src.preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets
 
+# Constants
+SEPARATOR_WIDTH = 70
+
 
 def create_test_image(output_path: Path, pattern: str = 'gradient'):
     """Create a test image with various alpha patterns."""
@@ -66,9 +69,9 @@ def create_test_image(output_path: Path, pattern: str = 'gradient'):
 
 def test_alpha_detection():
     """Test alpha color detection."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * SEPARATOR_WIDTH)
     print("Test 1: Alpha Color Detection")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH)
     
     corrector = AlphaCorrector()
     
@@ -99,9 +102,9 @@ def test_alpha_detection():
 
 def test_alpha_correction():
     """Test alpha correction with presets."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * SEPARATOR_WIDTH)
     print("Test 2: Alpha Correction with Presets")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH)
     
     corrector = AlphaCorrector()
     
@@ -148,9 +151,9 @@ def test_alpha_correction():
 
 def test_batch_processing():
     """Test batch processing."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * SEPARATOR_WIDTH)
     print("Test 3: Batch Processing")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH)
     
     corrector = AlphaCorrector()
     
@@ -204,9 +207,9 @@ def test_batch_processing():
 
 def test_presets():
     """Test all presets."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * SEPARATOR_WIDTH)
     print("Test 4: Preset Validation")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH)
     
     preset_names = AlphaCorrectionPresets.list_presets()
     print(f"\nFound {len(preset_names)} presets:")
@@ -223,9 +226,9 @@ def test_presets():
 
 def test_custom_thresholds():
     """Test custom thresholds."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * SEPARATOR_WIDTH)
     print("Test 5: Custom Thresholds")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH)
     
     corrector = AlphaCorrector()
     
@@ -271,9 +274,9 @@ def test_custom_thresholds():
 
 def main():
     """Run all tests."""
-    print("\n" + "=" * 70)
+    print("\n" + "=" * SEPARATOR_WIDTH)
     print("Alpha Correction Tool - Test Suite")
-    print("=" * 70)
+    print("=" * SEPARATOR_WIDTH)
     
     try:
         test_alpha_detection()
@@ -282,9 +285,9 @@ def main():
         test_presets()
         test_custom_thresholds()
         
-        print("\n" + "=" * 70)
+        print("\n" + "=" * SEPARATOR_WIDTH)
         print("✓ All tests passed!")
-        print("=" * 70)
+        print("=" * SEPARATOR_WIDTH)
         return 0
     
     except Exception as e:

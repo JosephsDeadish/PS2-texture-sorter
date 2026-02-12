@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple, Union
 import numpy as np
 from PIL import Image
-import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -415,10 +414,18 @@ class AlphaCorrector:
         common_root = None
         if preserve_structure and output_dir and len(image_paths) > 1:
             try:
-                common_root = Path(*Path(image_paths[0]).parts[:1])
+                # Start with the first path's parent
+                common_root = Path(image_paths[0]).resolve().parent
+                # Find the common parent directory of all paths
                 for path in image_paths[1:]:
-                    while not str(path).startswith(str(common_root)):
+                    resolved_path = path.resolve()
+                    # Keep going up until we find a common parent
+                    while not str(resolved_path).startswith(str(common_root) + str(Path('/'))):
                         common_root = common_root.parent
+                        # Safety check to avoid going above filesystem root
+                        if common_root == common_root.parent:
+                            common_root = None
+                            break
             except Exception:
                 common_root = None
         
