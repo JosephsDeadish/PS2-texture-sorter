@@ -620,6 +620,246 @@ _PANDA_TOOLTIPS = {
             "Show all. Because you're nosy like that."
         ]
     },
+    'sound_enabled': {
+        'normal': [
+            "Enable or disable all sound effects",
+            "Toggle sound effects on or off globally",
+            "Control whether the application plays sounds",
+            "Turn all audio feedback on or off"
+        ],
+        'vulgar': [
+            "Mute everything. Enjoy the silence, you hermit.",
+            "Sound toggle. On or off. Binary. Like your social skills.",
+            "Kill all sounds. Peace and quiet at last.",
+            "Enable sounds or pretend you're in a library. Your call.",
+            "Toggle audio. Because not everyone appreciates art."
+        ]
+    },
+    'master_volume': {
+        'normal': [
+            "Adjust the overall volume level for all sounds",
+            "Control the master audio volume",
+            "Set the global volume for all sound effects",
+            "Change how loud the application is overall"
+        ],
+        'vulgar': [
+            "Master volume. Crank it up or shut it down.",
+            "The big volume knob. Turn it up to 11 if you're brave.",
+            "Overall loudness control. Your neighbors might care.",
+            "Volume slider. Slide to the right for chaos, left for stealth mode.",
+            "How loud do you want this sh*t? Slide and find out."
+        ]
+    },
+    'effects_volume': {
+        'normal': [
+            "Control the volume of sound effects",
+            "Adjust how loud action sounds are",
+            "Set the volume for click and completion sounds",
+            "Fine-tune the effects audio level"
+        ],
+        'vulgar': [
+            "Effects volume. Make the clicks louder or stfu.",
+            "Sound effects loudness. For those satisfying click sounds.",
+            "Turn up the effects or turn them down. Nobody's watching.",
+            "How loud should the bleep-bloops be? You decide.",
+            "Effects slider. Slide it around like you know what you're doing."
+        ]
+    },
+    'notifications_volume': {
+        'normal': [
+            "Control the volume of notification sounds",
+            "Adjust how loud alert sounds are",
+            "Set the volume for notification audio",
+            "Fine-tune the notification audio level"
+        ],
+        'vulgar': [
+            "Notification volume. Ding ding or nothing. Pick one.",
+            "How loud do you want to be bothered? Slide accordingly.",
+            "Notification sounds. Adjust before your coworkers complain.",
+            "Alert volume. From 'barely a whisper' to 'everyone heard that'.",
+            "Notification loudness. Subtle or obnoxious. Both valid."
+        ]
+    },
+    'sound_pack': {
+        'normal': [
+            "Choose a sound pack style for audio feedback",
+            "Select between different sets of sound effects",
+            "Pick a sound theme for the application",
+            "Change the overall audio style"
+        ],
+        'vulgar': [
+            "Sound packs. Default is boring, vulgar is... interesting.",
+            "Choose your audio aesthetic. Classy or trashy.",
+            "Pick a sound theme. Each one has its own personality. Like you.",
+            "Sound pack selector. Default, minimal, or WTF mode.",
+            "Audio vibes. Pick the one that matches your energy."
+        ]
+    },
+    'sound_test_button': {
+        'normal': [
+            "Play a preview of this event's sound",
+            "Test what this sound effect sounds like",
+            "Preview the audio for this event",
+            "Click to hear a sample of this sound"
+        ],
+        'vulgar': [
+            "Test the sound. Preview before you commit. Smart.",
+            "Click to hear a preview. Try before you buy... wait, it's free.",
+            "Sound test. Because surprises aren't always fun.",
+            "Preview this noise. Your eardrums will thank you. Or not.",
+            "Hit test to hear what this sounds like. Science!"
+        ]
+    },
+    'cursor_type': {
+        'normal': [
+            "Select the style of your mouse cursor",
+            "Choose a cursor appearance from the available options",
+            "Change what your mouse pointer looks like",
+            "Pick a cursor design for the application"
+        ],
+        'vulgar': [
+            "Cursor style. Default is boring. Live a little.",
+            "Change your cursor. Skull cursor? Hell yeah.",
+            "Pointer picker. Because the default arrow is basic AF.",
+            "Cursor options. From professional to 'what is that?'",
+            "Pick a cursor. Crosshair makes you feel like a pro gamer."
+        ]
+    },
+    'cursor_size': {
+        'normal': [
+            "Change the size of your mouse cursor",
+            "Make your cursor larger or smaller",
+            "Adjust cursor size for visibility",
+            "Select a cursor size that works for you"
+        ],
+        'vulgar': [
+            "Cursor size. Compensating for something? Go huge.",
+            "Make your cursor tiny or massive. No judgment.",
+            "Size matters. At least for cursors. Pick your preference.",
+            "Cursor size slider. From 'where the hell is it' to 'can't miss it'.",
+            "Resize your pointer. Because accessibility is important, damn it."
+        ]
+    },
+    'cursor_trail': {
+        'normal': [
+            "Enable or disable cursor trail effects",
+            "Add a decorative trail behind your cursor",
+            "Toggle the cursor sparkle trail on or off",
+            "Turn cursor trail effects on or off"
+        ],
+        'vulgar': [
+            "Cursor trail. Leave sparkles wherever you go. Majestic.",
+            "Enable trails. Your cursor will look fabulous. Trust me.",
+            "Sparkle trail toggle. For the extra in all of us.",
+            "Cursor trail. Because your mouse movements deserve to be celebrated.",
+            "Turn on trails and watch your productivity drop. Worth it."
+        ]
+    },
+    'trail_style': {
+        'normal': [
+            "Choose the visual style for your cursor trail",
+            "Select a trail color scheme",
+            "Pick a trail appearance from available styles",
+            "Change the look of your cursor trail effect"
+        ],
+        'vulgar': [
+            "Trail style. Rainbow? Fire? Galaxy? Go nuts.",
+            "Pick a trail flavor. Each one is more extra than the last.",
+            "Trail aesthetic picker. Match your energy level.",
+            "Choose your sparkle style. No wrong answers here.",
+            "Trail options. From 'subtle nature' to 'galactic overkill'."
+        ]
+    },
+    'hotkey_edit': {
+        'normal': [
+            "Click to change the key binding for this shortcut",
+            "Edit this keyboard shortcut assignment",
+            "Remap this hotkey to a different key combination",
+            "Modify the key binding for this action"
+        ],
+        'vulgar': [
+            "Edit this hotkey. Remap it to something useful. Or chaotic.",
+            "Change the keybinding. Make it whatever the hell you want.",
+            "Remap this shortcut. Ctrl+Alt+Delete? Go for it.",
+            "Edit hotkey. Because the default key was stupid.",
+            "Rebind this action. Your keyboard, your rules."
+        ]
+    },
+    'hotkey_toggle': {
+        'normal': [
+            "Enable or disable this keyboard shortcut",
+            "Toggle this hotkey on or off",
+            "Control whether this shortcut is active",
+            "Turn this keyboard binding on or off"
+        ],
+        'vulgar': [
+            "Enable or disable this shortcut. Some keys deserve a break.",
+            "Toggle hotkey. On or off. Revolutionary, I know.",
+            "Disable this shortcut if it keeps interrupting your flow.",
+            "Turn this keybinding on or off. It's like a light switch but nerdier.",
+            "Enable/disable toggle. For when shortcuts start sh*t."
+        ]
+    },
+    'cursor_tint': {
+        'normal': [
+            "Set a color tint for your cursor",
+            "Add a custom color to your cursor",
+            "Change the cursor color using a hex code",
+            "Tint your cursor a different color"
+        ],
+        'vulgar': [
+            "Color your cursor. Make it match your personality.",
+            "Cursor tint. Paint that pointer whatever color you want.",
+            "Hex color input. #FF0000 if you're feeling dangerous.",
+            "Tint your cursor. Because plain white is so last year.",
+            "Color picker for your cursor. Go full rainbow if you dare."
+        ]
+    },
+    'hotkey_reset': {
+        'normal': [
+            "Reset all keyboard shortcuts to their defaults",
+            "Restore default key bindings for all shortcuts",
+            "Undo all custom hotkey changes",
+            "Return all shortcuts to factory settings"
+        ],
+        'vulgar': [
+            "Reset all hotkeys to defaults. Panic button for keybinds.",
+            "Factory reset your shortcuts. Undo all your 'improvements'.",
+            "Reset everything. Start fresh. Embrace the defaults.",
+            "Nuclear option for hotkeys. Resets EVERYTHING.",
+            "Defaults button. For when your custom bindings are a disaster."
+        ]
+    },
+    'sound_choice': {
+        'normal': [
+            "Choose which sound to play for this event",
+            "Select a sound style for this event",
+            "Pick a different audio tone for this action",
+            "Change the sound effect for this event"
+        ],
+        'vulgar': [
+            "Pick a sound style. Chime, beep, whatever tickles your fancy.",
+            "Sound selector. Mix and match your audio nightmare.",
+            "Choose your weapon. I mean sound. Same energy.",
+            "What noise do you want for this event? Go wild.",
+            "Sound picker. The DJ booth of settings panels."
+        ]
+    },
+    'per_event_sound': {
+        'normal': [
+            "Toggle individual sounds on or off for specific events",
+            "Control which events play sound effects",
+            "Enable or disable sounds for each event type",
+            "Manage individual sound event toggles"
+        ],
+        'vulgar': [
+            "Micromanage your sounds. Mute what annoys you.",
+            "Individual sound toggles for control freaks.",
+            "Pick and choose which sounds you tolerate. Fair enough.",
+            "Per-event audio control. Because one size doesn't fit all.",
+            "Cherry-pick your sounds like the picky bastard you are."
+        ]
+    },
 }
 
 
@@ -1179,6 +1419,25 @@ class TooltipVerbosityManager:
             'keyboard_controls': "View and customize keyboard shortcuts",
             'tooltip_mode': "Choose how tooltips are displayed: normal, beginner, or vulgar",
             'theme_selector': "Choose a visual theme for the application",
+            # Sound settings tooltips
+            'sound_enabled': "Enable or disable all sound effects",
+            'master_volume': "Adjust the overall volume level for all sounds",
+            'effects_volume': "Control the volume of sound effects",
+            'notifications_volume': "Control the volume of notification sounds",
+            'sound_pack': "Choose a sound pack style for audio feedback",
+            'per_event_sound': "Toggle individual sounds on or off for specific events",
+            'sound_test_button': "Play a preview of this event's sound",
+            'sound_choice': "Choose which sound to play for this event",
+            # Cursor settings tooltips
+            'cursor_type': "Select the style of your mouse cursor",
+            'cursor_size': "Change the size of your mouse cursor",
+            'cursor_tint': "Set a color tint for your cursor",
+            'cursor_trail': "Enable or disable cursor trail effects",
+            'trail_style': "Choose the visual style for your cursor trail",
+            # Hotkey settings tooltips
+            'hotkey_edit': "Click to change the key binding for this shortcut",
+            'hotkey_toggle': "Enable or disable this keyboard shortcut",
+            'hotkey_reset': "Reset all keyboard shortcuts to their defaults",
             # Inventory tooltips
             'inventory_purchased': "Items purchased from the shop",
             'inventory_give_button': "Give this item to your panda for interaction",
@@ -1543,16 +1802,121 @@ class TooltipVerbosityManager:
             'keyboard_controls': [
                 "View all keyboard shortcuts and change them to whatever keys "
                 "you prefer. Click Edit next to any shortcut to change it.",
+                "This panel lists every keyboard shortcut in the app. "
+                "You can change any of them by clicking the Edit button!",
             ],
             'tooltip_mode': [
                 "Choose how tooltips are shown: Normal gives standard info, "
                 "Dumbed Down gives extra detail, Vulgar adds humor.",
                 "Control tooltip style: Normal, Beginner-friendly, or Vulgar "
                 "with sarcastic commentary!",
+                "This controls the style of the little pop-up hints that appear "
+                "when you hover over buttons. Pick the one you like!",
             ],
             'theme_selector': [
                 "Pick a color theme for the application. Try dark mode for "
                 "late-night sessions or light mode for daytime use.",
+                "This changes all the colors of the app at once. "
+                "There are several presets — just pick one and see!",
+            ],
+            # Sound settings tooltips
+            'sound_enabled': [
+                "This checkbox turns all sounds on or off. When unchecked, "
+                "the app will be completely silent — no beeps, chimes, or effects.",
+                "Toggle sound effects globally. When off, nothing will make noise.",
+            ],
+            'master_volume': [
+                "This slider controls how loud everything is overall. Drag it "
+                "left for quieter, right for louder. Affects all sound types.",
+                "The master volume slider — controls the loudness of all sounds "
+                "in the application at once.",
+            ],
+            'effects_volume': [
+                "This slider controls just the sound effects (like clicks and "
+                "completion sounds). Separate from notification volume.",
+                "Adjust how loud the action sound effects are. These play when "
+                "you click buttons or complete tasks.",
+            ],
+            'notifications_volume': [
+                "This slider controls how loud notification sounds are. These "
+                "are the sounds that play for alerts and status updates.",
+                "Notification sounds volume — the sounds that tell you about "
+                "achievements, errors, and other events.",
+            ],
+            'sound_pack': [
+                "Choose a sound pack to change what all the sounds in the app "
+                "sound like. Default is standard, Minimal is subtle, and "
+                "Vulgar is... well, fun.",
+                "Sound packs change the overall style of every sound effect. "
+                "Try different ones to find your favorite!",
+            ],
+            'per_event_sound': [
+                "Turn individual sounds on or off. For example, you can mute "
+                "the button click sound but keep the achievement sound.",
+                "Each event (like clicking, completing, error) has its own "
+                "sound. Toggle them individually here!",
+            ],
+            'sound_test_button': [
+                "Click this to hear what this sound sounds like with your "
+                "current settings. Great for previewing before committing!",
+                "Preview button! Plays the sound for this event so you can "
+                "hear it before deciding to keep it or change it.",
+            ],
+            'sound_choice': [
+                "Pick a different sound style for this event. Each option "
+                "plays a unique tone — try them out with the Test button!",
+                "Choose which sound plays for this event. Options include "
+                "chimes, beeps, melodies, bells, and more.",
+            ],
+            # Cursor settings tooltips
+            'cursor_type': [
+                "This lets you change what your mouse pointer looks like. "
+                "There are lots of fun options like crosshairs, hearts, and skulls!",
+                "Pick a cursor style! The default arrow works great, but "
+                "you can also try crosshairs, stars, or even a pirate skull.",
+            ],
+            'cursor_size': [
+                "Make your cursor bigger or smaller. If you have trouble "
+                "seeing the cursor, try a larger size.",
+                "Cursor size options range from tiny to huge. Pick whatever "
+                "is most comfortable for you to see and use.",
+            ],
+            'cursor_tint': [
+                "Add a color tint to your cursor. Type a hex color code "
+                "(like #FF0000 for red) or use the Pick button.",
+                "This lets you color your cursor. Use the color picker "
+                "or type a hex code directly.",
+            ],
+            'cursor_trail': [
+                "Enable this to add a sparkly trail that follows your cursor. "
+                "It's purely decorative and can be turned off anytime.",
+                "Cursor trails leave a colorful effect behind your mouse "
+                "as you move it. Fun but optional!",
+            ],
+            'trail_style': [
+                "Choose the style of your cursor trail — rainbow, fire, "
+                "ice, nature, galaxy, or gold. Each has unique colors!",
+                "Different trail styles have different color patterns. "
+                "Try them all to see which one you like best!",
+            ],
+            # Hotkey settings tooltips
+            'hotkey_edit': [
+                "Click this to change which key triggers this shortcut. "
+                "Press the new key combination when prompted.",
+                "Edit the keyboard shortcut for this action. A dialog "
+                "will pop up where you press your new key combination.",
+            ],
+            'hotkey_toggle': [
+                "Check or uncheck this to enable or disable this keyboard "
+                "shortcut. Disabled shortcuts won't respond to key presses.",
+                "Toggle this shortcut on or off. When off, pressing the key "
+                "won't do anything for this action.",
+            ],
+            'hotkey_reset': [
+                "Reset all keyboard shortcuts back to their original default "
+                "settings. This undoes any custom key bindings you've made.",
+                "Click to restore all hotkeys to factory defaults. "
+                "Useful if you've messed up your shortcuts!",
             ],
         }
     
@@ -1791,14 +2155,138 @@ class TooltipVerbosityManager:
             'keyboard_controls': [
                 "Keyboard shortcuts. Customize 'em if you dare.",
                 "Hotkeys. For when clicking is too much effort.",
+                "Key bindings. Ctrl+Z your way out of problems.",
+                "Shortcuts for the lazy and the efficient. Same thing.",
+                "Remap keys. Because defaults are for normies.",
             ],
             'tooltip_mode': [
                 "Control the sass level. You've been warned.",
                 "Switch tooltip modes. You're in vulgar mode. Obviously.",
+                "Tooltip flavor picker. You chose chaos. Good for you.",
+                "Normal is boring. Dumbed down is hand-holding. Vulgar is *chef's kiss*.",
+                "Change how mouthy the tooltips are. You picked the spicy option.",
             ],
             'theme_selector': [
                 "Pick a vibe. Dark mode or boomer mode.",
                 "Choose your aesthetic. Make it pretty. Or ugly. Your call.",
+                "Theme picker. Dark mode supremacy or die trying.",
+                "Color scheme selector. Make it match your personality disorder.",
+                "Pick colors. We won't judge. Much.",
+            ],
+            # Sound settings tooltips
+            'sound_enabled': [
+                "Mute everything. Enjoy the silence, you hermit.",
+                "Sound toggle. On or off. Binary. Like your social skills.",
+                "Kill all sounds. Peace and quiet at last.",
+                "Enable sounds or pretend you're in a library. Your call.",
+                "Toggle audio. Because not everyone appreciates art.",
+            ],
+            'master_volume': [
+                "Master volume. Crank it up or shut it down.",
+                "The big volume knob. Turn it up to 11 if you're brave.",
+                "Overall loudness control. Your neighbors might care.",
+                "Volume slider. Slide to the right for chaos, left for stealth mode.",
+                "How loud do you want this sh*t? Slide and find out.",
+            ],
+            'effects_volume': [
+                "Effects volume. Make the clicks louder or stfu.",
+                "Sound effects loudness. For those satisfying click sounds.",
+                "Turn up the effects or turn them down. Nobody's watching.",
+                "Effects volume slider. Customize your auditory experience. Fancy.",
+                "How loud should the bleep-bloops be? You decide.",
+            ],
+            'notifications_volume': [
+                "Notification volume. Ding ding or nothing. Pick one.",
+                "How loud do you want to be bothered? Slide accordingly.",
+                "Notification sounds. Adjust before your coworkers complain.",
+                "Alert volume. From 'barely a whisper' to 'everyone heard that'.",
+                "Notification loudness. Subtle or obnoxious. Both valid.",
+            ],
+            'sound_pack': [
+                "Sound packs. Default is boring, vulgar is... interesting.",
+                "Choose your audio aesthetic. Classy or trashy.",
+                "Pick a sound theme. Each one has its own personality. Like you.",
+                "Sound pack selector. Default, minimal, or WTF mode.",
+                "Audio vibes. Pick the one that matches your energy.",
+            ],
+            'per_event_sound': [
+                "Micromanage your sounds. Mute what annoys you.",
+                "Individual sound toggles for control freaks.",
+                "Pick and choose which sounds you tolerate. Fair enough.",
+                "Per-event audio control. Because one size doesn't fit all.",
+                "Cherry-pick your sounds like the picky bastard you are.",
+            ],
+            'sound_test_button': [
+                "Test the sound. Preview before you commit. Smart.",
+                "Click to hear a preview. Try before you buy... wait, it's free.",
+                "Sound test. Because surprises aren't always fun.",
+                "Preview this noise. Your eardrums will thank you. Or not.",
+                "Hit test to hear what this sounds like. Science!",
+            ],
+            'sound_choice': [
+                "Pick a sound style. Chime, beep, whatever tickles your fancy.",
+                "Sound selector. Mix and match your audio nightmare.",
+                "Choose your weapon. I mean sound. Same energy.",
+                "What noise do you want for this event? Go wild.",
+                "Sound picker. The DJ booth of settings panels.",
+            ],
+            # Cursor settings tooltips
+            'cursor_type': [
+                "Cursor style. Default is boring. Live a little.",
+                "Change your cursor. Skull cursor? Hell yeah.",
+                "Pointer picker. Because the default arrow is basic AF.",
+                "Cursor options. From professional to 'what is that?'",
+                "Pick a cursor. Crosshair makes you feel like a pro gamer.",
+            ],
+            'cursor_size': [
+                "Cursor size. Compensating for something? Go huge.",
+                "Make your cursor tiny or massive. No judgment.",
+                "Size matters. At least for cursors. Pick your preference.",
+                "Cursor size slider. From 'where the hell is it' to 'can't miss it'.",
+                "Resize your pointer. Because accessibility is important, damn it.",
+            ],
+            'cursor_tint': [
+                "Color your cursor. Make it match your personality.",
+                "Cursor tint. Paint that pointer whatever color you want.",
+                "Hex color input. #FF0000 if you're feeling dangerous.",
+                "Tint your cursor. Because plain white is so last year.",
+                "Color picker for your cursor. Go full rainbow if you dare.",
+            ],
+            'cursor_trail': [
+                "Cursor trail. Leave sparkles wherever you go. Majestic.",
+                "Enable trails. Your cursor will look fabulous. Trust me.",
+                "Sparkle trail toggle. For the extra in all of us.",
+                "Cursor trail. Because your mouse movements deserve to be celebrated.",
+                "Turn on trails and watch your productivity drop. Worth it.",
+            ],
+            'trail_style': [
+                "Trail style. Rainbow? Fire? Galaxy? Go nuts.",
+                "Pick a trail flavor. Each one is more extra than the last.",
+                "Trail aesthetic picker. Match your energy level.",
+                "Choose your sparkle style. No wrong answers here.",
+                "Trail options. From 'subtle nature' to 'galactic overkill'.",
+            ],
+            # Hotkey settings tooltips
+            'hotkey_edit': [
+                "Edit this hotkey. Remap it to something useful. Or chaotic.",
+                "Change the keybinding. Make it whatever the hell you want.",
+                "Remap this shortcut. Ctrl+Alt+Delete? Go for it.",
+                "Edit hotkey. Because the default key was stupid.",
+                "Rebind this action. Your keyboard, your rules.",
+            ],
+            'hotkey_toggle': [
+                "Enable or disable this shortcut. Some keys deserve a break.",
+                "Toggle hotkey. On or off. Revolutionary, I know.",
+                "Disable this shortcut if it keeps interrupting your flow.",
+                "Turn this keybinding on or off. It's like a light switch but nerdier.",
+                "Enable/disable toggle. For when shortcuts start sh*t.",
+            ],
+            'hotkey_reset': [
+                "Reset all hotkeys to defaults. Panic button for keybinds.",
+                "Factory reset your shortcuts. Undo all your 'improvements'.",
+                "Reset everything. Start fresh. Embrace the defaults.",
+                "Nuclear option for hotkeys. Resets EVERYTHING.",
+                "Defaults button. For when your custom bindings are a disaster.",
             ],
         }
         
