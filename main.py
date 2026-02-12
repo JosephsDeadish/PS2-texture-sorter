@@ -164,6 +164,13 @@ except ImportError:
     print("Warning: Panda widgets not available.")
 
 try:
+    from src.features.weapon_system import WeaponCollection
+    WEAPON_SYSTEM_AVAILABLE = True
+except ImportError:
+    WEAPON_SYSTEM_AVAILABLE = False
+    print("Warning: Weapon system not available.")
+
+try:
     from src.ui.goodbye_splash import show_goodbye_splash
     GOODBYE_SPLASH_AVAILABLE = True
 except ImportError:
@@ -394,6 +401,7 @@ class PS2TextureSorter(ctk.CTk):
         self.panda_closet = None
         self.panda_widget = None
         self.widget_collection = None
+        self.weapon_collection = None
         self.closet_panel = None
         self.current_game_info = None  # Store detected game info
         
@@ -450,6 +458,9 @@ class PS2TextureSorter(ctk.CTk):
                     self.panda_closet = PandaCloset()
                 if PANDA_WIDGETS_AVAILABLE:
                     self.widget_collection = WidgetCollection()
+                if WEAPON_SYSTEM_AVAILABLE:
+                    weapons_path = CONFIG_DIR / 'weapons.json'
+                    self.weapon_collection = WeaponCollection(save_path=weapons_path)
                 
                 # Setup tutorial system
                 if TUTORIAL_AVAILABLE:
@@ -5090,9 +5101,17 @@ class PS2TextureSorter(ctk.CTk):
         # Confirm purchase
         from tkinter import messagebox
         
+        # Customize confirmation message based on item type
+        if item.category.value == 'food':
+            confirm_msg = f"Purchase {item.name} for ${item.price}?\n\nThis will be added to your inventory.\n\n{item.description}"
+        elif item.category.value == 'toys':
+            confirm_msg = f"Purchase {item.name} for ${item.price}?\n\nThis will be added to your toys collection.\n\n{item.description}"
+        else:
+            confirm_msg = f"Purchase {item.name} for ${item.price}?\n\n{item.description}"
+        
         confirm = messagebox.askyesno(
             "Confirm Purchase",
-            f"Purchase {item.name} for ${item.price}?\n\n{item.description}"
+            confirm_msg
         )
         
         if not confirm:
@@ -5187,7 +5206,7 @@ class PS2TextureSorter(ctk.CTk):
                 except Exception as e:
                     logger.debug(f"Could not save trail unlock: {e}")
             
-            # Handle food purchases — add to inventory and feed panda
+            # Handle food purchases — add to inventory only (no auto-feeding)
             if item.category.value == 'food':
                 # Add food quantity to widget collection for inventory
                 if self.widget_collection and item.unlockable_id:
@@ -5196,26 +5215,9 @@ class PS2TextureSorter(ctk.CTk):
                         if widget_id:
                             self.widget_collection.add_food_quantity(widget_id, 1)
                             logger.info(f"Added food to inventory: {widget_id}")
+                            self.log(f"🎋 Added {item.name} to your inventory!")
                     except Exception as e:
                         logger.debug(f"Could not add food to inventory: {e}")
-                
-                # Also feed the panda for immediate feedback
-                if self.panda:
-                    try:
-                        response = self.panda.on_food_received()
-                        if hasattr(self, 'panda_widget') and self.panda_widget:
-                            self.panda_widget.info_label.configure(text=response)
-                            self.panda_widget.play_animation_once('fed')
-                        self.log(f"🎋 Bought {item.name} for panda! {response}")
-                        # Award XP for feeding
-                        if self.panda_level_system:
-                            try:
-                                xp = self.panda_level_system.get_xp_reward('feed')
-                                self.panda_level_system.add_xp(xp, f'Bought {item.name}')
-                            except Exception:
-                                pass
-                    except Exception as e:
-                        logger.debug(f"Could not feed panda: {e}")
 
             # Handle toy purchases — unlock widget in collection
             if item.category.value == 'toys' and item.unlockable_id and self.widget_collection:
@@ -5228,6 +5230,18 @@ class PS2TextureSorter(ctk.CTk):
                     logger.info(f"Unlocked toy widget: {item.unlockable_id}")
                 except Exception as e:
                     logger.debug(f"Could not unlock toy widget: {e}")
+            
+            # Handle weapon purchases — unlock weapon in collection
+            if item.category.value == 'weapons' and item.unlockable_id and self.weapon_collection:
+                try:
+                    success = self.weapon_collection.unlock_weapon(item.unlockable_id)
+                    if success:
+                        self.log(f"⚔️ Unlocked {item.name}! Check the Armory to equip it.")
+                        logger.info(f"Unlocked weapon: {item.unlockable_id}")
+                    else:
+                        logger.warning(f"Failed to unlock weapon: {item.unlockable_id}")
+                except Exception as e:
+                    logger.debug(f"Could not unlock weapon: {e}")
             
             messagebox.showinfo("Purchase Successful", message)
             

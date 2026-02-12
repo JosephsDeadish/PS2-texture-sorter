@@ -240,6 +240,10 @@ class WidgetsPanel(ctk.CTkFrame if ctk else tk.Frame):
             )
             use_btn.pack(side="left", padx=2)
             
+            # Bind right-click for context menu
+            widget_id = widget.name.lower().replace(' ', '_')
+            card.bind("<Button-3>", lambda e, w=widget_id: self._show_item_context_menu(e, w))
+            
             # Return to inventory button
             return_btn = ctk.CTkButton(
                 btn_frame,
@@ -281,15 +285,47 @@ class WidgetsPanel(ctk.CTkFrame if ctk else tk.Frame):
     
     def _use_widget(self, widget_id: str):
         """Use a widget with the panda."""
+        widget = self.collection.get_widget(widget_id)
+        if not widget:
+            self.status_var.set("Widget not found!")
+            return
+        
         result = self.collection.use_widget(widget_id)
         
         if result:
-            # Update status
-            self.status_var.set(result['message'])
-            
-            # Update panda animation if callback provided
-            if self.panda_callback and hasattr(self.panda_callback, 'set_animation'):
-                self.panda_callback.set_animation(result['animation'])
+            # For food items, show walk-to and eating animation sequence
+            if widget.widget_type.value == 'food' and self.panda_callback:
+                # First, panda walks to item
+                if hasattr(self.panda_callback, 'panda') and self.panda_callback.panda:
+                    walk_msg = self.panda_callback.panda.on_item_interact(widget.name, 'food')
+                    self.status_var.set(walk_msg)
+                    
+                    # Start walking animation
+                    if hasattr(self.panda_callback, 'play_animation_once'):
+                        self.panda_callback.play_animation_once('walking')
+                    
+                    # After a delay, show eating animation using tkinter's after() method
+                    def delayed_eating():
+                        if hasattr(self.panda_callback, 'panda'):
+                            eat_msg = self.panda_callback.panda.on_eating(widget.name, widget_id)
+                            self.status_var.set(eat_msg)
+                        if hasattr(self.panda_callback, 'play_animation_once'):
+                            self.panda_callback.play_animation_once('eating')
+                    
+                    # Schedule eating animation after 1500ms (1.5 seconds)
+                    self.after(1500, delayed_eating)
+                else:
+                    # Fallback without walk animation
+                    self.status_var.set(result['message'])
+                    if hasattr(self.panda_callback, 'set_animation'):
+                        self.panda_callback.set_animation('eating')
+            else:
+                # For toys and other items, use normal behavior
+                self.status_var.set(result['message'])
+                
+                # Update panda animation if callback provided
+                if self.panda_callback and hasattr(self.panda_callback, 'set_animation'):
+                    self.panda_callback.set_animation(result['animation'])
             
             # Refresh display to show updated stats
             self._show_widgets()
@@ -386,3 +422,87 @@ class WidgetsPanel(ctk.CTkFrame if ctk else tk.Frame):
             self.status_var.set(f"Playing: {display_name}")
         else:
             self.status_var.set("Panda not available for animations")
+    
+    def _show_item_context_menu(self, event, widget_id: str):
+        """Show right-click context menu for an item."""
+        widget = self.collection.get_widget(widget_id)
+        if not widget:
+            return
+        
+        # Create context menu
+        menu = tk.Menu(self, tearoff=0)
+        
+        # Put away option
+        menu.add_command(
+            label="📥 Put Away",
+            command=lambda: self._return_to_inventory(widget_id)
+        )
+        
+        menu.add_separator()
+        
+        # Throw options
+        menu.add_command(
+            label="🎯 Throw at Panda",
+            command=lambda: self._throw_item_at_target(widget_id, 'panda')
+        )
+        menu.add_command(
+            label="🧱 Throw at Wall",
+            command=lambda: self._throw_item_at_target(widget_id, 'wall')
+        )
+        menu.add_command(
+            label="🏠 Throw at Roof",
+            command=lambda: self._throw_item_at_target(widget_id, 'roof')
+        )
+        
+        menu.add_separator()
+        
+        # Trash option
+        if widget.consumable:
+            menu.add_command(
+                label="🗑️ Throw in Trash",
+                command=lambda: self._trash_item(widget_id)
+            )
+        
+        # Display menu at cursor position
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+    
+    def _throw_item_at_target(self, widget_id: str, target: str):
+        """Throw item at a target (panda, wall, roof)."""
+        widget = self.collection.get_widget(widget_id)
+        if not widget:
+            return
+        
+        # Simulate throwing
+        target_messages = {
+            'panda': f"Threw {widget.name} at panda! Panda catches it! 🐼",
+            'wall': f"Threw {widget.name} at the wall! *THUNK!* 🧱",
+            'roof': f"Threw {widget.name} at the roof! It bounces back! 🏠"
+        }
+        
+        self.status_var.set(target_messages.get(target, f"Threw {widget.name}!"))
+        
+        # Trigger panda reaction if throwing at panda
+        if target == 'panda' and self.panda_callback:
+            if hasattr(self.panda_callback, 'play_animation_once'):
+                self.panda_callback.play_animation_once('catching')
+            elif hasattr(self.panda_callback, 'set_animation'):
+                self.panda_callback.set_animation('playing')
+        
+        logger.info(f"Threw {widget_id} at {target}")
+    
+    def _trash_item(self, widget_id: str):
+        """Throw item in trash (delete consumable quantity)."""
+        widget = self.collection.get_widget(widget_id)
+        if not widget or not widget.consumable:
+            return
+        
+        if widget.quantity > 0:
+            widget.quantity -= 1
+            self.status_var.set(f"Threw {widget.name} in trash! (Remaining: {widget.quantity})")
+            self._show_widgets()
+            logger.info(f"Trashed one {widget_id} (remaining: {widget.quantity})")
+        else:
+            self.status_var.set(f"No {widget.name} to trash!")
