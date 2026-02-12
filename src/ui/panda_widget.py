@@ -80,6 +80,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     ANIMATION_INTERVAL = 33
     # Reset frame counter at this value to prevent unbounded growth
     MAX_ANIMATION_FRAME = 10000
+    # Emoji decoration cycle interval (frames between emoji changes, ~660ms at 33ms/frame)
+    EMOJI_CYCLE_FRAMES = 20
     
     # Drag pattern detection thresholds
     DRAG_HISTORY_SECONDS = 2.0      # How long to retain drag positions
@@ -1748,9 +1750,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # --- Draw panda name tag below feet ---
         if self.panda and self.panda.name:
             name_y = int(h - 12 * sy)  # position just above canvas bottom edge
+            # width constrains text wrapping to fit within the canvas
             c.create_text(cx_draw, name_y, text=self.panda.name,
                           font=("Arial Bold", int(10 * sx)),
-                          fill="#666666", width=int(w - 10), tags="name_tag")
+                          fill="#666666", width=int(w * 0.9), tags="name_tag")
     
     def _draw_eyes(self, c: tk.Canvas, cx: int, ey: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda eyes based on the current animation style."""
@@ -2524,8 +2527,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         """Draw extra decorations based on animation type."""
         emoji_list = self.ANIMATION_EMOJIS.get(anim)
         if emoji_list:
-            # Cycle emojis slowly (~every 20 frames / ~660ms) to avoid frantic flicker
-            emoji = emoji_list[(frame_idx // 20) % len(emoji_list)]
+            # Cycle emojis slowly to avoid frantic flicker
+            emoji = emoji_list[(frame_idx // self.EMOJI_CYCLE_FRAMES) % len(emoji_list)]
             c.create_text(cx + int(55 * sx), int(18 * sy + by), text=emoji,
                           font=("Arial", int(20 * sx)), tags="extra")
         
