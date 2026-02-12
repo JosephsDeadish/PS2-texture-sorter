@@ -3709,7 +3709,7 @@ class GameTextureSorter(ctk.CTk):
             pass
     
     def open_settings_window(self):
-        """Open settings in a separate window"""
+        """Open settings in a separate window with tabbed categories"""
         # Import subprocess for directory opening functionality
         import subprocess
         
@@ -3724,21 +3724,47 @@ class GameTextureSorter(ctk.CTk):
         
         # Title
         ctk.CTkLabel(settings_window, text="🐼 Application Settings 🐼",
-                     font=("Arial Bold", 18)).pack(pady=15)
+                     font=("Arial Bold", 18)).pack(pady=10)
         
-        # Settings scroll frame
-        settings_scroll = ctk.CTkScrollableFrame(settings_window, width=850, height=550)
-        settings_scroll.pack(padx=20, pady=10, fill="both", expand=True)
+        # Create tabview for settings categories
+        settings_tabs = ctk.CTkTabview(settings_window, width=860, height=520)
+        settings_tabs.pack(padx=20, pady=5, fill="both", expand=True)
         
-        # === PERFORMANCE SETTINGS ===
-        perf_frame = ctk.CTkFrame(settings_scroll)
-        perf_frame.pack(fill="x", padx=10, pady=10)
+        # Add tabs
+        tab_perf = settings_tabs.add("⚡ Performance")
+        tab_appearance = settings_tabs.add("🎨 Appearance")
+        tab_controls = settings_tabs.add("⌨️ Controls")
+        tab_files = settings_tabs.add("📁 Files")
+        tab_ai = settings_tabs.add("🤖 AI")
+        tab_system = settings_tabs.add("🛠️ System")
         
-        ctk.CTkLabel(perf_frame, text="⚡ Performance Settings", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+        # Add tooltips to tab buttons
+        try:
+            tab_tooltips = {
+                "⚡ Performance": "Thread count, memory limits, cache sizes, and animation settings",
+                "🎨 Appearance": "UI scaling, themes, tooltip modes, and visual customization",
+                "⌨️ Controls": "Keyboard shortcuts and hotkey configuration",
+                "📁 Files": "Backup, overwrite, auto-save, and undo settings",
+                "🤖 AI": "Offline and online AI model configuration, blending modes",
+                "🛠️ System": "Logging, crash reports, and data directory access"
+            }
+            seg_button = settings_tabs._segmented_button
+            for child in seg_button.winfo_children():
+                try:
+                    child_text = child.cget("text")
+                    if child_text in tab_tooltips and WidgetTooltip:
+                        self._tooltips.append(WidgetTooltip(child, tab_tooltips[child_text]))
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.debug(f"Could not add tab tooltips: {e}")
+        
+        # === PERFORMANCE TAB ===
+        perf_scroll = ctk.CTkScrollableFrame(tab_perf)
+        perf_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
         # Thread count
-        thread_frame = ctk.CTkFrame(perf_frame)
+        thread_frame = ctk.CTkFrame(perf_scroll)
         thread_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(thread_frame, text="Thread Count:").pack(side="left", padx=10)
@@ -3755,7 +3781,7 @@ class GameTextureSorter(ctk.CTk):
         thread_slider.configure(command=update_thread_label)
         
         # Memory limit
-        mem_frame = ctk.CTkFrame(perf_frame)
+        mem_frame = ctk.CTkFrame(perf_scroll)
         mem_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(mem_frame, text="Memory Limit (MB):").pack(side="left", padx=10)
@@ -3766,7 +3792,7 @@ class GameTextureSorter(ctk.CTk):
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
         # Cache size
-        cache_frame = ctk.CTkFrame(perf_frame)
+        cache_frame = ctk.CTkFrame(perf_scroll)
         cache_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(cache_frame, text="Thumbnail Cache Size:").pack(side="left", padx=10)
@@ -3777,7 +3803,7 @@ class GameTextureSorter(ctk.CTk):
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
         # Show thumbnails toggle
-        thumb_toggle_frame = ctk.CTkFrame(perf_frame)
+        thumb_toggle_frame = ctk.CTkFrame(perf_scroll)
         thumb_toggle_frame.pack(fill="x", padx=10, pady=5)
         
         show_thumb_var = ctk.BooleanVar(value=config.get('ui', 'show_thumbnails', default=True))
@@ -3787,7 +3813,6 @@ class GameTextureSorter(ctk.CTk):
             try:
                 config.set('ui', 'show_thumbnails', value=show_thumb_var.get())
                 config.save()
-                # Immediately refresh browser if it's loaded
                 if hasattr(self, 'browser_current_dir'):
                     self.browser_refresh()
                 self.log(f"✅ Thumbnails {'enabled' if show_thumb_var.get() else 'disabled'}")
@@ -3800,7 +3825,7 @@ class GameTextureSorter(ctk.CTk):
                        command=on_thumbnail_toggle).pack(side="left", padx=10)
         
         # Thumbnail size selector
-        thumb_size_frame = ctk.CTkFrame(perf_frame)
+        thumb_size_frame = ctk.CTkFrame(perf_scroll)
         thumb_size_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(thumb_size_frame, text="Thumbnail Size:").pack(side="left", padx=10)
@@ -3811,10 +3836,8 @@ class GameTextureSorter(ctk.CTk):
             try:
                 config.set('ui', 'thumbnail_size', value=int(choice))
                 config.save()
-                # Clear cache since size changed
                 if hasattr(self, '_thumbnail_cache'):
                     self._thumbnail_cache.clear()
-                # Refresh browser to show new size
                 if hasattr(self, 'browser_current_dir'):
                     self.browser_refresh()
                 self.log(f"✅ Thumbnail size changed to {choice}px")
@@ -3829,8 +3852,8 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(thumb_size_frame, text="(default: 32)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
-        # Disable panda animations (for low-end systems)
-        panda_anim_frame = ctk.CTkFrame(perf_frame)
+        # Disable panda animations
+        panda_anim_frame = ctk.CTkFrame(perf_scroll)
         panda_anim_frame.pack(fill="x", padx=10, pady=5)
         
         disable_panda_anim_var = ctk.BooleanVar(value=config.get('ui', 'disable_panda_animations', default=False))
@@ -3842,12 +3865,11 @@ class GameTextureSorter(ctk.CTk):
                 config.set('ui', 'disable_panda_animations', value=disabled)
                 config.save()
                 self.log(f"✅ Panda animations {'disabled' if disabled else 'enabled'}")
-                # Immediately apply to active panda widget
                 if hasattr(self, 'panda_widget') and self.panda_widget:
                     if disabled:
-                        self.panda_widget.start_animation('idle')  # triggers hide
+                        self.panda_widget.start_animation('idle')
                     else:
-                        self.panda_widget.start_animation('idle')  # triggers show
+                        self.panda_widget.start_animation('idle')
             except Exception as e:
                 logger.error(f"Failed to save panda animation setting: {e}")
         
@@ -3855,133 +3877,67 @@ class GameTextureSorter(ctk.CTk):
                        variable=disable_panda_anim_var,
                        command=on_panda_anim_toggle).pack(side="left", padx=10)
         
-        # === APPEARANCE & CUSTOMIZATION (merged UI Settings + UI Customization) ===
-        ui_frame = ctk.CTkFrame(settings_scroll)
-        ui_frame.pack(fill="x", padx=10, pady=10)
+        # === APPEARANCE TAB ===
+        appear_scroll = ctk.CTkScrollableFrame(tab_appearance)
+        appear_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
-        ctk.CTkLabel(ui_frame, text="🎨 Appearance & Customization", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
-        
-        # Theme note - themes are managed in Advanced Customization panel only
-        theme_note_frame = ctk.CTkFrame(ui_frame)
+        # Theme note
+        theme_note_frame = ctk.CTkFrame(appear_scroll)
         theme_note_frame.pack(fill="x", padx=10, pady=5)
         ctk.CTkLabel(theme_note_frame, text="🎨 Theme: Use Advanced Customization below to select themes",
                     font=("Arial", 11), text_color="gray").pack(side="left", padx=10)
         
         # UI Scaling
-        scale_frame = ctk.CTkFrame(ui_frame)
+        scale_frame = ctk.CTkFrame(appear_scroll)
         scale_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(scale_frame, text="UI Scale:").pack(side="left", padx=10)
         scale_var = ctk.StringVar(value=config.get('ui', 'scale', default='100%'))
         scale_menu = ctk.CTkOptionMenu(
-            scale_frame, 
+            scale_frame,
             variable=scale_var,
             values=["80%", "90%", "100%", "110%", "120%", "130%", "150%"],
             command=lambda val: self.apply_ui_scaling(val)
         )
         scale_menu.pack(side="left", padx=10)
-        ctk.CTkLabel(scale_frame, text="(applies immediately)", 
+        ctk.CTkLabel(scale_frame, text="(applies immediately)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
-        # Note: Tooltip mode, cursor style, and sound settings are
-        # available in the Advanced Customization panel to avoid duplication.
+        # Tooltip mode selector with descriptions
+        tooltip_frame = ctk.CTkFrame(appear_scroll)
+        tooltip_frame.pack(fill="x", padx=10, pady=5)
         
-        # Advanced Customization button
-        ctk.CTkButton(ui_frame, text="🎨 Advanced Customization (Tooltips, Cursors, Colors)",
-                     command=self.open_customization,
-                     width=350, height=35).pack(padx=20, pady=10)
+        ctk.CTkLabel(tooltip_frame, text="💡 Tooltip Mode:", font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
         
-        # === KEYBOARD CONTROLS & HOTKEY CONFIGURATION (combined) ===
-        kb_frame = ctk.CTkFrame(settings_scroll)
-        kb_frame.pack(fill="x", padx=10, pady=10)
+        tooltip_mode_var = ctk.StringVar(value=config.get('ui', 'tooltip_mode', default='normal'))
         
-        ctk.CTkLabel(kb_frame, text="⌨️ Keyboard Controls & Hotkey Configuration", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+        tooltip_descriptions = {
+            "normal": "Standard helpful tooltips with clear, professional descriptions",
+            "dumbed-down": "Simplified tooltips for beginners — explains everything in plain language",
+            "vulgar_panda": "Uncensored panda commentary — sarcastic and humorous tooltip text (opt-in)"
+        }
         
-        ctk.CTkLabel(kb_frame, text="View and customize keyboard shortcuts below. Click Edit to change a hotkey binding.", 
-                    font=("Arial", 10), text_color="gray").pack(anchor="w", padx=20, pady=(0, 5))
-        
-        # Enable/disable hotkeys
-        hotkey_enabled_var = ctk.BooleanVar(value=config.get('hotkeys', 'enabled', default=True))
-        ctk.CTkCheckBox(kb_frame, text="Enable keyboard shortcuts", 
-                       variable=hotkey_enabled_var).pack(anchor="w", padx=20, pady=3)
-        
-        global_hotkey_var = ctk.BooleanVar(value=config.get('hotkeys', 'global_hotkeys_enabled', default=False))
-        ctk.CTkCheckBox(kb_frame, text="Enable global hotkeys (work when app is not focused)", 
-                       variable=global_hotkey_var).pack(anchor="w", padx=20, pady=3)
-        
-        # Embed the HotkeySettingsPanel directly
-        try:
-            from src.ui.hotkey_settings_panel import HotkeySettingsPanel
-            if not hasattr(self, 'hotkey_manager') or self.hotkey_manager is None:
-                from src.features.hotkey_manager import HotkeyManager
-                self.hotkey_manager = HotkeyManager()
+        for mode_val, mode_desc in tooltip_descriptions.items():
+            mode_frame = ctk.CTkFrame(tooltip_frame)
+            mode_frame.pack(fill="x", padx=20, pady=2)
             
-            hotkey_panel = HotkeySettingsPanel(kb_frame, self.hotkey_manager)
-            hotkey_panel.pack(fill="both", expand=True, padx=10, pady=5)
-        except Exception as e:
-            logger.error(f"Failed to load hotkey panel: {e}", exc_info=True)
-            ctk.CTkLabel(kb_frame, text=f"⚠️ Could not load hotkey panel: {e}", 
-                        text_color="orange").pack(padx=20, pady=5)
+            mode_label = mode_val.replace('_', ' ').replace('-', ' ').title()
+            rb = ctk.CTkRadioButton(mode_frame, text=mode_label, variable=tooltip_mode_var, value=mode_val,
+                                     command=lambda v=mode_val: self._apply_setting_change('tooltip_mode', v))
+            rb.pack(side="left", padx=5)
+            
+            desc_lbl = ctk.CTkLabel(mode_frame, text=f"— {mode_desc}", font=("Arial", 10), text_color="gray")
+            desc_lbl.pack(side="left", padx=5)
+            
+            if WidgetTooltip:
+                self._tooltips.append(WidgetTooltip(rb, mode_desc))
         
-        # === FILE HANDLING SETTINGS ===
-        file_frame = ctk.CTkFrame(settings_scroll)
-        file_frame.pack(fill="x", padx=10, pady=10)
+        # Notifications & Sound reference
+        notif_frame = ctk.CTkFrame(appear_scroll)
+        notif_frame.pack(fill="x", padx=10, pady=5)
         
-        ctk.CTkLabel(file_frame, text="📁 File Handling", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
-        
-        backup_var = ctk.BooleanVar(value=config.get('file_handling', 'create_backup', default=True))
-        ctk.CTkCheckBox(file_frame, text="Create backup before operations", 
-                       variable=backup_var).pack(anchor="w", padx=20, pady=3)
-        
-        overwrite_var = ctk.BooleanVar(value=config.get('file_handling', 'overwrite_existing', default=False))
-        ctk.CTkCheckBox(file_frame, text="Overwrite existing files", 
-                       variable=overwrite_var).pack(anchor="w", padx=20, pady=3)
-        
-        autosave_var = ctk.BooleanVar(value=config.get('file_handling', 'auto_save', default=True))
-        ctk.CTkCheckBox(file_frame, text="Auto-save progress", 
-                       variable=autosave_var).pack(anchor="w", padx=20, pady=3)
-        
-        # Undo depth
-        undo_frame = ctk.CTkFrame(file_frame)
-        undo_frame.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkLabel(undo_frame, text="Undo History Depth:").pack(side="left", padx=10)
-        undo_var = ctk.StringVar(value=str(config.get('file_handling', 'undo_depth', default=10)))
-        undo_entry = ctk.CTkEntry(undo_frame, textvariable=undo_var, width=100)
-        undo_entry.pack(side="left", padx=10)
-        ctk.CTkLabel(undo_frame, text="(default: 10)",
-                    font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
-        
-        # === LOGGING SETTINGS ===
-        log_frame = ctk.CTkFrame(settings_scroll)
-        log_frame.pack(fill="x", padx=10, pady=10)
-        
-        ctk.CTkLabel(log_frame, text="📋 Logging", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
-        
-        # Log level
-        loglevel_frame = ctk.CTkFrame(log_frame)
-        loglevel_frame.pack(fill="x", padx=10, pady=5)
-        
-        ctk.CTkLabel(loglevel_frame, text="Log Level:").pack(side="left", padx=10)
-        loglevel_var = ctk.StringVar(value=config.get('logging', 'log_level', default='INFO'))
-        loglevel_menu = ctk.CTkOptionMenu(loglevel_frame, variable=loglevel_var,
-                                          values=["DEBUG", "INFO", "WARNING", "ERROR"])
-        loglevel_menu.pack(side="left", padx=10)
-        
-        crash_report_var = ctk.BooleanVar(value=config.get('logging', 'crash_reports', default=True))
-        ctk.CTkCheckBox(log_frame, text="Enable crash reports", 
-                       variable=crash_report_var).pack(anchor="w", padx=20, pady=3)
-        
-        # === NOTIFICATIONS & SOUND SETTINGS ===
-        notif_frame = ctk.CTkFrame(settings_scroll)
-        notif_frame.pack(fill="x", padx=10, pady=10)
-        
-        ctk.CTkLabel(notif_frame, text="🔔 Notifications & Sounds", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+        ctk.CTkLabel(notif_frame, text="🔔 Notifications & Sounds",
+                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
         
         ctk.CTkLabel(notif_frame,
                      text="🔊 All sound settings are in Advanced Customization → Sound tab",
@@ -3991,37 +3947,91 @@ class GameTextureSorter(ctk.CTk):
                      command=self._open_sound_settings,
                      width=220, height=30).pack(padx=20, pady=8)
         
-        # === AI MODEL SETTINGS ===
-        ai_frame = ctk.CTkFrame(settings_scroll)
-        ai_frame.pack(fill="x", padx=10, pady=10)
+        # Advanced Customization button
+        ctk.CTkButton(appear_scroll, text="🎨 Advanced Customization (Themes, Cursors, Colors)",
+                     command=self.open_customization,
+                     width=350, height=35).pack(padx=20, pady=10)
         
-        ctk.CTkLabel(ai_frame, text="🤖 AI Model Settings", 
-                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+        # === CONTROLS TAB ===
+        controls_scroll = ctk.CTkScrollableFrame(tab_controls)
+        controls_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Classification preference
+        ctk.CTkLabel(controls_scroll, text="View and customize keyboard shortcuts below. Click Edit to change a hotkey binding.",
+                    font=("Arial", 10), text_color="gray").pack(anchor="w", padx=20, pady=(0, 5))
+        
+        hotkey_enabled_var = ctk.BooleanVar(value=config.get('hotkeys', 'enabled', default=True))
+        ctk.CTkCheckBox(controls_scroll, text="Enable keyboard shortcuts",
+                       variable=hotkey_enabled_var).pack(anchor="w", padx=20, pady=3)
+        
+        global_hotkey_var = ctk.BooleanVar(value=config.get('hotkeys', 'global_hotkeys_enabled', default=False))
+        ctk.CTkCheckBox(controls_scroll, text="Enable global hotkeys (work when app is not focused)",
+                       variable=global_hotkey_var).pack(anchor="w", padx=20, pady=3)
+        
+        try:
+            from src.ui.hotkey_settings_panel import HotkeySettingsPanel
+            if not hasattr(self, 'hotkey_manager') or self.hotkey_manager is None:
+                from src.features.hotkey_manager import HotkeyManager
+                self.hotkey_manager = HotkeyManager()
+            
+            hotkey_panel = HotkeySettingsPanel(controls_scroll, self.hotkey_manager)
+            hotkey_panel.pack(fill="both", expand=True, padx=10, pady=5)
+        except Exception as e:
+            logger.error(f"Failed to load hotkey panel: {e}", exc_info=True)
+            ctk.CTkLabel(controls_scroll, text=f"⚠️ Could not load hotkey panel: {e}",
+                        text_color="orange").pack(padx=20, pady=5)
+        
+        # === FILES TAB ===
+        files_scroll = ctk.CTkScrollableFrame(tab_files)
+        files_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        backup_var = ctk.BooleanVar(value=config.get('file_handling', 'create_backup', default=True))
+        ctk.CTkCheckBox(files_scroll, text="Create backup before operations",
+                       variable=backup_var).pack(anchor="w", padx=20, pady=3)
+        
+        overwrite_var = ctk.BooleanVar(value=config.get('file_handling', 'overwrite_existing', default=False))
+        ctk.CTkCheckBox(files_scroll, text="Overwrite existing files",
+                       variable=overwrite_var).pack(anchor="w", padx=20, pady=3)
+        
+        autosave_var = ctk.BooleanVar(value=config.get('file_handling', 'auto_save', default=True))
+        ctk.CTkCheckBox(files_scroll, text="Auto-save progress",
+                       variable=autosave_var).pack(anchor="w", padx=20, pady=3)
+        
+        undo_frame = ctk.CTkFrame(files_scroll)
+        undo_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(undo_frame, text="Undo History Depth:").pack(side="left", padx=10)
+        undo_var = ctk.StringVar(value=str(config.get('file_handling', 'undo_depth', default=10)))
+        undo_entry = ctk.CTkEntry(undo_frame, textvariable=undo_var, width=100)
+        undo_entry.pack(side="left", padx=10)
+        ctk.CTkLabel(undo_frame, text="(default: 10)",
+                    font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
+        
+        # === AI TAB ===
+        ai_scroll = ctk.CTkScrollableFrame(tab_ai)
+        ai_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
         prefer_image_var = ctk.BooleanVar(value=config.get('ai', 'prefer_image_content', default=True))
-        ctk.CTkCheckBox(ai_frame, text="Prioritize image content over filename patterns (recommended)", 
+        ctk.CTkCheckBox(ai_scroll, text="Prioritize image content over filename patterns (recommended)",
                        variable=prefer_image_var).pack(anchor="w", padx=20, pady=3)
         
-        ctk.CTkLabel(ai_frame, text="This makes the AI analyze actual image content instead of just filenames",
+        ctk.CTkLabel(ai_scroll, text="This makes the AI analyze actual image content instead of just filenames",
                     font=("Arial", 9), text_color="gray").pack(anchor="w", padx=40, pady=(0, 5))
         
         # Offline AI Model
-        offline_frame = ctk.CTkFrame(ai_frame)
+        offline_frame = ctk.CTkFrame(ai_scroll)
         offline_frame.pack(fill="x", padx=10, pady=5)
         
-        ctk.CTkLabel(offline_frame, text="Offline AI Model (ONNX):", 
+        ctk.CTkLabel(offline_frame, text="Offline AI Model (ONNX):",
                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=3)
         
         offline_enabled_var = ctk.BooleanVar(value=config.get('ai', 'offline', 'enabled', default=True))
-        ctk.CTkCheckBox(offline_frame, text="Enable offline AI model", 
+        ctk.CTkCheckBox(offline_frame, text="Enable offline AI model",
                        variable=offline_enabled_var).pack(anchor="w", padx=20, pady=3)
         
         offline_image_var = ctk.BooleanVar(value=config.get('ai', 'offline', 'use_image_analysis', default=True))
-        ctk.CTkCheckBox(offline_frame, text="Use for image content analysis", 
+        ctk.CTkCheckBox(offline_frame, text="Use for image content analysis",
                        variable=offline_image_var).pack(anchor="w", padx=20, pady=3)
         
-        # Offline threads
         offline_thread_frame = ctk.CTkFrame(offline_frame)
         offline_thread_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4032,7 +4042,6 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(offline_thread_frame, text="(default: 4)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
-        # Offline confidence weight
         offline_conf_frame = ctk.CTkFrame(offline_frame)
         offline_conf_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4048,17 +4057,16 @@ class GameTextureSorter(ctk.CTk):
         offline_conf_slider.configure(command=update_offline_conf_label)
         
         # Online AI Model
-        online_frame = ctk.CTkFrame(ai_frame)
+        online_frame = ctk.CTkFrame(ai_scroll)
         online_frame.pack(fill="x", padx=10, pady=5)
         
-        ctk.CTkLabel(online_frame, text="Online AI Model (API):", 
+        ctk.CTkLabel(online_frame, text="Online AI Model (API):",
                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=3)
         
         online_enabled_var = ctk.BooleanVar(value=config.get('ai', 'online', 'enabled', default=False))
-        ctk.CTkCheckBox(online_frame, text="Enable online AI model (requires API key)", 
+        ctk.CTkCheckBox(online_frame, text="Enable online AI model (requires API key)",
                        variable=online_enabled_var).pack(anchor="w", padx=20, pady=3)
         
-        # API Key
         api_key_frame = ctk.CTkFrame(online_frame)
         api_key_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4067,7 +4075,6 @@ class GameTextureSorter(ctk.CTk):
         api_key_entry = ctk.CTkEntry(api_key_frame, textvariable=api_key_var, width=300, show="*")
         api_key_entry.pack(side="left", padx=10)
         
-        # API URL
         api_url_frame = ctk.CTkFrame(online_frame)
         api_url_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4076,7 +4083,6 @@ class GameTextureSorter(ctk.CTk):
         api_url_entry = ctk.CTkEntry(api_url_frame, textvariable=api_url_var, width=400)
         api_url_entry.pack(side="left", padx=10)
         
-        # Model name
         model_frame = ctk.CTkFrame(online_frame)
         model_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4085,7 +4091,6 @@ class GameTextureSorter(ctk.CTk):
         model_entry = ctk.CTkEntry(model_frame, textvariable=model_var, width=300)
         model_entry.pack(side="left", padx=10)
         
-        # Online timeout
         timeout_frame = ctk.CTkFrame(online_frame)
         timeout_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4094,7 +4099,6 @@ class GameTextureSorter(ctk.CTk):
         timeout_entry = ctk.CTkEntry(timeout_frame, textvariable=timeout_var, width=60)
         timeout_entry.pack(side="left", padx=10)
         
-        # Rate limits
         rate_frame = ctk.CTkFrame(online_frame)
         rate_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4108,7 +4112,6 @@ class GameTextureSorter(ctk.CTk):
         rate_hour_entry = ctk.CTkEntry(rate_frame, textvariable=rate_hour_var, width=60)
         rate_hour_entry.pack(side="left", padx=5)
         
-        # Online confidence weight
         online_conf_frame = ctk.CTkFrame(online_frame)
         online_conf_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4123,12 +4126,10 @@ class GameTextureSorter(ctk.CTk):
             online_conf_label.configure(text=f"{float(value):.1f}")
         online_conf_slider.configure(command=update_online_conf_label)
         
-        # Use online for difficult images
         online_difficult_var = ctk.BooleanVar(value=config.get('ai', 'online', 'use_for_difficult_images', default=True))
-        ctk.CTkCheckBox(online_frame, text="Use online AI when offline has low confidence", 
+        ctk.CTkCheckBox(online_frame, text="Use online AI when offline has low confidence",
                        variable=online_difficult_var).pack(anchor="w", padx=20, pady=3)
         
-        # Low confidence threshold
         low_conf_frame = ctk.CTkFrame(online_frame)
         low_conf_frame.pack(fill="x", padx=20, pady=5)
         
@@ -4144,7 +4145,7 @@ class GameTextureSorter(ctk.CTk):
         low_conf_slider.configure(command=update_low_conf_label)
         
         # AI Blending Mode
-        blend_frame = ctk.CTkFrame(ai_frame)
+        blend_frame = ctk.CTkFrame(ai_scroll)
         blend_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(blend_frame, text="AI Blend Mode:").pack(side="left", padx=10)
@@ -4155,8 +4156,7 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(blend_frame, text="(how to combine offline and online predictions)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
         
-        # Minimum confidence
-        min_conf_frame = ctk.CTkFrame(ai_frame)
+        min_conf_frame = ctk.CTkFrame(ai_scroll)
         min_conf_frame.pack(fill="x", padx=10, pady=5)
         
         ctk.CTkLabel(min_conf_frame, text="Minimum Confidence:").pack(side="left", padx=10)
@@ -4170,15 +4170,31 @@ class GameTextureSorter(ctk.CTk):
             min_conf_label.configure(text=f"{float(value):.1f}")
         min_conf_slider.configure(command=update_min_conf_label)
         
-        # === SYSTEM & DEBUG SETTINGS ===
-        system_frame = ctk.CTkFrame(settings_scroll)
-        system_frame.pack(fill="x", padx=10, pady=10)
+        # === SYSTEM TAB ===
+        system_scroll = ctk.CTkScrollableFrame(tab_system)
+        system_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
-        ctk.CTkLabel(system_frame, text="🛠️ System & Debug", 
+        ctk.CTkLabel(system_scroll, text="📋 Logging",
                      font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
         
+        loglevel_frame = ctk.CTkFrame(system_scroll)
+        loglevel_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(loglevel_frame, text="Log Level:").pack(side="left", padx=10)
+        loglevel_var = ctk.StringVar(value=config.get('logging', 'log_level', default='INFO'))
+        loglevel_menu = ctk.CTkOptionMenu(loglevel_frame, variable=loglevel_var,
+                                          values=["DEBUG", "INFO", "WARNING", "ERROR"])
+        loglevel_menu.pack(side="left", padx=10)
+        
+        crash_report_var = ctk.BooleanVar(value=config.get('logging', 'crash_reports', default=True))
+        ctk.CTkCheckBox(system_scroll, text="Enable crash reports",
+                       variable=crash_report_var).pack(anchor="w", padx=20, pady=3)
+        
         # Directory access buttons
-        dirs_frame = ctk.CTkFrame(system_frame)
+        ctk.CTkLabel(system_scroll, text="📁 Data Directories",
+                     font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=(15, 5))
+        
+        dirs_frame = ctk.CTkFrame(system_scroll)
         dirs_frame.pack(fill="x", padx=10, pady=5)
         
         def open_logs_directory():
@@ -4187,16 +4203,12 @@ class GameTextureSorter(ctk.CTk):
                 logs_dir = LOGS_DIR
                 if not logs_dir.exists():
                     logs_dir.mkdir(parents=True, exist_ok=True)
-                    logger.info(f"Created logs directory: {logs_dir}")
-                
                 if sys.platform == 'win32':
                     os.startfile(str(logs_dir))
-                elif sys.platform == 'darwin':  # macOS
+                elif sys.platform == 'darwin':
                     subprocess.run(['open', str(logs_dir)], check=True)
-                else:  # linux
+                else:
                     subprocess.run(['xdg-open', str(logs_dir)], check=True)
-                
-                logger.info(f"Opened logs directory: {logs_dir}")
                 self.log(f"✅ Opened logs directory: {logs_dir}")
             except Exception as e:
                 logger.error(f"Failed to open logs directory: {e}", exc_info=True)
@@ -4208,16 +4220,12 @@ class GameTextureSorter(ctk.CTk):
                 config_dir = CONFIG_DIR
                 if not config_dir.exists():
                     config_dir.mkdir(parents=True, exist_ok=True)
-                    logger.info(f"Created config directory: {config_dir}")
-                
                 if sys.platform == 'win32':
                     os.startfile(str(config_dir))
-                elif sys.platform == 'darwin':  # macOS
+                elif sys.platform == 'darwin':
                     subprocess.run(['open', str(config_dir)], check=True)
-                else:  # linux
+                else:
                     subprocess.run(['xdg-open', str(config_dir)], check=True)
-                
-                logger.info(f"Opened config directory: {config_dir}")
                 self.log(f"✅ Opened config directory: {config_dir}")
             except Exception as e:
                 logger.error(f"Failed to open config directory: {e}", exc_info=True)
@@ -4229,51 +4237,45 @@ class GameTextureSorter(ctk.CTk):
                 cache_dir = CACHE_DIR
                 if not cache_dir.exists():
                     cache_dir.mkdir(parents=True, exist_ok=True)
-                    logger.info(f"Created cache directory: {cache_dir}")
-                
                 if sys.platform == 'win32':
                     os.startfile(str(cache_dir))
-                elif sys.platform == 'darwin':  # macOS
+                elif sys.platform == 'darwin':
                     subprocess.run(['open', str(cache_dir)], check=True)
-                else:  # linux
+                else:
                     subprocess.run(['xdg-open', str(cache_dir)], check=True)
-                
-                logger.info(f"Opened cache directory: {cache_dir}")
                 self.log(f"✅ Opened cache directory: {cache_dir}")
             except Exception as e:
                 logger.error(f"Failed to open cache directory: {e}", exc_info=True)
                 messagebox.showerror("Error", f"Failed to open cache directory:\n{e}")
         
-        # Buttons for opening directories
-        ctk.CTkButton(dirs_frame, text="📁 Open Logs Directory", 
+        ctk.CTkButton(dirs_frame, text="📁 Open Logs Directory",
                      command=open_logs_directory,
                      width=200, height=32).pack(side="left", padx=5, pady=5)
         
-        ctk.CTkButton(dirs_frame, text="📁 Open Config Directory", 
+        ctk.CTkButton(dirs_frame, text="📁 Open Config Directory",
                      command=open_config_directory,
                      width=200, height=32).pack(side="left", padx=5, pady=5)
         
-        ctk.CTkButton(dirs_frame, text="📁 Open Cache Directory", 
+        ctk.CTkButton(dirs_frame, text="📁 Open Cache Directory",
                      command=open_cache_directory,
                      width=200, height=32).pack(side="left", padx=5, pady=5)
         
-        # Directory paths display
-        paths_frame = ctk.CTkFrame(system_frame)
+        paths_frame = ctk.CTkFrame(system_scroll)
         paths_frame.pack(fill="x", padx=10, pady=5)
         
-        ctk.CTkLabel(paths_frame, text="Application Data Locations:", 
+        ctk.CTkLabel(paths_frame, text="Application Data Locations:",
                     font=("Arial Bold", 11)).pack(anchor="w", padx=10, pady=(5, 0))
         
-        ctk.CTkLabel(paths_frame, text=f"• Logs: {LOGS_DIR}", 
+        ctk.CTkLabel(paths_frame, text=f"• Logs: {LOGS_DIR}",
                     font=("Arial", 9), text_color="gray").pack(anchor="w", padx=20)
         
-        ctk.CTkLabel(paths_frame, text=f"• Config: {CONFIG_DIR}", 
+        ctk.CTkLabel(paths_frame, text=f"• Config: {CONFIG_DIR}",
                     font=("Arial", 9), text_color="gray").pack(anchor="w", padx=20)
         
-        ctk.CTkLabel(paths_frame, text=f"• Cache: {CACHE_DIR}", 
+        ctk.CTkLabel(paths_frame, text=f"• Cache: {CACHE_DIR}",
                     font=("Arial", 9), text_color="gray").pack(anchor="w", padx=20, pady=(0, 5))
         
-        # === SAVE BUTTON ===
+        # === SAVE BUTTON (below tabs) ===
         def save_settings_window():
             try:
                 # Validate and save Performance settings
@@ -4301,8 +4303,9 @@ class GameTextureSorter(ctk.CTk):
                 config.set('ui', 'thumbnail_size', value=int(thumb_size_var.get()))
                 config.set('ui', 'disable_panda_animations', value=disable_panda_anim_var.get())
                 
-                # UI / Appearance & Customization
+                # UI / Appearance
                 config.set('ui', 'scale', value=scale_var.get())
+                config.set('ui', 'tooltip_mode', value=tooltip_mode_var.get())
                 
                 # Validate and save File Handling settings
                 try:
@@ -4320,8 +4323,6 @@ class GameTextureSorter(ctk.CTk):
                 # Logging
                 config.set('logging', 'log_level', value=loglevel_var.get())
                 config.set('logging', 'crash_reports', value=crash_report_var.get())
-                
-                # Notifications & Sounds are now managed in Advanced Customization → Sound tab
                 
                 # AI Settings
                 config.set('ai', 'prefer_image_content', value=prefer_image_var.get())
@@ -4376,8 +4377,7 @@ class GameTextureSorter(ctk.CTk):
                 # Save to file
                 config.save()
                 
-                # Apply settings immediately - wrap in try/except to avoid crashing settings window
-                # Theme is now managed through Advanced Customization panel only
+                # Apply settings immediately
                 try:
                     self.apply_ui_scaling(scale_var.get())
                 except Exception as scale_err:
@@ -4386,13 +4386,11 @@ class GameTextureSorter(ctk.CTk):
                 # Reinitialize classifier with new config
                 if hasattr(self, 'classifier'):
                     try:
-                        # Create model manager if AI is enabled
                         model_manager = None
                         if config.get('ai', 'offline', 'enabled') or config.get('ai', 'online', 'enabled'):
                             from src.ai.model_manager import ModelManager
                             model_manager = ModelManager.create_default(config.settings.get('ai', {}))
                         
-                        # Recreate classifier with new config and model manager
                         self.classifier = TextureClassifier(config=config, model_manager=model_manager)
                         self.log("✅ AI settings applied - classifier reinitialized")
                     except Exception as e:
@@ -4401,7 +4399,6 @@ class GameTextureSorter(ctk.CTk):
                 
                 self.log("✅ Settings saved successfully!")
                 
-                # Show confirmation
                 if GUI_AVAILABLE:
                     messagebox.showinfo("Settings Saved", "All settings have been saved and applied successfully!")
                     
@@ -4416,10 +4413,10 @@ class GameTextureSorter(ctk.CTk):
                 if GUI_AVAILABLE:
                     messagebox.showerror("Error", f"Failed to save settings: {e}")
         
-        button_frame = ctk.CTkFrame(settings_scroll)
-        button_frame.pack(fill="x", padx=10, pady=20)
+        button_frame = ctk.CTkFrame(settings_window)
+        button_frame.pack(fill="x", padx=20, pady=10)
         
-        ctk.CTkButton(button_frame, text="💾 Save Settings", 
+        ctk.CTkButton(button_frame, text="💾 Save Settings",
                      command=save_settings_window,
                      width=200, height=40,
                      font=("Arial Bold", 14)).pack(pady=10)

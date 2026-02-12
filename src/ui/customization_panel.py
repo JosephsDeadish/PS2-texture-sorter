@@ -40,7 +40,7 @@ THEME_PRESETS = {
         "appearance_mode": "light",
         "colors": {
             "primary": "#2874A6",
-            "secondary": "#5499C7",
+            "secondary": "#d6e9f5",
             "background": "#f0f0f0",
             "foreground": "#000000",
             "accent": "#3498DB",
@@ -55,16 +55,16 @@ THEME_PRESETS = {
         "name": "🤖 Cyberpunk",
         "appearance_mode": "dark",
         "colors": {
-            "primary": "#00ff41",
-            "secondary": "#008f11",
+            "primary": "#00cc33",
+            "secondary": "#0d1a0f",
             "background": "#0a0e27",
-            "foreground": "#00ff41",
+            "foreground": "#e0e0e0",
             "accent": "#ff006e",
-            "button": "#00ff41",
-            "button_hover": "#00cc33",
+            "button": "#005522",
+            "button_hover": "#007733",
             "text": "#00ff41",
-            "text_secondary": "#008f11",
-            "border": "#00ff41"
+            "text_secondary": "#66cc88",
+            "border": "#1a3a1a"
         }
     },
     "neon_dreams": {
@@ -72,15 +72,15 @@ THEME_PRESETS = {
         "appearance_mode": "dark",
         "colors": {
             "primary": "#00d4ff",
-            "secondary": "#0080ff",
+            "secondary": "#152535",
             "background": "#0d1b2a",
             "foreground": "#ffffff",
             "accent": "#ff00ff",
-            "button": "#00d4ff",
-            "button_hover": "#00a3cc",
+            "button": "#005577",
+            "button_hover": "#007799",
             "text": "#ffffff",
             "text_secondary": "#a0d2eb",
-            "border": "#00d4ff"
+            "border": "#1a3550"
         }
     },
     "classic_windows": {
@@ -88,14 +88,14 @@ THEME_PRESETS = {
         "appearance_mode": "light",
         "colors": {
             "primary": "#0078d7",
-            "secondary": "#005a9e",
+            "secondary": "#d4d4d4",
             "background": "#c0c0c0",
             "foreground": "#000000",
             "accent": "#0078d7",
             "button": "#0078d7",
             "button_hover": "#005a9e",
             "text": "#000000",
-            "text_secondary": "#555555",
+            "text_secondary": "#333333",
             "border": "#808080"
         }
     },
@@ -104,15 +104,15 @@ THEME_PRESETS = {
         "appearance_mode": "dark",
         "colors": {
             "primary": "#cc0000",
-            "secondary": "#8b0000",
+            "secondary": "#2a0a0a",
             "background": "#1a0000",
-            "foreground": "#ff0000",
+            "foreground": "#e0e0e0",
             "accent": "#ff3333",
-            "button": "#cc0000",
-            "button_hover": "#ff0000",
-            "text": "#ff0000",
-            "text_secondary": "#cc6666",
-            "border": "#cc0000"
+            "button": "#8b0000",
+            "button_hover": "#aa0000",
+            "text": "#f0c0c0",
+            "text_secondary": "#cc8888",
+            "border": "#4a1a1a"
         }
     }
 }
@@ -1047,6 +1047,11 @@ class ThemeManager(ctk.CTkFrame):
             text_secondary = colors.get("text_secondary", "#b0b0b0")
             border = colors.get("border", "#333333")
             
+            # Compute contrasting text color for buttons/accent backgrounds
+            button_text = self._get_contrast_text(button)
+            accent_text = self._get_contrast_text(accent)
+            secondary_text = self._get_contrast_text(secondary)
+            
             # Apply colors based on widget type
             widget_class = widget.__class__.__name__
             
@@ -1062,7 +1067,7 @@ class ThemeManager(ctk.CTkFrame):
                         widget.configure(fg_color=secondary, border_color=border)
                 elif widget_class == 'CTkButton':
                     widget.configure(fg_color=button, hover_color=button_hover, 
-                                   text_color=text, border_color=border)
+                                   text_color=button_text, border_color=border)
                 elif widget_class == 'CTkLabel':
                     widget.configure(text_color=text)
                 elif widget_class == 'CTkEntry':
@@ -1071,7 +1076,7 @@ class ThemeManager(ctk.CTkFrame):
                     widget.configure(fg_color=bg, text_color=text, border_color=border)
                 elif widget_class == 'CTkOptionMenu':
                     widget.configure(fg_color=button, button_color=button, 
-                                   button_hover_color=button_hover, text_color=text)
+                                   button_hover_color=button_hover, text_color=button_text)
                 elif widget_class == 'CTkComboBox':
                     widget.configure(fg_color=bg, button_color=button, 
                                    button_hover_color=button_hover, text_color=text, 
@@ -1108,6 +1113,18 @@ class ThemeManager(ctk.CTkFrame):
                 pass
         except Exception as e:
             logger.debug(f"Error applying theme to widget {widget.__class__.__name__}: {e}")
+    
+    @staticmethod
+    def _get_contrast_text(hex_color):
+        """Return '#ffffff' or '#000000' depending on which contrasts better with the given color."""
+        try:
+            hex_color = hex_color.lstrip('#')
+            r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+            # Relative luminance formula (ITU-R BT.709)
+            luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+            return "#000000" if luminance > 0.5 else "#ffffff"
+        except Exception:
+            return "#ffffff"
     
     def _save_custom_theme(self):
         if not self.preview_theme:
