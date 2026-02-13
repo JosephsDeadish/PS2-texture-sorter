@@ -2047,11 +2047,10 @@ class GameTextureSorter(ctk.CTk):
 
     def _update_alpha_backup_state(self):
         """Enable/disable the backup checkbox based on overwrite state."""
-        if hasattr(self, 'alpha_backup_cb'):
-            if self.alpha_fix_overwrite_var.get():
-                self.alpha_backup_cb.configure(state="normal")
-            else:
-                self.alpha_backup_cb.configure(state="disabled")
+        if self.alpha_fix_overwrite_var.get():
+            self.alpha_backup_cb.configure(state="normal")
+        else:
+            self.alpha_backup_cb.configure(state="disabled")
 
     def _alpha_fix_log(self, message):
         """Thread-safe log helper for alpha fixer."""

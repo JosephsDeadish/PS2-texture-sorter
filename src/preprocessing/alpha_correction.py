@@ -76,7 +76,7 @@ class AlphaCorrectionPresets:
     # PSP - PlayStation Portable alpha style
     PSP_BINARY = {
         'name': 'PSP Binary',
-        'description': 'PSP textures with binary alpha (common in PSP ports)',
+        'description': 'PlayStation Portable (PSP) textures with binary alpha (common in PSP ports)',
         'thresholds': [(0, 100, 0), (101, 255, 255)],
         'mode': 'threshold'
     }
