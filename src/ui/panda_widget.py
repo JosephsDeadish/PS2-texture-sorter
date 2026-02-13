@@ -861,7 +861,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = -abs(math.sin(phase)) * 22
                 body_bob = -abs(math.sin(phase * 2)) * 10 + math.sin(phase * 4) * 3
         elif anim == 'celebrating':
-            celeb_cycle = (frame_idx % 48) / 48.0
+            # Expanded to 60 frames for smoother celebration
+            celeb_cycle = (frame_idx % 60) / 60.0
             if celeb_cycle < 0.33:
                 # Arms pumping up
                 leg_swing = math.sin(phase) * 6
@@ -927,7 +928,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = math.sin(phase * 3) * 10
             body_bob = math.sin(phase * 4) * 4
         elif anim == 'petting':
-            pet_cycle = (frame_idx % 48) / 48.0
+            # Expanded to 60 frames for smoother petting response
+            pet_cycle = (frame_idx % 60) / 60.0
             leg_swing = math.sin(phase * 1.2) * 3
             arm_swing = math.sin(phase * 1.5) * 6 + math.sin(phase * 3) * 2
             body_bob = math.sin(phase) * 4 + abs(math.sin(phase * 2)) * 2.5
@@ -952,7 +954,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = math.cos(phase * 2) * 12
                 body_bob = math.sin(phase * 3) * 5
         elif anim == 'eating':
-            eat_cycle = (frame_idx % 48) / 48.0
+            # Expanded to 60 frames for smoother eating animation
+            eat_cycle = (frame_idx % 60) / 60.0
             if eat_cycle < 0.3:
                 # Reaching for food
                 leg_swing = 0
@@ -976,7 +979,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_bob = math.sin(phase) * 3
         elif anim == 'spinning':
             # Full-body spin: limbs follow a rotation cycle, body sways side to side
-            spin_cycle = (frame_idx % 48) / 48.0
+            # Expanded to 60 frames for smoother spin
+            spin_cycle = (frame_idx % 60) / 60.0
             spin_angle = spin_cycle * 2 * math.pi  # One full rotation per cycle
             # Arms and legs follow the rotation so the whole body appears to turn
             leg_swing = math.sin(spin_angle) * 12
@@ -1056,7 +1060,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = -22 * (1 - settle) + math.sin(phase) * 3
                 body_bob = -6 * (1 - settle)
         elif anim == 'waving':
-            wave_cycle = (frame_idx % 48) / 48.0
+            # Expanded to 60 frames for smoother waving motion
+            wave_cycle = (frame_idx % 60) / 60.0
             if wave_cycle < 0.15:
                 # Arm raising
                 ramp = wave_cycle / 0.15
@@ -1075,7 +1080,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = -18 * (1 - settle) + math.sin(phase * 2) * 5 * (1 - settle)
                 body_bob = 2 * (1 - settle)
         elif anim == 'jumping':
-            jump_cycle = (frame_idx % 36) / 36.0
+            # Expanded to 60 frames for smoother jumping motion
+            jump_cycle = (frame_idx % 60) / 60.0
             if jump_cycle < 0.15:
                 # Crouch down — both legs bend together
                 crouch = jump_cycle / 0.15
@@ -1107,7 +1113,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = 4 * math.sin(land * math.pi * 2) * (1 - land)
                 body_bob = 8 * math.sin(land * math.pi) * (1 - land * 0.7)
         elif anim == 'yawning':
-            yawn_cycle = (frame_idx % 48) / 48.0
+            # Expanded to 60 frames for smoother yawning motion
+            yawn_cycle = (frame_idx % 60) / 60.0
             if yawn_cycle < 0.15:
                 # Inhale, lean back slightly
                 ramp = yawn_cycle / 0.15
@@ -1699,31 +1706,27 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         elif anim == 'drunk':
             eye_style = 'dizzy'
         elif anim == 'petting':
-            # Very smooth squint: happy → soft → squint → soft → happy (48 frames)
-            cycle = frame_idx % 48
+            # Expanded to 60 frames: very smooth squint with happy → soft → squint → soft → happy
+            cycle = frame_idx % 60
             if cycle < 6:
                 eye_style = 'happy'
             elif cycle < 9:
                 eye_style = 'wide'
             elif cycle < 12:
                 eye_style = 'happy'
-            elif cycle < 15:
-                eye_style = 'soft'
             elif cycle < 18:
-                eye_style = 'mostly_open'
-            elif cycle < 24:
-                eye_style = 'squint'
-            elif cycle < 27:
-                eye_style = 'squint'
-            elif cycle < 30:
-                eye_style = 'mostly_open'
-            elif cycle < 33:
                 eye_style = 'soft'
+            elif cycle < 24:
+                eye_style = 'mostly_open'
+            elif cycle < 30:
+                eye_style = 'squint'
             elif cycle < 36:
-                eye_style = 'happy'
-            elif cycle < 39:
-                eye_style = 'wide'
+                eye_style = 'squint'
             elif cycle < 42:
+                eye_style = 'mostly_open'
+            elif cycle < 48:
+                eye_style = 'soft'
+            elif cycle < 54:
                 eye_style = 'happy'
             else:
                 eye_style = 'happy'
