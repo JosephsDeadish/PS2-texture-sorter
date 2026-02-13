@@ -112,9 +112,14 @@ class AdvancedTextureAnalyzer:
         }
         
         try:
+            if not texture_path.exists():
+                logger.error(f"Texture file not found: {texture_path}")
+                result['error'] = f"File not found: {texture_path}"
+                return result
+            
             # Load image
-            image = Image.open(texture_path).convert('RGB')
-            img_array = np.array(image)
+            with Image.open(texture_path) as _img:
+                img_array = np.array(_img.convert('RGB'))
             
             # Preprocess if enabled
             if preprocess and self.preprocessing:
