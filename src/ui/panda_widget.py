@@ -124,6 +124,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     # Full dangle (dangly look) only when grabbed by head region
     DANGLE_HEAD_MULTIPLIER = 1.0     # Full dangle when held by head
     DANGLE_BODY_MULTIPLIER = 0.3     # Minimal dangle when held elsewhere
+    DANGLE_LIMB_MULTIPLIER = 0.9     # Strong dangle when held by arm/leg (body hangs from limb)
     # Collision detection
     LIMB_COLLISION_ENABLED = True    # Enable limb-to-limb collision
     LIMB_COLLISION_RADIUS = 15.0     # Collision radius for limbs (pixels)
@@ -180,6 +181,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         'walking_right': ['👉', '🚶', '🐾', '→', '🐼'],
         'walking_up': ['👆', '🚶', '🐾', '↑', '🐼'],
         'walking_down': ['👇', '🚶', '🐾', '↓', '🐼'],
+        'walking_up_left': ['↖', '🚶', '🐾', '🐼', '↗'],
+        'walking_up_right': ['↗', '🚶', '🐾', '🐼', '↖'],
+        'walking_down_left': ['↙', '🚶', '🐾', '🐼', '↘'],
+        'walking_down_right': ['↘', '🚶', '🐾', '🐼', '↙'],
         'fall_on_face': ['😵', '💥', '🤕', '⭐', '😣'],
         'tip_over_side': ['😴', '💤', '🛌', '😌', '💫'],
     }
@@ -1187,6 +1192,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             leg_swing = math.sin(phase) * 10
             arm_swing = math.sin(phase + math.pi) * 8
             body_bob = abs(math.sin(phase)) * 4
+        elif anim in ('walking_up_left', 'walking_up_right',
+                       'walking_down_left', 'walking_down_right'):
+            # Diagonal walking: blend of side and forward/backward motion
+            leg_swing = math.sin(phase) * 11
+            arm_swing = math.sin(phase + math.pi) * 9
+            body_bob = abs(math.sin(phase)) * 3.5
         elif anim == 'fall_on_face':
             # Fallen on face: body low, limbs splayed
             leg_swing = 15
@@ -1243,14 +1254,18 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             grabbed_part = self._drag_grab_part
             
             # Apply dangle multiplier: head/ear grabs get full dangly effect,
-            # body/butt grabs get minimal dangle, limb grabs get moderate dangle
+            # body/butt grabs get minimal dangle, arm/leg grabs get strong dangle
+            # so the panda hangs naturally from the grabbed limb
             if grabbed_part in ('head', 'left_ear', 'right_ear', 'nose', 'left_eye', 'right_eye'):
                 dangle_mult = self.DANGLE_HEAD_MULTIPLIER
             elif grabbed_part in ('body', 'butt'):
                 dangle_mult = self.DANGLE_BODY_MULTIPLIER
+            elif grabbed_part in ('left_arm', 'right_arm', 'left_leg', 'right_leg'):
+                # Strong dangle when held by a limb — body hangs from that point
+                dangle_mult = self.DANGLE_LIMB_MULTIPLIER
             else:
-                # Limb grab: moderate dangle for non-grabbed limbs
-                dangle_mult = 0.7
+                # Fallback: moderate dangle for unrecognized parts
+                dangle_mult = self.DANGLE_LIMB_MULTIPLIER
             
             # Left arm dangles unless it's being grabbed
             if grabbed_part != 'left_arm':
@@ -1466,10 +1481,15 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         elif anim == 'tip_over_side':
             # Tipped over on side - large sideways tilt
             body_sway = 28
-        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down'):
+        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down',
+                      'walking_up_left', 'walking_up_right',
+                      'walking_down_left', 'walking_down_right'):
             # Walking sway based on direction
             if anim in ('walking_left', 'walking_right'):
                 body_sway = math.sin(phase) * 3
+            elif anim in ('walking_up_left', 'walking_up_right',
+                          'walking_down_left', 'walking_down_right'):
+                body_sway = math.sin(phase) * 2.5
             else:
                 body_sway = math.sin(phase * 0.5) * 2
         
@@ -1650,7 +1670,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             eye_style = 'dizzy'
         elif anim == 'tip_over_side':
             eye_style = 'half'
-        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down'):
+        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down',
+                      'walking_up_left', 'walking_up_right',
+                      'walking_down_left', 'walking_down_right'):
             eye_style = 'normal'
         
         # --- Determine mouth style ---
@@ -1757,7 +1779,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             mouth_style = 'angry'
         elif anim == 'tip_over_side':
             mouth_style = 'sleep'
-        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down'):
+        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down',
+                      'walking_up_left', 'walking_up_right',
+                      'walking_down_left', 'walking_down_right'):
             mouth_style = 'smile'
         
         # --- Colors ---
@@ -1800,6 +1824,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 anim = 'walking_right'
             elif facing == 'up':
                 anim = 'walking_up'
+            elif facing == 'front_left':
+                anim = 'walking_down_left'
+            elif facing == 'front_right':
+                anim = 'walking_down_right'
+            elif facing == 'back_left':
+                anim = 'walking_up_left'
+            elif facing == 'back_right':
+                anim = 'walking_up_right'
         
         if anim in ('walking_left', 'walking_right'):
             # --- SIDE VIEW: panda viewed from left or right profile ---
@@ -2049,6 +2081,219 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Animation extras
             self._draw_animation_extras(c, cx_draw, by, anim, frame_idx, sx, sy)
+            
+            # Name tag
+            if self.panda and self.panda.name:
+                name_y = int(h - 12 * sy)
+                c.create_text(cx_draw, name_y, text=self.panda.name,
+                              font=("Arial Bold", int(10 * sx)),
+                              fill="#666666", width=int(w * 0.9), tags="name_tag")
+        
+        elif anim in ('walking_up_left', 'walking_up_right',
+                       'walking_down_left', 'walking_down_right'):
+            # --- DIAGONAL VIEW: 3/4 perspective panda ---
+            is_right = anim in ('walking_up_right', 'walking_down_right')
+            is_back = anim in ('walking_up_left', 'walking_up_right')
+            diag_dir = 1 if is_right else -1
+            # Body width compression for 3/4 turn (between full front and side)
+            persp_w = 0.8  # 80% width for 3/4 view
+            body_offset = int(8 * sx * diag_dir)  # Slight body shift
+            
+            leg_top = int(145 * sy + by)
+            leg_len = int(30 * sy)
+            
+            # Near leg (closer to viewer, bigger stride)
+            near_leg_x = cx_draw + body_offset + int(20 * sx * diag_dir)
+            near_leg_swing = leg_swing
+            c.create_oval(
+                near_leg_x - int(12 * sx), leg_top + near_leg_swing,
+                near_leg_x + int(12 * sx), leg_top + leg_len + near_leg_swing,
+                fill=black, outline=black, tags="leg"
+            )
+            c.create_oval(
+                near_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + near_leg_swing,
+                near_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + near_leg_swing,
+                fill=white, outline=black, width=1, tags="foot"
+            )
+            # Far leg (behind, slightly smaller)
+            far_leg_x = cx_draw + body_offset - int(15 * sx * diag_dir)
+            far_leg_swing = -leg_swing
+            c.create_oval(
+                far_leg_x - int(11 * sx), leg_top + far_leg_swing,
+                far_leg_x + int(11 * sx), leg_top + leg_len - int(2 * sy) + far_leg_swing,
+                fill=black, outline=black, tags="leg"
+            )
+            c.create_oval(
+                far_leg_x - int(9 * sx), leg_top + leg_len - int(10 * sy) + far_leg_swing,
+                far_leg_x + int(9 * sx), leg_top + leg_len + int(2 * sy) + far_leg_swing,
+                fill=white, outline=black, width=1, tags="foot"
+            )
+            
+            # Body (slightly narrower for perspective)
+            body_top = int(75 * sy + by)
+            body_bot = int(160 * sy + by)
+            body_rx = int(42 * sx * persp_w * breath_scale)
+            body_cx = cx_draw + body_offset
+            c.create_oval(
+                body_cx - body_rx, body_top,
+                body_cx + body_rx, body_bot,
+                fill=white, outline=black, width=2, tags="body"
+            )
+            
+            # Belly patch (visible from front-diagonal, hidden from back-diagonal)
+            if not is_back:
+                belly_rx = int(24 * sx * persp_w)
+                belly_ry = int(22 * sy)
+                belly_cy = int(128 * sy + by)
+                belly_cx = body_cx + int(4 * sx * diag_dir)
+                c.create_oval(
+                    belly_cx - belly_rx, belly_cy - belly_ry,
+                    belly_cx + belly_rx, belly_cy + belly_ry,
+                    fill="#F5F5F5", outline="", tags="belly"
+                )
+            
+            # Arms
+            arm_top = int(95 * sy + by)
+            arm_len = int(35 * sy)
+            # Near arm (closer side, larger)
+            near_arm_x = body_cx + int(40 * sx * diag_dir * persp_w)
+            na_swing = arm_swing
+            c.create_oval(
+                near_arm_x - int(13 * sx), arm_top + na_swing,
+                near_arm_x + int(13 * sx), arm_top + arm_len + na_swing,
+                fill=black, outline=black, tags="arm"
+            )
+            # Far arm (further side, smaller)
+            far_arm_x = body_cx - int(35 * sx * diag_dir * persp_w)
+            fa_swing = -arm_swing
+            c.create_oval(
+                far_arm_x - int(11 * sx), arm_top + fa_swing,
+                far_arm_x + int(11 * sx), arm_top + arm_len - int(3 * sy) + fa_swing,
+                fill=black, outline=black, tags="arm"
+            )
+            
+            # Head (slightly offset for 3/4 view)
+            head_cy = int(52 * sy + by)
+            head_rx = int(36 * sx * persp_w)
+            head_ry = int(32 * sy)
+            head_cx = body_cx + int(3 * sx * diag_dir)
+            c.create_oval(
+                head_cx - head_rx, head_cy - head_ry,
+                head_cx + head_rx, head_cy + head_ry,
+                fill=white, outline=black, width=2, tags="head"
+            )
+            
+            # Ears
+            ear_y = head_cy - head_ry + int(5 * sy)
+            ear_w = int(22 * sx * persp_w)
+            # Near ear (bigger)
+            near_ear_x = head_cx + int(head_rx * diag_dir)
+            c.create_oval(
+                near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
+                near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
+                fill=black, outline=black, tags="ear"
+            )
+            # Far ear (smaller, partially hidden)
+            far_ear_x = head_cx - int(head_rx * diag_dir)
+            far_ear_w = int(16 * sx * persp_w)
+            c.create_oval(
+                far_ear_x - int(far_ear_w * 0.5), ear_y - int(12 * sy),
+                far_ear_x + int(far_ear_w * 0.5), ear_y + int(6 * sy),
+                fill=black, outline=black, tags="ear"
+            )
+            
+            # Face features (only for front-diagonal views)
+            if not is_back:
+                # Eye patches (shifted for perspective)
+                patch_rx = int(16 * sx * persp_w)
+                patch_ry = int(14 * sy)
+                # Near eye patch
+                near_patch_cx = head_cx + int(14 * sx * diag_dir)
+                c.create_oval(
+                    near_patch_cx - patch_rx, head_cy - patch_ry,
+                    near_patch_cx + patch_rx, head_cy + patch_ry,
+                    fill=black, outline=black, tags="eye_patch"
+                )
+                # Far eye patch (partially hidden)
+                far_patch_cx = head_cx - int(10 * sx * diag_dir)
+                far_patch_rx = int(12 * sx * persp_w)
+                c.create_oval(
+                    far_patch_cx - far_patch_rx, head_cy - patch_ry + int(2 * sy),
+                    far_patch_cx + far_patch_rx, head_cy + patch_ry - int(2 * sy),
+                    fill=black, outline=black, tags="eye_patch"
+                )
+                
+                # Eyes
+                eye_r = int(4 * sx)
+                # Near eye (fully visible)
+                near_eye_cx = near_patch_cx
+                near_eye_cy = head_cy
+                c.create_oval(
+                    near_eye_cx - eye_r, near_eye_cy - eye_r,
+                    near_eye_cx + eye_r, near_eye_cy + eye_r,
+                    fill=white, outline=black, width=1, tags="eye"
+                )
+                pupil_r = int(2 * sx)
+                c.create_oval(
+                    near_eye_cx - pupil_r + int(diag_dir * sx),
+                    near_eye_cy - pupil_r,
+                    near_eye_cx + pupil_r + int(diag_dir * sx),
+                    near_eye_cy + pupil_r,
+                    fill=black, outline="", tags="pupil"
+                )
+                # Far eye (smaller, at edge)
+                far_eye_cx = far_patch_cx
+                far_eye_cy = head_cy + int(1 * sy)
+                far_eye_r = int(3 * sx)
+                c.create_oval(
+                    far_eye_cx - far_eye_r, far_eye_cy - far_eye_r,
+                    far_eye_cx + far_eye_r, far_eye_cy + far_eye_r,
+                    fill=white, outline=black, width=1, tags="eye"
+                )
+                far_pupil_r = int(1.5 * sx)
+                c.create_oval(
+                    int(far_eye_cx - far_pupil_r + diag_dir * sx),
+                    int(far_eye_cy - far_pupil_r),
+                    int(far_eye_cx + far_pupil_r + diag_dir * sx),
+                    int(far_eye_cy + far_pupil_r),
+                    fill=black, outline="", tags="pupil"
+                )
+                
+                # Nose (offset toward facing side)
+                nose_cx = head_cx + int(6 * sx * diag_dir)
+                nose_cy = head_cy + int(10 * sy)
+                nose_r = int(4 * sx)
+                c.create_oval(
+                    nose_cx - nose_r, nose_cy - int(3 * sy),
+                    nose_cx + nose_r, nose_cy + int(3 * sy),
+                    fill=nose_color, outline=black, width=1, tags="nose"
+                )
+                
+                # Mouth (small smile offset)
+                mouth_cx = head_cx + int(5 * sx * diag_dir)
+                mouth_cy = head_cy + int(16 * sy)
+                mouth_w = int(8 * sx)
+                c.create_arc(
+                    mouth_cx - mouth_w, mouth_cy - int(4 * sy),
+                    mouth_cx + mouth_w, mouth_cy + int(4 * sy),
+                    start=200, extent=140, style='arc',
+                    outline=black, width=max(1, int(1.5 * sx)), tags="mouth"
+                )
+            else:
+                # Back-diagonal: show back of head markings
+                back_patch_rx = int(18 * sx * persp_w)
+                back_patch_ry = int(12 * sy)
+                c.create_oval(
+                    head_cx - back_patch_rx, head_cy - back_patch_ry + int(4 * sy),
+                    head_cx + back_patch_rx, head_cy + back_patch_ry - int(4 * sy),
+                    fill="#F5F5F5", outline="", tags="back_head"
+                )
+            
+            # Draw equipped items on panda body
+            self._draw_equipped_items(c, body_cx, by, sx, sy)
+            
+            # Animation extras
+            self._draw_animation_extras(c, body_cx, by, anim, frame_idx, sx, sy)
             
             # Name tag
             if self.panda and self.panda.name:
@@ -2592,15 +2837,27 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     anim = 'walking_right'
                 elif facing == 'up':
                     anim = 'walking_up'
+                elif facing == 'front_left':
+                    anim = 'walking_down_left'
+                elif facing == 'front_right':
+                    anim = 'walking_down_right'
+                elif facing == 'back_left':
+                    anim = 'walking_up_left'
+                elif facing == 'back_right':
+                    anim = 'walking_up_right'
 
             is_side = anim in ('walking_left', 'walking_right')
             is_back = anim == 'walking_up'
+            is_diag = anim in ('walking_up_left', 'walking_up_right',
+                               'walking_down_left', 'walking_down_right')
             side_dir = 1 if anim == 'walking_right' else -1
 
             if is_side:
                 persp_sx = sx * 0.75  # Side view: compress width
             elif is_back:
                 persp_sx = sx * 1.05  # Back view: slightly wider
+            elif is_diag:
+                persp_sx = sx * 0.85  # Diagonal view: moderate compression
             else:
                 persp_sx = sx  # Front view: normal
 
@@ -3717,8 +3974,25 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             self._auto_walk_steps_remaining = steps
             self._is_auto_walking = True
             
-            # Set facing direction based on dominant movement axis
-            if abs(dx) > abs(dy):
+            # Set facing direction based on movement direction
+            # Use diagonal walking when both axes have significant movement
+            adx = abs(dx)
+            ady = abs(dy)
+            if adx > 0 and ady > 0 and min(adx, ady) / max(adx, ady) > 0.4:
+                # Diagonal movement: both axes significant
+                if dy < 0 and dx < 0:
+                    self._facing_direction = 'back_left'
+                    walk_anim = 'walking_up_left'
+                elif dy < 0 and dx > 0:
+                    self._facing_direction = 'back_right'
+                    walk_anim = 'walking_up_right'
+                elif dy > 0 and dx < 0:
+                    self._facing_direction = 'front_left'
+                    walk_anim = 'walking_down_left'
+                else:
+                    self._facing_direction = 'front_right'
+                    walk_anim = 'walking_down_right'
+            elif adx > ady:
                 self._facing_direction = 'right' if dx > 0 else 'left'
                 walk_anim = 'walking_right' if dx > 0 else 'walking_left'
             else:
@@ -3730,7 +4004,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 from src.features.panda_character import PandaFacing
                 facing_map = {'front': PandaFacing.FRONT, 'back': PandaFacing.BACK,
                               'left': PandaFacing.LEFT, 'right': PandaFacing.RIGHT,
-                              'up': PandaFacing.BACK, 'down': PandaFacing.FRONT}
+                              'up': PandaFacing.BACK, 'down': PandaFacing.FRONT,
+                              'front_left': PandaFacing.FRONT_LEFT,
+                              'front_right': PandaFacing.FRONT_RIGHT,
+                              'back_left': PandaFacing.BACK_LEFT,
+                              'back_right': PandaFacing.BACK_RIGHT}
                 self.panda.set_facing(facing_map.get(self._facing_direction, PandaFacing.FRONT))
             
             # Show a comment
