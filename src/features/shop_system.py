@@ -31,6 +31,7 @@ class ShopCategory(Enum):
     FOOD = "food"
     TOYS = "toys"
     WEAPONS = "weapons"  # New category for weapons
+    SOUNDS = "sounds"
     FUR_STYLES = "fur_styles"
     FUR_COLORS = "fur_colors"
 
@@ -3485,6 +3486,78 @@ class ShopSystem:
             unlockable_id='astral_orb',
             subcategory='magic'
         ),
+        # === Sound Packs (purchasable) ===
+        'sound_retro_pack': ShopItem(
+            id='sound_retro_pack', name='Retro Sound Pack',
+            description='8-bit chiptune sounds for all system events',
+            category=ShopCategory.SOUNDS, price=150, icon='🎮',
+            subcategory='system'),
+        'sound_nature_pack': ShopItem(
+            id='sound_nature_pack', name='Nature Sound Pack',
+            description='Forest and nature ambient sounds',
+            category=ShopCategory.SOUNDS, price=200, icon='🌿',
+            subcategory='system'),
+        'sound_scifi_pack': ShopItem(
+            id='sound_scifi_pack', name='Sci-Fi Sound Pack',
+            description='Futuristic sci-fi UI sounds',
+            category=ShopCategory.SOUNDS, price=200, icon='🚀',
+            subcategory='system'),
+        'sound_musical_pack': ShopItem(
+            id='sound_musical_pack', name='Musical Sound Pack',
+            description='Musical instrument sounds for events',
+            category=ShopCategory.SOUNDS, price=250, icon='🎵',
+            subcategory='system'),
+        'sound_cute_pack': ShopItem(
+            id='sound_cute_pack', name='Cute Sound Pack',
+            description='Adorable kawaii-style sound effects',
+            category=ShopCategory.SOUNDS, price=175, icon='🌸',
+            subcategory='system'),
+        'sound_dramatic_pack': ShopItem(
+            id='sound_dramatic_pack', name='Dramatic Sound Pack',
+            description='Over-the-top dramatic sound effects',
+            category=ShopCategory.SOUNDS, price=300, icon='🎭',
+            subcategory='system'),
+        'sound_ocean_pack': ShopItem(
+            id='sound_ocean_pack', name='Ocean Sound Pack',
+            description='Calming ocean and water themed sounds',
+            category=ShopCategory.SOUNDS, price=175, icon='🌊',
+            subcategory='system'),
+        'sound_comedy_pack': ShopItem(
+            id='sound_comedy_pack', name='Comedy Sound Pack',
+            description='Funny cartoon sound effects',
+            category=ShopCategory.SOUNDS, price=200, icon='🤡',
+            subcategory='system'),
+        # Panda-specific sound packs
+        'panda_sound_baby_pack': ShopItem(
+            id='panda_sound_baby_pack', name='Baby Panda Sounds',
+            description='Cute baby panda vocalizations for your panda pal',
+            category=ShopCategory.SOUNDS, price=250, icon='🐼',
+            subcategory='panda'),
+        'panda_sound_wild_pack': ShopItem(
+            id='panda_sound_wild_pack', name='Wild Panda Sounds',
+            description='Realistic wild panda sounds from nature',
+            category=ShopCategory.SOUNDS, price=300, icon='🎋',
+            subcategory='panda'),
+        'panda_sound_silly_pack': ShopItem(
+            id='panda_sound_silly_pack', name='Silly Panda Sounds',
+            description='Goofy and silly sounds for your panda',
+            category=ShopCategory.SOUNDS, price=200, icon='🤪',
+            subcategory='panda'),
+        'panda_sound_anime_pack': ShopItem(
+            id='panda_sound_anime_pack', name='Anime Panda Sounds',
+            description='Anime-style vocal reactions for your panda',
+            category=ShopCategory.SOUNDS, price=350, icon='✨',
+            subcategory='panda'),
+        'panda_sound_robot_pack': ShopItem(
+            id='panda_sound_robot_pack', name='Robot Panda Sounds',
+            description='Mechanical robot sounds for a cyber panda',
+            category=ShopCategory.SOUNDS, price=275, icon='🤖',
+            subcategory='panda'),
+        'panda_sound_asmr_pack': ShopItem(
+            id='panda_sound_asmr_pack', name='ASMR Panda Sounds',
+            description='Soothing ASMR-style sounds for relaxation',
+            category=ShopCategory.SOUNDS, price=225, icon='🎧',
+            subcategory='panda'),
     }
     
     def __init__(self, save_path: Optional[Path] = None):

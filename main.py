@@ -4200,6 +4200,25 @@ class GameTextureSorter(ctk.CTk):
                 except Exception as mute_err:
                     logger.debug(f"Could not save mute setting: {mute_err}")
             
+            elif setting_type == 'select_sound':
+                try:
+                    event_id = value.get('event', '')
+                    sound_file = value.get('sound', '')
+                    if self.sound_manager and event_id and sound_file:
+                        from src.features.sound_manager import SoundEvent
+                        try:
+                            event = SoundEvent(event_id)
+                            self.sound_manager.set_event_sound(event, sound_file)
+                        except ValueError:
+                            pass
+                    # Persist selection
+                    sound_selections = config.get('sound', 'sound_selections', default={})
+                    sound_selections[event_id] = sound_file
+                    config.set('sound', 'sound_selections', value=sound_selections)
+                    config.save()
+                except Exception as sel_err:
+                    logger.debug(f"Could not save sound selection: {sel_err}")
+            
             elif setting_type == 'sound_choice':
                 try:
                     event_id = value.get('event', '')
