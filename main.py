@@ -2049,6 +2049,7 @@ class GameTextureSorter(ctk.CTk):
 
         def worker():
             try:
+                import shutil
                 corrector = AlphaCorrector()
                 input_path = Path(input_dir)
                 output_path = Path(output_dir) if output_dir else None
@@ -2075,7 +2076,6 @@ class GameTextureSorter(ctk.CTk):
                         rel = fpath.relative_to(input_path)
                         dest = output_path / rel
                         dest.parent.mkdir(parents=True, exist_ok=True)
-                        import shutil
                         shutil.copy2(fpath, dest)
                         result = corrector.process_image(
                             dest, preset=preset, overwrite=True, backup=False)
