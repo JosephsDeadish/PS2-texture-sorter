@@ -8176,19 +8176,19 @@ Built with:
                                 button_frame = ctk.CTkFrame(dialog_window)
                                 button_frame.pack(pady=20)
                                 
-                                def on_ok():
+                                def on_confirm():
                                     selected_category[0] = category_var.get()
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_skip():
-                                    selected_category[0] = "unclassified"
+                                    selected_category[0] = ai_category
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_skip_all():
                                     self._sorting_skip_all.set()
-                                    selected_category[0] = "unclassified"
+                                    selected_category[0] = ai_category
                                     dialog_window.destroy()
                                     result_event.set()
                                 
@@ -8198,12 +8198,37 @@ Built with:
                                     dialog_window.destroy()
                                     result_event.set()
                                 
-                                ctk.CTkButton(button_frame, text="✓ OK", command=on_ok, width=80).pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="⏭ Skip", command=on_skip, width=80).pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="⏩ Skip All", command=on_skip_all, width=90, 
-                                            fg_color="orange").pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="✖ Cancel", command=on_cancel, width=80,
-                                            fg_color="red").pack(side="left", padx=3)
+                                confirm_btn = ctk.CTkButton(button_frame, text="✓ Confirm", command=on_confirm, width=90, fg_color="green")
+                                confirm_btn.pack(side="left", padx=3)
+                                skip_btn = ctk.CTkButton(button_frame, text="⏭ Skip", command=on_skip, width=80)
+                                skip_btn.pack(side="left", padx=3)
+                                skip_all_btn = ctk.CTkButton(button_frame, text="⏩ Skip All", command=on_skip_all, width=100, 
+                                            fg_color="orange")
+                                skip_all_btn.pack(side="left", padx=3)
+                                cancel_btn = ctk.CTkButton(button_frame, text="✖ Cancel Sort", command=on_cancel, width=100,
+                                            fg_color="red")
+                                cancel_btn.pack(side="left", padx=3)
+                                
+                                # Tooltips for manual mode dialog buttons
+                                if WidgetTooltip:
+                                    self._tooltips.append(WidgetTooltip(confirm_btn,
+                                        "Sort this texture into the category selected in the dropdown above",
+                                        widget_id='manual_confirm_btn'))
+                                    self._tooltips.append(WidgetTooltip(skip_btn,
+                                        "Skip this texture — use the AI suggestion instead of choosing manually",
+                                        widget_id='manual_skip_btn'))
+                                    self._tooltips.append(WidgetTooltip(skip_all_btn,
+                                        "Stop reviewing — let the AI automatically classify all remaining textures",
+                                        widget_id='manual_skip_all_btn'))
+                                    self._tooltips.append(WidgetTooltip(cancel_btn,
+                                        "Cancel the entire sorting operation and stop processing files",
+                                        widget_id='manual_cancel_btn'))
+                                    self._tooltips.append(WidgetTooltip(category_dropdown,
+                                        "Choose which category to sort this texture into",
+                                        widget_id='manual_category_dropdown'))
+                                    self._tooltips.append(WidgetTooltip(search_entry,
+                                        "Type to filter the category list — narrows the dropdown options",
+                                        widget_id='manual_search_entry'))
                                 
                                 # Handle dialog close
                                 def on_close():
@@ -8286,7 +8311,7 @@ Built with:
                                            text=f"AI Classification: {ai_category} ({ai_confidence:.0%} confidence)",
                                            font=("Arial Bold", 13), text_color="green").pack(pady=10)
                                 
-                                ctk.CTkLabel(dialog_window, text="Change category if incorrect:", 
+                                ctk.CTkLabel(dialog_window, text="Confirm or change the category below:", 
                                            font=("Arial", 11)).pack(pady=(5, 2))
                                 
                                 # Search entry for filtering categories
@@ -8308,18 +8333,13 @@ Built with:
                                 button_frame = ctk.CTkFrame(dialog_window)
                                 button_frame.pack(pady=20)
                                 
-                                def on_accept():
-                                    confirmed_category[0] = ai_category
-                                    dialog_window.destroy()
-                                    result_event.set()
-                                
-                                def on_change():
+                                def on_confirm():
                                     confirmed_category[0] = category_var.get()
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_skip():
-                                    confirmed_category[0] = "unclassified"
+                                    confirmed_category[0] = ai_category
                                     dialog_window.destroy()
                                     result_event.set()
                                 
@@ -8335,16 +8355,39 @@ Built with:
                                     dialog_window.destroy()
                                     result_event.set()
                                 
-                                ctk.CTkButton(button_frame, text="✓ Accept", command=on_accept, 
-                                            width=80, fg_color="green").pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="✏ Change", command=on_change, 
-                                            width=80).pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="⏭ Skip", command=on_skip, 
-                                            width=80).pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="⏩ Skip All", command=on_skip_all, width=90,
-                                            fg_color="orange").pack(side="left", padx=3)
-                                ctk.CTkButton(button_frame, text="✖ Cancel", command=on_cancel, width=80,
-                                            fg_color="red").pack(side="left", padx=3)
+                                confirm_btn = ctk.CTkButton(button_frame, text="✓ Confirm", command=on_confirm, 
+                                            width=90, fg_color="green")
+                                confirm_btn.pack(side="left", padx=3)
+                                skip_btn = ctk.CTkButton(button_frame, text="⏭ Skip", command=on_skip, 
+                                            width=80)
+                                skip_btn.pack(side="left", padx=3)
+                                skip_all_btn = ctk.CTkButton(button_frame, text="⏩ Skip All", command=on_skip_all, width=100,
+                                            fg_color="orange")
+                                skip_all_btn.pack(side="left", padx=3)
+                                cancel_btn = ctk.CTkButton(button_frame, text="✖ Cancel Sort", command=on_cancel, width=100,
+                                            fg_color="red")
+                                cancel_btn.pack(side="left", padx=3)
+                                
+                                # Tooltips for suggested mode dialog buttons
+                                if WidgetTooltip:
+                                    self._tooltips.append(WidgetTooltip(confirm_btn,
+                                        "Accept the category shown in the dropdown — change it first if the AI got it wrong",
+                                        widget_id='suggested_confirm_btn'))
+                                    self._tooltips.append(WidgetTooltip(skip_btn,
+                                        "Accept the AI suggestion as-is and move to the next texture",
+                                        widget_id='suggested_skip_btn'))
+                                    self._tooltips.append(WidgetTooltip(skip_all_btn,
+                                        "Stop reviewing — accept all remaining AI suggestions automatically",
+                                        widget_id='suggested_skip_all_btn'))
+                                    self._tooltips.append(WidgetTooltip(cancel_btn,
+                                        "Cancel the entire sorting operation and stop processing files",
+                                        widget_id='suggested_cancel_btn'))
+                                    self._tooltips.append(WidgetTooltip(category_dropdown,
+                                        "The AI-suggested category — change it here if incorrect, then click Confirm",
+                                        widget_id='suggested_category_dropdown'))
+                                    self._tooltips.append(WidgetTooltip(search_entry,
+                                        "Type to filter the category list — narrows the dropdown options",
+                                        widget_id='suggested_search_entry'))
                                 
                                 # Handle dialog close
                                 def on_close():
