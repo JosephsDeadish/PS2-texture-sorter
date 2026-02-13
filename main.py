@@ -887,10 +887,16 @@ class GameTextureSorter(ctk.CTk):
                 self.create_closet_tab()
             self.create_inventory_tab()
             self.create_panda_stats_tab()
-            self.create_armory_tab()
-            self.create_dungeon_tab()
-            self.create_battle_arena_tab()
-            self.create_travel_hub_tab()
+            # Wrap game tabs individually so a failure in one does not
+            # prevent the others from being created (avoids empty tabs).
+            for _tab_creator in (self.create_armory_tab,
+                                 self.create_dungeon_tab,
+                                 self.create_battle_arena_tab,
+                                 self.create_travel_hub_tab):
+                try:
+                    _tab_creator()
+                except Exception as tab_err:
+                    logger.error(f"Error creating tab {_tab_creator.__name__}: {tab_err}", exc_info=True)
             
             # Throttle scroll events on all scrollable frames to reduce lag/tearing
             self._throttle_scroll_frames()
@@ -8796,6 +8802,17 @@ Built with:
         try:
             if not hasattr(self, 'tab_panda_stats') or not self.tab_panda_stats.winfo_exists():
                 return
+            # Auto-update mood from context so it reflects current activity
+            if self.panda and hasattr(self.panda, 'update_mood_from_context'):
+                try:
+                    idle_time = time.time() - self.panda.start_time
+                    self.panda.update_mood_from_context(
+                        files_processed=self.panda.files_processed_count,
+                        errors=self.panda.failed_operations,
+                        idle_time_seconds=idle_time,
+                    )
+                except Exception:
+                    pass
             if hasattr(self, 'panda_mood_label') and self.panda:
                 try:
                     mood_indicator = self.panda.get_mood_indicator()
@@ -8817,6 +8834,29 @@ Built with:
                         lbl = self._stats_labels.get(key)
                         if lbl:
                             new_val = str(stats.get(key, 0))
+                            if lbl.cget("text") != new_val:
+                                lbl.configure(text=new_val)
+                    # Update base stats
+                    base_stats = stats.get('base_stats', {})
+                    for key in ('Level', 'Experience', 'Health', 'Defense', 'Magic',
+                                'Intelligence', 'Strength', 'Agility', 'Vitality',
+                                'Skill Points'):
+                        lbl = self._stats_labels.get(f'base_{key}')
+                        if lbl:
+                            if key == 'Health':
+                                new_val = f"{base_stats.get('Health', 100)}/{base_stats.get('Max Health', 100)}"
+                            else:
+                                new_val = str(base_stats.get(key, 0))
+                            if lbl.cget("text") != new_val:
+                                lbl.configure(text=new_val)
+                    # Update combat stats
+                    combat_stats_data = stats.get('combat_stats', {})
+                    for key in ('Total Attacks', 'Monsters Slain', 'Damage Dealt',
+                                'Damage Taken', 'Critical Hits', 'Perfect Dodges',
+                                'Spells Cast', 'Healing Done'):
+                        lbl = self._stats_labels.get(f'combat_{key}')
+                        if lbl:
+                            new_val = str(combat_stats_data.get(key, 0))
                             if lbl.cget("text") != new_val:
                                 lbl.configure(text=new_val)
                     # Update animation label

@@ -49,14 +49,13 @@ a = Analysis(
     pathex=[str(SCRIPT_DIR)],
     binaries=[],
     datas=[
-        # Include assets (icon files)
-        (str(ASSETS_DIR / 'icon.ico'), 'assets'),
-        (str(ASSETS_DIR / 'icon.png'), 'assets'),
+        # Include entire assets directory
+        (str(ASSETS_DIR), 'assets'),
         # Include resources
         (str(RESOURCES_DIR / 'icons'), 'resources/icons'),
         (str(RESOURCES_DIR / 'cursors'), 'resources/cursors'),
-        (str(RESOURCES_DIR / 'themes'), 'resources/themes'),
         (str(RESOURCES_DIR / 'sounds'), 'resources/sounds'),
+        (str(RESOURCES_DIR / 'translations'), 'resources/translations'),
     ],
     hiddenimports=[
         # Core image processing

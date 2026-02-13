@@ -1269,21 +1269,31 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = settle * (-15) + math.sin(phase * 0.2) * 1  # Arm tucked under head
             body_bob = settle * 60 + math.sin(phase * 0.3) * 1  # Very low to ground
         elif anim in ('walking_left', 'walking_right'):
-            # Walking sideways: legs stride, arms swing opposite
-            leg_swing = math.sin(phase) * 12
-            arm_swing = math.sin(phase + math.pi) * 10
-            body_bob = abs(math.sin(phase)) * 3
+            # Walking sideways: multi-layered stride with foot contact, toe-off,
+            # mid-stride, and knee lift for smooth realistic motion
+            stride = math.sin(phase) * 12
+            knee_lift = abs(math.sin(phase)) * 4
+            foot_contact = math.sin(phase * 2) * 2
+            leg_swing = stride + foot_contact
+            arm_swing = math.sin(phase + math.pi) * 10 + math.sin(phase * 2 + math.pi) * 3
+            body_bob = knee_lift + math.sin(phase * 2) * 1.5
         elif anim in ('walking_up', 'walking_down'):
-            # Walking forward/backward: moderate stride
-            leg_swing = math.sin(phase) * 10
-            arm_swing = math.sin(phase + math.pi) * 8
-            body_bob = abs(math.sin(phase)) * 4
+            # Walking forward/backward: natural gait with hip sway and arm counter-swing
+            stride = math.sin(phase) * 10
+            knee_lift = abs(math.sin(phase)) * 3.5
+            foot_contact = math.sin(phase * 2) * 1.5
+            leg_swing = stride + foot_contact
+            arm_swing = math.sin(phase + math.pi) * 8 + math.sin(phase * 2 + math.pi) * 2.5
+            body_bob = knee_lift + math.sin(phase * 2) * 1.5
         elif anim in ('walking_up_left', 'walking_up_right',
                        'walking_down_left', 'walking_down_right'):
             # Diagonal walking: blend of side and forward/backward motion
-            leg_swing = math.sin(phase) * 11
-            arm_swing = math.sin(phase + math.pi) * 9
-            body_bob = abs(math.sin(phase)) * 3.5
+            stride = math.sin(phase) * 11
+            knee_lift = abs(math.sin(phase)) * 3.5
+            foot_contact = math.sin(phase * 2) * 1.8
+            leg_swing = stride + foot_contact
+            arm_swing = math.sin(phase + math.pi) * 9 + math.sin(phase * 2 + math.pi) * 2.5
+            body_bob = knee_lift + math.sin(phase * 2) * 1.5
         elif anim == 'fall_on_face':
             # Fallen on face: body low, limbs splayed
             leg_swing = 15
@@ -2505,8 +2515,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         cx_draw = cx + int(body_sway)
         
         # During toss physics or dragging, use _facing_direction to pick the correct view
-        # Save original dragging state before anim is remapped for view
-        is_being_dragged = (anim == 'dragging' and self.is_dragging)
+        # Save original dragging state before anim is remapped for view.
+        # Include drag sub-animations (wall_hit, shaking, spinning) that can
+        # be triggered mid-drag so that dangle physics and facing continue to
+        # work instead of freezing when two animations compete.
+        _drag_anims = ('dragging', 'wall_hit', 'shaking', 'spinning')
+        is_being_dragged = (anim in _drag_anims and self.is_dragging)
         if ((is_being_dragged) or
             (anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing)):
             facing = getattr(self, '_facing_direction', 'front')
@@ -2634,13 +2648,23 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Single eye (profile view)
             es = int(5 * sx)
             ps = int(2 * sx)
+            iris_r = int(3 * sx)
             c.create_oval(eye_x - es, eye_y - es, eye_x + es, eye_y + es,
                            fill="white", outline="white", tags="eye")
-            # Pupil looks in walking direction
+            # Iris ring
             pupil_shift = int(2 * sx * side_dir)
+            c.create_oval(eye_x - iris_r + pupil_shift, eye_y - iris_r,
+                           eye_x + iris_r + pupil_shift, eye_y + iris_r,
+                           fill="#444444", outline="", tags="iris")
+            # Pupil looks in walking direction
             c.create_oval(eye_x - ps + pupil_shift, eye_y - ps,
                            eye_x + ps + pupil_shift, eye_y + ps,
-                           fill="black", outline="", tags="eye")
+                           fill="black", outline="", tags="pupil")
+            # Shine highlight
+            sh = max(1, int(1 * sx))
+            c.create_oval(eye_x - int(2 * sx), eye_y - int(3 * sy),
+                           eye_x - int(2 * sx) + sh * 2, eye_y - int(3 * sy) + sh * 2,
+                           fill="white", outline="", tags="shine")
             
             # Profile nose (bump on the side)
             nose_y = head_cy + int(8 * sy)
@@ -3298,6 +3322,66 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         """
         self._ground_cracks.append((x, y, time.time(), crack_type))
     
+    def _draw_eye_on_patch(self, c: tk.Canvas, ex: int, ey: int, style: str,
+                           sx: float = 1.0, sy: float = 1.0, scale: float = 1.0):
+        """Draw a single eye at a specific position (used for diagonal view).
+        
+        Args:
+            c: Canvas to draw on
+            ex: X center of this eye
+            ey: Y center of this eye
+            style: Eye style (normal, happy, closed, etc.)
+            sx, sy: Base scale factors
+            scale: Additional scale for perspective (0.8 for far eye, 1.0 for near)
+        """
+        es = int(6 * sx * scale)  # eye size
+        ps = int(3 * sx * scale)  # pupil size
+        iris_r = int(4 * sx * scale)
+        
+        if style in ('closed', 'almost_closed'):
+            slit_h = max(1, int(1 * sy * scale))
+            c.create_oval(ex - es, ey - slit_h, ex + es, ey + slit_h,
+                          fill="white", outline="", tags="eye")
+        elif style in ('happy',):
+            c.create_arc(ex - es, ey - es, ex + es, ey + int(4 * sy * scale),
+                         start=0, extent=180, style="arc",
+                         outline="white", width=2, tags="eye")
+        elif style in ('half_closed', 'half'):
+            half_h = max(2, int(3 * sy * scale))
+            c.create_oval(ex - es, ey - int(1 * sy * scale), ex + es, ey + half_h,
+                          fill="white", outline="", tags="eye")
+            c.create_oval(ex - int(2 * sx * scale), ey,
+                          ex + int(2 * sx * scale), ey + int(2 * sy * scale),
+                          fill="#111111", outline="", tags="pupil")
+        elif style == 'dizzy':
+            c.create_line(ex - int(4 * sx * scale), ey - int(4 * sy * scale),
+                          ex + int(4 * sx * scale), ey + int(4 * sy * scale),
+                          fill="white", width=2, tags="eye")
+            c.create_line(ex - int(4 * sx * scale), ey + int(4 * sy * scale),
+                          ex + int(4 * sx * scale), ey - int(4 * sy * scale),
+                          fill="white", width=2, tags="eye")
+        elif style == 'sparkle':
+            c.create_text(ex, ey, text="★", font=("Arial", int(8 * sx * scale)),
+                          fill="white", tags="eye")
+        elif style == 'heart':
+            c.create_text(ex, ey, text="♥", font=("Arial", int(8 * sx * scale)),
+                          fill="#FF69B4", tags="eye")
+        elif style == 'angry':
+            c.create_oval(ex - ps, ey - ps, ex + ps, ey + ps,
+                          fill="red", outline="", tags="eye")
+        else:
+            # Normal / wide / soft / mostly_open — white sclera + iris + pupil + shine
+            c.create_oval(ex - es, ey - es, ex + es, ey + es,
+                          fill="white", outline="", tags="eye")
+            c.create_oval(ex - iris_r, ey - iris_r, ex + iris_r, ey + iris_r,
+                          fill="#444444", outline="", tags="iris")
+            c.create_oval(ex - ps, ey - ps, ex + ps, ey + ps,
+                          fill="#111111", outline="", tags="pupil")
+            sh = max(1, int(2 * sx * scale))
+            c.create_oval(ex - int(3 * sx * scale), ey - int(3 * sy * scale),
+                          ex - int(3 * sx * scale) + sh, ey - int(3 * sy * scale) + sh,
+                          fill="white", outline="", tags="shine")
+    
     def _draw_eyes(self, c: tk.Canvas, cx: int, ey: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda eyes based on the current animation style."""
         left_ex = cx - int(24 * sx)
@@ -3323,38 +3407,47 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 c.create_oval(ex_pos - es, ey - int(1 * sy), ex_pos + es, ey + half_h,
                               fill="white", outline="", tags="eye")
                 c.create_oval(ex_pos - int(2 * sx), ey, ex_pos + int(2 * sx), ey + int(2 * sy),
-                              fill="#222222", outline="", tags="pupil")
+                              fill="#111111", outline="", tags="pupil")
         elif style == 'mostly_open':
             # Slightly narrowed eyes — almost full size but top is cut off
             narrow_h = max(3, int(5 * sy))
+            iris = int(4 * sx)
             for ex_pos in [left_ex, right_ex]:
                 c.create_oval(ex_pos - es, ey - int(3 * sy), ex_pos + es, ey + narrow_h,
                               fill="white", outline="", tags="eye")
+                c.create_oval(ex_pos - iris, ey - int(1 * sy), ex_pos + iris, ey + iris,
+                              fill="#444444", outline="", tags="iris")
                 c.create_oval(ex_pos - ps, ey - int(1 * sy), ex_pos + ps, ey + ps,
-                              fill="#222222", outline="", tags="pupil")
+                              fill="#111111", outline="", tags="pupil")
                 c.create_oval(ex_pos - int(4 * sx), ey - int(4 * sy),
                               ex_pos - int(1 * sx), ey - int(1 * sy),
                               fill="white", outline="", tags="shine")
         elif style == 'wide':
             # Slightly wider than normal — alert/interested look
             wide_es = int(7 * sx)
+            wide_iris = int(5 * sx)
             for ex_pos in [left_ex, right_ex]:
                 c.create_oval(ex_pos - wide_es, ey - wide_es, ex_pos + wide_es, ey + wide_es,
                               fill="white", outline="", tags="eye")
+                c.create_oval(ex_pos - wide_iris, ey - wide_iris, ex_pos + wide_iris, ey + wide_iris,
+                              fill="#444444", outline="", tags="iris")
                 c.create_oval(ex_pos - ps, ey - ps, ex_pos + ps, ey + ps,
-                              fill="#222222", outline="", tags="pupil")
+                              fill="#111111", outline="", tags="pupil")
                 c.create_oval(ex_pos - int(5 * sx), ey - int(5 * sy),
                               ex_pos - int(2 * sx), ey - int(2 * sy),
                               fill="white", outline="", tags="shine")
         elif style == 'soft':
             # Gentle, relaxed eyes — slightly smaller and rounder
             soft_es = int(5 * sx)
+            soft_iris = int(3 * sx)
             for ex_pos in [left_ex, right_ex]:
                 c.create_oval(ex_pos - soft_es, ey - int(4 * sy), ex_pos + soft_es, ey + int(4 * sy),
                               fill="white", outline="", tags="eye")
+                c.create_oval(ex_pos - soft_iris, ey - soft_iris, ex_pos + soft_iris, ey + soft_iris,
+                              fill="#444444", outline="", tags="iris")
                 c.create_oval(ex_pos - int(2 * sx), ey - int(2 * sy),
                               ex_pos + int(2 * sx), ey + int(2 * sy),
-                              fill="#222222", outline="", tags="pupil")
+                              fill="#111111", outline="", tags="pupil")
         elif style == 'happy':
             c.create_arc(left_ex - es, ey - es, left_ex + es, ey + int(4 * sy),
                          start=0, extent=180, style="arc",
@@ -3383,11 +3476,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             c.create_oval(left_ex - int(4 * sx), ey - 1, left_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", outline="", tags="eye")
             c.create_oval(left_ex - int(2 * sx), ey, left_ex + int(2 * sx), ey + ps,
-                          fill="#222222", outline="", tags="pupil")
+                          fill="#111111", outline="", tags="pupil")
             c.create_oval(right_ex - int(4 * sx), ey - 1, right_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", outline="", tags="eye")
             c.create_oval(right_ex - int(2 * sx), ey, right_ex + int(2 * sx), ey + ps,
-                          fill="#222222", outline="", tags="pupil")
+                          fill="#111111", outline="", tags="pupil")
         elif style == 'dizzy':
             c.create_line(left_ex - int(4 * sx), ey - int(4 * sy), left_ex + int(4 * sx), ey + int(4 * sy),
                           fill="white", width=2, tags="eye")
@@ -3398,32 +3491,32 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             c.create_line(right_ex - int(4 * sx), ey + int(4 * sy), right_ex + int(4 * sx), ey - int(4 * sy),
                           fill="white", width=2, tags="eye")
         elif style == 'wink':
-            # Left eye normal, right eye winking (line)
+            # Left eye normal with iris, right eye winking (line)
+            iris = int(4 * sx)
             c.create_oval(left_ex - es, ey - es, left_ex + es, ey + es,
                           fill="white", outline="", tags="eye")
+            c.create_oval(left_ex - iris, ey - iris, left_ex + iris, ey + iris,
+                          fill="#444444", outline="", tags="iris")
             c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
-                          fill="#222222", outline="", tags="pupil")
+                          fill="#111111", outline="", tags="pupil")
             c.create_line(right_ex - es, ey, right_ex + es, ey,
                           fill="white", width=2, tags="eye")
         elif style == 'surprised':
-            # Wide open eyes (larger)
+            # Wide open eyes (larger) with visible iris
             big_es = int(9 * sx)
-            c.create_oval(left_ex - big_es, ey - big_es, left_ex + big_es, ey + big_es,
-                          fill="white", outline="", tags="eye")
-            c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
-                          fill="#222222", outline="", tags="pupil")
-            # Highlight dot
-            hl = int(2 * sx)
-            c.create_oval(left_ex + ps, ey - big_es + hl,
-                          left_ex + ps + hl * 2, ey - big_es + hl * 3,
-                          fill="white", outline="", tags="shine")
-            c.create_oval(right_ex - big_es, ey - big_es, right_ex + big_es, ey + big_es,
-                          fill="white", outline="", tags="eye")
-            c.create_oval(right_ex - ps, ey - ps, right_ex + ps, ey + ps,
-                          fill="#222222", outline="", tags="pupil")
-            c.create_oval(right_ex + ps, ey - big_es + hl,
-                          right_ex + ps + hl * 2, ey - big_es + hl * 3,
-                          fill="white", outline="", tags="shine")
+            big_iris = int(5 * sx)
+            for ex_pos in [left_ex, right_ex]:
+                c.create_oval(ex_pos - big_es, ey - big_es, ex_pos + big_es, ey + big_es,
+                              fill="white", outline="", tags="eye")
+                c.create_oval(ex_pos - big_iris, ey - big_iris, ex_pos + big_iris, ey + big_iris,
+                              fill="#444444", outline="", tags="iris")
+                c.create_oval(ex_pos - ps, ey - ps, ex_pos + ps, ey + ps,
+                              fill="#111111", outline="", tags="pupil")
+                # Highlight dot
+                hl = int(2 * sx)
+                c.create_oval(ex_pos + ps, ey - big_es + hl,
+                              ex_pos + ps + hl * 2, ey - big_es + hl * 3,
+                              fill="white", outline="", tags="shine")
         elif style == 'spinning':
             # Swirly spiral eyes
             for ex_pos in [left_ex, right_ex]:
@@ -3433,7 +3526,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="white", outline="", tags="eye")
                 # Inner spiral dots
                 c.create_text(ex_pos, ey, text="@", font=("Arial", int(8 * sx)),
-                              fill="#222222", tags="pupil")
+                              fill="#111111", tags="pupil")
         elif style == 'rolling':
             # Eyes rolling around
             offset = int(4 * sx * math.sin(self.animation_frame * 0.5))
@@ -3443,7 +3536,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="white", outline="", tags="eye")
                 c.create_oval(ex_pos + offset - ps, ey + v_offset - ps,
                               ex_pos + offset + ps, ey + v_offset + ps,
-                              fill="#222222", outline="", tags="pupil")
+                              fill="#111111", outline="", tags="pupil")
         elif style == 'squint':
             # Squinting eyes
             for ex_pos in [left_ex, right_ex]:
@@ -3452,7 +3545,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="white", outline="", tags="eye")
                 c.create_oval(ex_pos - int(2 * sx), ey - int(1 * sy),
                               ex_pos + int(2 * sx), ey + int(1 * sy),
-                              fill="#222222", outline="", tags="pupil")
+                              fill="#111111", outline="", tags="pupil")
         elif style == 'sparkle':
             # Sparkly star eyes with extra sparkle rays
             for ex_pos in [left_ex, right_ex]:
@@ -3474,19 +3567,23 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 c.create_text(ex_pos, ey, text="♥", font=("Arial", int(10 * sx)),
                               fill="#FF69B4", tags="eye")
         else:
-            # Normal round eyes with pupils and shine
-            c.create_oval(left_ex - es, ey - es, left_ex + es, ey + es,
-                          fill="white", outline="", tags="eye")
-            c.create_oval(left_ex - ps, ey - ps, left_ex + ps, ey + ps,
-                          fill="#222222", outline="", tags="pupil")
-            c.create_oval(left_ex - int(5 * sx), ey - int(5 * sy), left_ex - int(2 * sx), ey - int(2 * sy),
-                          fill="white", outline="", tags="shine")
-            c.create_oval(right_ex - es, ey - es, right_ex + es, ey + es,
-                          fill="white", outline="", tags="eye")
-            c.create_oval(right_ex - ps, ey - ps, right_ex + ps, ey + ps,
-                          fill="#222222", outline="", tags="pupil")
-            c.create_oval(right_ex - int(5 * sx), ey - int(5 * sy), right_ex - int(2 * sx), ey - int(2 * sy),
-                          fill="white", outline="", tags="shine")
+            # Normal round eyes with pupils, iris, and shine highlight
+            iris = int(4 * sx)  # iris size (between pupil and eye)
+            for ex_pos in [left_ex, right_ex]:
+                # White sclera
+                c.create_oval(ex_pos - es, ey - es, ex_pos + es, ey + es,
+                              fill="white", outline="", tags="eye")
+                # Dark iris ring for depth
+                c.create_oval(ex_pos - iris, ey - iris, ex_pos + iris, ey + iris,
+                              fill="#444444", outline="", tags="iris")
+                # Black pupil
+                c.create_oval(ex_pos - ps, ey - ps, ex_pos + ps, ey + ps,
+                              fill="#111111", outline="", tags="pupil")
+                # Bright shine highlight (upper-left within the eye)
+                sh = max(1, int(2 * sx))
+                c.create_oval(ex_pos - int(3 * sx), ey - int(4 * sy),
+                              ex_pos - int(3 * sx) + sh * 2, ey - int(4 * sy) + sh * 2,
+                              fill="white", outline="", tags="shine")
     
     def _draw_mouth(self, c: tk.Canvas, cx: int, my: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda mouth based on the current animation style."""
@@ -5790,25 +5887,29 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._prev_drag_time = now
         
         # Update facing direction based on drag velocity
+        # Only update facing when grabbed by body/butt — dragging by limbs or
+        # ears should not cause the panda to change the direction he's facing.
         vx = self._toss_velocity_x
         vy = self._toss_velocity_y
-        avx = abs(vx)
-        avy = abs(vy)
-        if avx > 1 or avy > 1:  # Only update when there's meaningful movement
-            max_av = max(avx, avy)
-            if max_av > 0 and min(avx, avy) / max_av > self.DIAGONAL_MOVEMENT_THRESHOLD:
-                if vy < 0 and vx < 0:
-                    self._facing_direction = 'back_left'
-                elif vy < 0 and vx > 0:
-                    self._facing_direction = 'back_right'
-                elif vy > 0 and vx < 0:
-                    self._facing_direction = 'front_left'
+        _facing_update_parts = ('body', 'butt')
+        if self._drag_grab_part in _facing_update_parts:
+            avx = abs(vx)
+            avy = abs(vy)
+            if avx > 1 or avy > 1:  # Only update when there's meaningful movement
+                max_av = max(avx, avy)
+                if max_av > 0 and min(avx, avy) / max_av > self.DIAGONAL_MOVEMENT_THRESHOLD:
+                    if vy < 0 and vx < 0:
+                        self._facing_direction = 'back_left'
+                    elif vy < 0 and vx > 0:
+                        self._facing_direction = 'back_right'
+                    elif vy > 0 and vx < 0:
+                        self._facing_direction = 'front_left'
+                    else:
+                        self._facing_direction = 'front_right'
+                elif avx > avy:
+                    self._facing_direction = 'right' if vx > 0 else 'left'
                 else:
-                    self._facing_direction = 'front_right'
-            elif avx > avy:
-                self._facing_direction = 'right' if vx > 0 else 'left'
-            else:
-                self._facing_direction = 'down' if vy > 0 else 'up'
+                    self._facing_direction = 'down' if vy > 0 else 'up'
         
         # Detect drag patterns
         self._detect_drag_patterns()
