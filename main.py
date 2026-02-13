@@ -5875,7 +5875,6 @@ class GameTextureSorter(ctk.CTk):
             self.log(f"🎁 Claimed reward for '{achievement.name}': {desc}")
             # Give user visible feedback
             try:
-                from tkinter import messagebox
                 messagebox.showinfo("Reward Claimed", f"🎁 {desc}")
             except Exception:
                 pass
