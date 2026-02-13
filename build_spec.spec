@@ -5,6 +5,14 @@ Author: Dead On The Inside / JosephsDeadish
 
 This spec file creates a single-EXE application for Windows
 with all resources embedded and proper metadata.
+
+NOTE: This build DOES NOT include SVG support (for CI compatibility)
+      Cairo DLLs are not available on Windows CI and cause build failures.
+      
+      For SVG support, use: pyinstaller build_spec_with_svg.spec
+      Or run the automated build: python scripts/build_with_svg.py
+      
+      See docs/SVG_BUILD_GUIDE.md for detailed instructions.
 """
 
 import sys
