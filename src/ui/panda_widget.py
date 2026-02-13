@@ -2342,6 +2342,200 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               font=("Arial Bold", int(10 * sx)),
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
+        elif anim in ('walking_up_left', 'walking_up_right', 
+                      'walking_down_left', 'walking_down_right'):
+            # --- DIAGONAL VIEW: 3/4 perspective combining front/back with side ---
+            # Determine diagonal direction
+            is_back_facing = anim in ('walking_up_left', 'walking_up_right')
+            facing_left = anim in ('walking_up_left', 'walking_down_left')
+            side_dir = -1 if facing_left else 1
+            
+            # Diagonal view uses intermediate perspective (between side and front/back)
+            # Body is slightly narrower than front view but wider than side view
+            diag_body_scale = 0.85
+            
+            leg_top = int(145 * sy + by)
+            leg_len = int(30 * sy)
+            
+            # Apply individual limb dangle physics during drag
+            left_leg_dangle = int(self._dangle_left_leg) if anim == 'dragging' else 0
+            right_leg_dangle = int(self._dangle_right_leg) if anim == 'dragging' else 0
+            left_arm_dangle = int(self._dangle_left_arm) if anim == 'dragging' else 0
+            right_arm_dangle = int(self._dangle_right_arm) if anim == 'dragging' else 0
+            left_leg_dangle_h = int(self._dangle_left_leg_h) if anim == 'dragging' else 0
+            right_leg_dangle_h = int(self._dangle_right_leg_h) if anim == 'dragging' else 0
+            left_arm_dangle_h = int(self._dangle_left_arm_h) if anim == 'dragging' else 0
+            right_arm_dangle_h = int(self._dangle_right_arm_h) if anim == 'dragging' else 0
+            
+            # Legs with perspective - one more forward, one more back
+            if is_back_facing:
+                # Back-diagonal: left leg on left, right leg on right (walking away)
+                back_leg_x = cx_draw - int(22 * sx * diag_body_scale) + left_leg_dangle_h
+                back_leg_swing = leg_swing + left_leg_dangle
+                front_leg_x = cx_draw + int(22 * sx * diag_body_scale) + right_leg_dangle_h
+                front_leg_swing = -leg_swing + right_leg_dangle
+            else:
+                # Front-diagonal: standard left/right (walking toward viewer)
+                back_leg_x = cx_draw - int(22 * sx * diag_body_scale) + left_leg_dangle_h
+                back_leg_swing = -leg_swing + left_leg_dangle
+                front_leg_x = cx_draw + int(22 * sx * diag_body_scale) + right_leg_dangle_h
+                front_leg_swing = leg_swing + right_leg_dangle
+            
+            # Back leg (further from viewer)
+            c.create_oval(
+                back_leg_x - int(10 * sx), leg_top + back_leg_swing,
+                back_leg_x + int(10 * sx), leg_top + leg_len + back_leg_swing,
+                fill=black, outline=black, tags="leg"
+            )
+            c.create_oval(
+                back_leg_x - int(9 * sx), leg_top + leg_len - int(8 * sy) + back_leg_swing,
+                back_leg_x + int(9 * sx), leg_top + leg_len + int(4 * sy) + back_leg_swing,
+                fill=white, outline=black, width=1, tags="foot"
+            )
+            
+            # Body - oval with diagonal compression
+            body_top = int(75 * sy + by)
+            body_bot = int(160 * sy + by)
+            body_rx = int(38 * sx * diag_body_scale * breath_scale)
+            body_ry = int(42 * sy * breath_scale)
+            c.create_oval(
+                cx_draw - body_rx, body_top,
+                cx_draw + body_rx, body_bot,
+                fill=white, outline=black, width=2, tags="body"
+            )
+            
+            # Belly patch - shifted slightly based on facing direction
+            belly_shift_x = int(4 * sx * side_dir)
+            c.create_oval(
+                cx_draw - int(22 * sx * diag_body_scale) + belly_shift_x, body_top + int(18 * sy),
+                cx_draw + int(22 * sx * diag_body_scale) + belly_shift_x, body_bot - int(14 * sy),
+                fill="#FAFAFA", outline="", tags="belly"
+            )
+            
+            # Front leg (closer to viewer)
+            c.create_oval(
+                front_leg_x - int(11 * sx), leg_top + front_leg_swing,
+                front_leg_x + int(11 * sx), leg_top + leg_len + front_leg_swing,
+                fill=black, outline=black, tags="leg"
+            )
+            c.create_oval(
+                front_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + front_leg_swing,
+                front_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + front_leg_swing,
+                fill=white, outline=black, width=1, tags="foot"
+            )
+            
+            # Arms - positioned with diagonal offset
+            arm_top = int(95 * sy + by)
+            arm_len = int(35 * sy)
+            
+            # Back arm (further side)
+            back_arm_x = cx_draw - int(30 * sx * diag_body_scale * side_dir) + left_arm_dangle_h
+            back_arm_swing = -arm_swing + left_arm_dangle
+            c.create_oval(
+                back_arm_x - int(9 * sx), arm_top + back_arm_swing,
+                back_arm_x + int(9 * sx), arm_top + arm_len + back_arm_swing,
+                fill=black, outline=black, tags="arm"
+            )
+            
+            # Front arm (near side)
+            front_arm_x = cx_draw + int(30 * sx * diag_body_scale * side_dir) + right_arm_dangle_h
+            front_arm_swing = arm_swing + right_arm_dangle
+            c.create_oval(
+                front_arm_x - int(10 * sx), arm_top + front_arm_swing,
+                front_arm_x + int(10 * sx), arm_top + arm_len + front_arm_swing,
+                fill=black, outline=black, tags="arm"
+            )
+            
+            # Head - slightly rotated perspective
+            head_cy = int(52 * sy + by)
+            head_rx = int(34 * sx * diag_body_scale)
+            head_ry = int(32 * sy)
+            c.create_oval(
+                cx_draw - head_rx, head_cy - head_ry,
+                cx_draw + head_rx, head_cy + head_ry,
+                fill=white, outline=black, width=2, tags="head"
+            )
+            
+            # Ears - both visible but one smaller (perspective)
+            ear_y = head_cy - head_ry + int(5 * sy)
+            ear_w = int(22 * sx)
+            
+            # Far ear (smaller)
+            far_ear_x = cx_draw - int(head_rx * 0.7 * side_dir) + ear_wiggle
+            c.create_oval(
+                far_ear_x - int(ear_w * 0.4), ear_y - int(14 * sy),
+                far_ear_x + int(ear_w * 0.4), ear_y + int(8 * sy),
+                fill=black, outline=black, tags="ear"
+            )
+            c.create_oval(
+                far_ear_x - int(ear_w * 0.25), ear_y - int(9 * sy),
+                far_ear_x + int(ear_w * 0.25), ear_y + int(3 * sy),
+                fill=pink, outline="", tags="ear_inner"
+            )
+            
+            # Near ear (larger)
+            near_ear_x = cx_draw + int(head_rx * 0.7 * side_dir) + ear_wiggle
+            c.create_oval(
+                near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
+                near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
+                fill=black, outline=black, tags="ear"
+            )
+            c.create_oval(
+                near_ear_x - int(ear_w * 0.3), ear_y - int(10 * sy),
+                near_ear_x + int(ear_w * 0.3), ear_y + int(2 * sy),
+                fill=pink, outline="", tags="ear_inner"
+            )
+            
+            # Eye patches - both visible with diagonal positioning
+            eye_y = head_cy - int(4 * sy)
+            patch_rx = int(12 * sx * diag_body_scale)
+            patch_ry = int(10 * sy)
+            
+            # Far eye patch (smaller, partially obscured)
+            far_eye_x = cx_draw - int(16 * sx * diag_body_scale * side_dir)
+            c.create_oval(
+                far_eye_x - int(patch_rx * 0.8), eye_y - patch_ry,
+                far_eye_x + int(patch_rx * 0.8), eye_y + patch_ry,
+                fill=black, outline="", tags="eye_patch"
+            )
+            
+            # Near eye patch (larger, fully visible)
+            near_eye_x = cx_draw + int(16 * sx * diag_body_scale * side_dir)
+            c.create_oval(
+                near_eye_x - patch_rx, eye_y - patch_ry,
+                near_eye_x + patch_rx, eye_y + patch_ry,
+                fill=black, outline="", tags="eye_patch"
+            )
+            
+            # Draw equipped items on panda body
+            self._draw_equipped_items(c, cx_draw, by, sx, sy)
+            
+            # Eyes with diagonal gaze
+            self._draw_eye_on_patch(c, far_eye_x, eye_y, eye_style, sx, sy, 0.8)
+            self._draw_eye_on_patch(c, near_eye_x, eye_y, eye_style, sx, sy, 1.0)
+            
+            # Nose - centered
+            nose_y = head_cy + int(8 * sy)
+            c.create_oval(
+                cx_draw - int(5 * sx), nose_y - int(4 * sy),
+                cx_draw + int(5 * sx), nose_y + int(4 * sy),
+                fill=nose_color, outline="", tags="nose"
+            )
+            
+            # Mouth
+            self._draw_mouth(c, cx_draw, nose_y + int(8 * sy), mouth_style, 
+                           sx, sy, black, white)
+            
+            # Animation extras
+            self._draw_animation_extras(c, cx_draw, by, anim, frame_idx, sx, sy)
+            
+            # Name tag
+            if self.panda and self.panda.name:
+                name_y = int(h - 12 * sy)
+                c.create_text(cx_draw, name_y, text=self.panda.name,
+                              font=("Arial Bold", int(10 * sx)),
+                              fill="#666666", width=int(w * 0.9), tags="name_tag")
+        
         else:
             # --- FRONT VIEW (default): standard forward-facing panda ---
             leg_top = int(145 * sy + by)
