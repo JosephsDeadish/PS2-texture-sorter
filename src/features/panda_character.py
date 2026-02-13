@@ -1228,12 +1228,13 @@ class PandaCharacter:
         """Handle panda receiving food."""
         return random.choice(self.FOOD_CONTEXT_RESPONSES)
 
-    def on_item_interact(self, item_name: str, item_type: str) -> str:
+    def on_item_interact(self, item_name: str, item_type: str, physics: Optional[object] = None) -> str:
         """Handle panda walking to and interacting with an item on screen.
         
         Args:
             item_name: Name of the item
             item_type: 'toy' or 'food'
+            physics: ItemPhysics object for special item interactions
             
         Returns:
             Interaction response string
@@ -1242,15 +1243,43 @@ class PandaCharacter:
             self.feed_count += 1
             return random.choice(self.WALK_TO_FOOD_RESPONSES)
         else:
-            toy_actions = [
-                f"🐼 *walks to {item_name}* Oooh, what's this?! *kicks it*",
-                f"🐼 *runs to {item_name}* PLAYTIME! *bats it around*",
-                f"🐼 *spots {item_name}* Mine! *rolls it across screen*",
-                f"🐼 *waddles to {item_name}* Let's play! *pounces*",
-                f"🐼 *picks up {item_name}* Watch this trick! *tosses in air*",
-            ]
-            self.toy_interact_count += 1
-            return random.choice(toy_actions)
+            # Check for special item types with unique physics
+            item_lower = item_name.lower()
+            
+            # Heavy items (weights, dumbbells) - panda can't kick them, hurts foot
+            if physics and hasattr(physics, 'hurt_on_kick') and physics.hurt_on_kick:
+                hurt_responses = [
+                    f"🐼 *tries to kick {item_name}* OW! My foot! 😫 That's too heavy!",
+                    f"🐼 *attempts to move {item_name}* Ungh... it won't budge! 💢",
+                    f"🐼 *pushes {item_name}* Why is this so heavy?! *rubs hurt paws* 🤕",
+                    f"🐼 *kicks {item_name}* OUCH! 😭 Note to self: don't kick heavy things...",
+                ]
+                self.toy_interact_count += 1
+                return random.choice(hurt_responses)
+            
+            # Springy/slinky items - special spring animations
+            elif physics and hasattr(physics, 'springiness') and physics.springiness > 0.8:
+                slinky_responses = [
+                    f"🐼 *kicks {item_name}* Wheee! Watch it spring! 🌈✨",
+                    f"🐼 *pokes {item_name}* Boing boing boing! So springy! 🎪",
+                    f"🐼 *nudges {item_name}* Look at it slink around! *giggles* 🎭",
+                    f"🐼 *bats {item_name}* It's bouncing everywhere! So fun! 🎨",
+                    f"🐼 *pushes {item_name}* Watch it crawl and stretch! Amazing! 🎪",
+                ]
+                self.toy_interact_count += 1
+                return random.choice(slinky_responses)
+            
+            # Default toy interactions
+            else:
+                toy_actions = [
+                    f"🐼 *walks to {item_name}* Oooh, what's this?! *kicks it*",
+                    f"🐼 *runs to {item_name}* PLAYTIME! *bats it around*",
+                    f"🐼 *spots {item_name}* Mine! *rolls it across screen*",
+                    f"🐼 *waddles to {item_name}* Let's play! *pounces*",
+                    f"🐼 *picks up {item_name}* Watch this trick! *tosses in air*",
+                ]
+                self.toy_interact_count += 1
+                return random.choice(toy_actions)
 
     def on_food_pickup(self, item_name: str) -> str:
         """Handle panda picking up a food item.

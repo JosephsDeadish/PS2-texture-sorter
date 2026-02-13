@@ -39,6 +39,10 @@ class ItemPhysics:
     bounciness: float = 1.0  # Multiplier for bounce height
     wobble: float = 0.0  # How much the item wobbles when moving (0=rigid, 1=very wobbly)
     elasticity: float = 0.0  # How much the item stretches/bends (0=rigid, 1=bendy)
+    springiness: float = 0.0  # How much the item springs and bounces around (0=no spring, 1=super springy)
+    kickable: bool = True  # Can panda kick this item (heavy items can't be kicked)
+    causes_crack: bool = False  # Does dropping this item create a crack effect
+    hurt_on_kick: bool = False  # Does kicking this item hurt panda's foot
 
 
 @dataclass
@@ -284,7 +288,12 @@ class WidgetCollection:
                                                      friction=0.88, wobble=0.9, elasticity=0.9)),
         'dumbbell': ToyWidget('Super Heavy Dumbbell', '🏋️', WidgetRarity.EPIC,
                               physics=ItemPhysics(weight=3.0, gravity=3.0, bounciness=0.15,
-                                                 bounce_damping=0.3, wobble=0.05)),
+                                                 bounce_damping=0.3, wobble=0.05,
+                                                 kickable=False, hurt_on_kick=True, causes_crack=True)),
+        'slinky': ToyWidget('Rainbow Slinky', '🌈', WidgetRarity.UNCOMMON,
+                           physics=ItemPhysics(weight=0.4, bounciness=2.2, bounce_damping=0.7,
+                                              wobble=0.9, elasticity=0.95, springiness=0.95,
+                                              friction=0.85, gravity=1.2)),
         
         # Food - consumed on use
         'bamboo': FoodWidget('Fresh Bamboo', '🎋', WidgetRarity.COMMON, energy_boost=10),

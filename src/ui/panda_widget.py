@@ -370,6 +370,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._auto_walk_step_dy = 0.0
         self._auto_walk_steps_remaining = 0
         
+        # Ground crack effects (for heavy items landing and panda falling)
+        self._ground_cracks = []  # List of (x, y, creation_time, crack_type) tuples
+        self._crack_duration_ms = 3000  # How long cracks stay visible (3 seconds)
+        
         # Configure the proxy frame – it stays in the widget tree for API
         # compatibility but is intentionally empty / zero-size.
         if ctk:
@@ -3225,6 +3229,67 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 if abs(self._drag_body_angle) < 0.05:
                     self._drag_body_angle = 0.0
             self._flip_progress = max(0.0, self._flip_progress - 0.15)
+        
+        # Draw ground cracks (for heavy items landing or panda falling)
+        self._draw_ground_cracks(c, w, h)
+    
+    def _draw_ground_cracks(self, c: tk.Canvas, canvas_w: int, canvas_h: int):
+        """Draw temporary ground crack effects from heavy impacts.
+        
+        Args:
+            c: Canvas to draw on
+            canvas_w: Canvas width
+            canvas_h: Canvas height
+        """
+        current_time = time.time()
+        
+        # Remove expired cracks
+        self._ground_cracks = [
+            (x, y, t, crack_type) for x, y, t, crack_type in self._ground_cracks
+            if (current_time - t) * 1000 < self._crack_duration_ms
+        ]
+        
+        # Draw active cracks
+        for crack_x, crack_y, crack_time, crack_type in self._ground_cracks:
+            age = (current_time - crack_time) * 1000  # age in ms
+            fade_progress = age / self._crack_duration_ms
+            
+            # Fade out opacity
+            opacity = int(255 * (1.0 - fade_progress))
+            if opacity < 10:
+                continue
+            
+            # Convert opacity to hex color (gray cracks that fade out)
+            gray_val = max(0, 100 - int(100 * fade_progress))
+            color = f"#{gray_val:02x}{gray_val:02x}{gray_val:02x}"
+            
+            # Draw crack lines radiating from impact point
+            # Different crack patterns for different impact types
+            if crack_type == 'heavy':
+                # Larger cracks for heavy items
+                crack_lines = 5
+                crack_length = 15
+            else:
+                # Smaller cracks for panda falls
+                crack_lines = 3
+                crack_length = 10
+            
+            for i in range(crack_lines):
+                angle = (i / crack_lines) * 2 * math.pi
+                end_x = crack_x + int(crack_length * math.cos(angle))
+                end_y = crack_y + int(crack_length * math.sin(angle))
+                c.create_line(crack_x, crack_y, end_x, end_y,
+                             fill=color, width=2, tags="crack_effect")
+    
+    def _add_ground_crack(self, x: int, y: int, crack_type: str = 'normal'):
+        """Add a new ground crack effect at the specified position.
+        
+        Args:
+            x: X position relative to canvas
+            y: Y position relative to canvas
+            crack_type: Type of crack ('normal' or 'heavy')
+        """
+        self._ground_cracks.append((x, y, time.time(), crack_type))
     
     def _draw_eyes(self, c: tk.Canvas, cx: int, ey: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda eyes based on the current animation style."""
@@ -6014,6 +6079,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # After a rough toss (multiple bounces), panda may fall on face or tip over
         if self._toss_bounce_count >= 3 and random.random() < 0.4:
+            # Add ground crack where panda lands hard
+            crack_x = PANDA_CANVAS_W // 2
+            crack_y = int(PANDA_CANVAS_H * 0.85)  # Near bottom where panda lands
+            self._add_ground_crack(crack_x, crack_y, 'normal')
+            
             if random.random() < 0.5:
                 self._is_face_down = True
                 self._is_on_side = False
