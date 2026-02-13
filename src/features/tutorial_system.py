@@ -2187,6 +2187,444 @@ _PANDA_TOOLTIPS = {
             "Battle time! The panda has been training. Mostly by eating, but still.",
         ]
     },
+    # ═══════════════════ STATS SYSTEM TOOLTIPS ═══════════════════
+    'stat_level': {
+        'normal': [
+            "Your panda's current experience level",
+            "Level indicates overall progression and unlocks new abilities",
+            "Gain experience through interactions and combat to level up",
+            "Higher levels grant stat boosts and skill points",
+            "Character level - increases with experience points",
+        ],
+        'dumbed-down': [
+            "This number goes up when you do stuff. Bigger number = better panda!",
+            "Level is like... how strong your panda is. Do things, get XP, level goes brrr.",
+            "The bigger this number, the more awesome your panda becomes!",
+            "Think of this like... your panda's power level. It's over 9000... eventually.",
+            "This is your panda's 'I'm better than I was yesterday' number.",
+        ],
+        'vulgar': [
+            "Your panda's badass level. Higher = more badass.",
+            "This sh*t shows how much of a beast your panda has become.",
+            "Level up, get stronger, kick more ass. Simple as that.",
+            "The 'how much of a legend is this panda' metric. Currently: working on it.",
+            "Your panda's power level. Make it bigger, goddammit.",
+        ]
+    },
+    'stat_experience': {
+        'normal': [
+            "Experience points toward next level",
+            "Earn XP through activities, combat, and achievements",
+            "Reach the required XP to level up and gain rewards",
+            "Experience accumulates from all panda activities",
+            "Progress bar showing XP needed for next level",
+        ],
+        'dumbed-down': [
+            "Do stuff, get points. Get enough points, level goes up!",
+            "This bar fills up when you make your panda do things. Full bar = DING!",
+            "XP is like... participation points but actually useful.",
+            "Every time your panda does something cool, this number goes up a little.",
+            "Fill this bar by playing. It's basically a 'you're doing great sweetie' meter.",
+        ],
+        'vulgar': [
+            "XP points. Get 'em, level up, become a god. No pressure.",
+            "Fill this f*cking bar already! Do stuff! Kill things! Whatever!",
+            "Experience points. AKA 'proof you're not just sitting there'.",
+            "This bar needs to fill up. Go adventure or some sh*t.",
+            "Earn XP by not being lazy. The panda demands progress!",
+        ]
+    },
+    'stat_health': {
+        'normal': [
+            "Current and maximum health points",
+            "Health represents vitality and determines survival in combat",
+            "Restore health through healing items and rest",
+            "Low health increases danger - manage it carefully",
+            "HP determines how much damage you can take",
+        ],
+        'dumbed-down': [
+            "This is your panda's life juice. Don't let it hit zero!",
+            "Health = how alive your panda is. Keep this number up!",
+            "The 'please don't die' meter. Red = bad, green = good.",
+            "HP means health points. More is better. Zero is game over.",
+            "How much ouchie your panda can take before naptime.",
+        ],
+        'vulgar': [
+            "HP. Don't let this hit zero or your panda's taking a dirt nap.",
+            "Health points. Lose 'em all and it's game f*cking over.",
+            "This is your 'am I dead yet' meter. Keep it high, genius.",
+            "The life bar. When it empties, you're f*cked. Stay alive!",
+            "Your panda's 'still kicking' gauge. Zero = not kicking anymore.",
+        ]
+    },
+    'stat_defense': {
+        'normal': [
+            "Damage reduction from incoming attacks",
+            "Higher defense means less damage taken in combat",
+            "Defense reduces physical damage by a percentage",
+            "Improve defense through equipment and skills",
+            "Defensive stat that mitigates incoming damage",
+        ],
+        'dumbed-down': [
+            "This makes your panda harder to hurt. Like armor but... statsier.",
+            "Defense = how tough your panda is. More = good!",
+            "This number makes attacks hurt less. It's like a safety cushion!",
+            "Think of it as your panda's toughness level. Bigger is better!",
+            "How well your panda can take a hit without crying.",
+        ],
+        'vulgar': [
+            "Defense. Makes you harder to kill. Pretty f*cking important.",
+            "How much of a tank your panda is. More = less ouchie.",
+            "Your damage resistance stat. High = laugh at enemy attacks.",
+            "This sh*t reduces how much you get hurt. Stack it!",
+            "Defense means you can take a beating. Level this up, fool.",
+        ]
+    },
+    'stat_strength': {
+        'normal': [
+            "Physical power and melee damage multiplier",
+            "Strength increases damage dealt with physical attacks",
+            "Higher strength = more devastating attacks",
+            "Primary stat for physical combat effectiveness",
+            "Boosts all melee and physical damage output",
+        ],
+        'dumbed-down': [
+            "This is your panda's muscles! Big muscles = big damage!",
+            "Strength makes you hit harder. Like, way harder. SMASH!",
+            "How strong your panda is. More strength = enemies go bye-bye faster.",
+            "The 'how hard can this panda punch' stat. Make it BIG!",
+            "This number decides if you tickle enemies or obliterate them.",
+        ],
+        'vulgar': [
+            "Strength. Hit harder, kill faster. It's that f*cking simple.",
+            "Your panda's ability to absolutely wreck sh*t. Pump this up!",
+            "How much pain your panda can dish out. More = more carnage.",
+            "The 'crush your enemies' stat. Max this bad boy out.",
+            "Strength means you hit like a goddamn truck. Stack it!",
+        ]
+    },
+    'stat_magic': {
+        'normal': [
+            "Magical power and spell effectiveness",
+            "Increases damage and potency of magical abilities",
+            "Higher magic stat unlocks more powerful spells",
+            "Determines success rate of magical effects",
+            "Core stat for spellcasting and magic damage",
+        ],
+        'dumbed-down': [
+            "Magic power! Makes your spells go BOOM instead of poof.",
+            "This is how magical your panda is. More magic = cooler spells!",
+            "The 'can this panda do magic tricks' stat. Spoiler: yes!",
+            "Makes your magic spells actually do something instead of fizzle.",
+            "How much wizard energy your panda has. Make it sparkly!",
+        ],
+        'vulgar': [
+            "Magic stat. Makes you a f*cking wizard. Abracadabra, bitches!",
+            "Your panda's 'turning enemies into toast' power. Magic!",
+            "This sh*t makes spells hurt. More magic = more pain.",
+            "The sorcery stat. High enough and you're basically Gandalf.",
+            "Magic power. Shoot fireballs and watch sh*t burn!",
+        ]
+    },
+    'stat_intelligence': {
+        'normal': [
+            "Mental acuity and magical damage bonus",
+            "Intelligence amplifies spell damage and magic effects",
+            "Higher INT increases magic critical chance",
+            "Governs learning speed and ability effectiveness",
+            "Determines maximum mana and magic regeneration",
+        ],
+        'dumbed-down': [
+            "How smart your panda is! Smart pandas cast better spells!",
+            "Intelligence = brain power. More brains = stronger magic!",
+            "The 'is this panda a genius' stat. Make it brainy!",
+            "Think of it like... how much your panda studied at wizard school.",
+            "Smart pandas do more magic damage. Be a smart panda!",
+        ],
+        'vulgar': [
+            "Intelligence. Be smart, cast better spells, f*ck sh*t up.",
+            "Your panda's IQ basically. Higher = better magic damage.",
+            "The 'how big brain is this panda' stat. Make it huge!",
+            "Intelligence means your magic actually works. Don't be dumb!",
+            "Brain power stat. More brain = more magical destruction.",
+        ]
+    },
+    'stat_agility': {
+        'normal': [
+            "Speed, evasion, and critical hit chance",
+            "Higher agility increases dodge probability",
+            "Determines attack speed and movement",
+            "Affects critical strike chance in combat",
+            "Core stat for evasive and precision-based builds",
+        ],
+        'dumbed-down': [
+            "How fast and nimble your panda is! Zoom zoom, dodge dodge!",
+            "Agility = not getting hit. Also hitting enemies in their face more often!",
+            "This makes your panda quick like... a quick panda!",
+            "The 'can this panda dodge stuff' stat. Make it swooshy!",
+            "Fast pandas dodge better and crit more. Be speedy!",
+        ],
+        'vulgar': [
+            "Agility. Be fast, dodge sh*t, land crits. It's clutch.",
+            "Your panda's 'try to hit me, I dare you' stat. Pump this!",
+            "Speed and dodge chance. High agility = untouchable badass.",
+            "This sh*t lets you dodge like Neo and crit like a boss.",
+            "Agility means you're fast as f*ck and hard to hit. Stack it!",
+        ]
+    },
+    'stat_vitality': {
+        'normal': [
+            "Constitution and health pool modifier",
+            "Each point of vitality increases maximum health",
+            "Determines survivability and endurance",
+            "Affects health regeneration rate",
+            "Essential stat for tanks and survival builds",
+        ],
+        'dumbed-down': [
+            "This makes your health bar bigger! More health = live longer!",
+            "Vitality = how much health your panda has. Big health = good!",
+            "The 'don't die easily' stat. More vitality = more life!",
+            "Think of it as your panda's toughness juice. Get more!",
+            "Vitality gives you more HP so you don't die as fast. Useful!",
+        ],
+        'vulgar': [
+            "Vitality. More HP, harder to kill. Don't be a glass cannon.",
+            "This sh*t increases your health pool. More = survive longer.",
+            "Your panda's 'I ain't dying today' stat. Max this b*tch!",
+            "Vitality means you can take more beatings. Very f*cking important.",
+            "Health modifier stat. Stack this if you like being alive.",
+        ]
+    },
+    'stat_skill_points': {
+        'normal': [
+            "Available points for skill tree progression",
+            "Earned through leveling up and achievements",
+            "Spend on unlocking and upgrading abilities",
+            "Plan carefully - some skills require prerequisites",
+            "Skill points enable character customization",
+        ],
+        'dumbed-down': [
+            "These are your 'buy cool abilities' points! Spend them wisely!",
+            "Skill points = unlock new powers. Get them, spend them, be awesome!",
+            "This is how many new abilities you can unlock right now!",
+            "Think of these like... tokens at an arcade but for superpowers!",
+            "You get these when you level up. Use them to get stronger!",
+        ],
+        'vulgar': [
+            "Skill points. Spend 'em on abilities or hoard like a dragon. Your call.",
+            "These let you unlock sh*t in the skill tree. Don't waste them!",
+            "Skill points = new abilities. More abilities = more ass-kicking.",
+            "Use these to unlock skills and become a f*cking powerhouse.",
+            "Points for buying cool powers. Spend wisely or you'll regret it.",
+        ]
+    },
+    'stat_total_attacks': {
+        'normal': [
+            "Total number of attacks performed in combat",
+            "Tracks all offensive actions taken",
+            "Includes melee, ranged, and magical attacks",
+            "Historical combat activity metric",
+            "Cumulative attack count across all battles",
+        ],
+        'dumbed-down': [
+            "How many times your panda has tried to hit something. A lot, probably!",
+            "This counts every single time you pressed the attack button. Every. Single. Time.",
+            "Attack counter! Goes up every time your panda goes 'HI-YAH!'",
+            "The 'how aggressive is this panda' tracker. Spoiler: very!",
+            "Total attacks ever. This number just keeps going up and up!",
+        ],
+        'vulgar': [
+            "How many times your panda has thrown hands. The answer: a sh*t ton.",
+            "Attack counter. Basically tracks how violent your panda is.",
+            "Total attacks launched. This number = your dedication to violence.",
+            "Every swing, every spell, every 'f*ck you' attack. All counted here.",
+            "How many times you've tried to murder something. No judgment.",
+        ]
+    },
+    'stat_monsters_slain': {
+        'normal': [
+            "Total enemies defeated in combat",
+            "Tracks successful kills and takedowns",
+            "Measure of combat prowess and experience",
+            "Each victory contributes to this count",
+            "Monster elimination statistics",
+        ],
+        'dumbed-down': [
+            "How many bad guys your panda has defeated! Victory counter!",
+            "This counts every monster you've beaten. You're a hero!",
+            "Monster kill count! Higher = you're winning at life!",
+            "The 'how many enemies did I destroy' tracker. Celebrate each one!",
+            "Every monster defeated adds to this number. You did that!",
+        ],
+        'vulgar': [
+            "Kill count. How many f*ckers you've sent to the shadow realm.",
+            "Body count tracker. Your panda is a certified monster murderer.",
+            "Enemies slain. This number = your combat resume. Impressive!",
+            "How many things you've killed. Badge of honor, really.",
+            "Monster slayer stat. Higher = more badass. Keep killing!",
+        ]
+    },
+    'stat_damage_dealt': {
+        'normal': [
+            "Total damage output across all combat encounters",
+            "Cumulative offensive damage delivered",
+            "Tracks effectiveness of your attacks",
+            "Includes all damage types and sources",
+            "Overall damage metrics for combat analysis",
+        ],
+        'dumbed-down': [
+            "All the ouchies your panda has given to enemies. Big number = good panda!",
+            "This is how much hurt you've delivered. The more the merrier!",
+            "Total damage! Every hit adds up. You're doing great!",
+            "The 'how much pain have I caused' counter. Lots, apparently!",
+            "All your damage combined into one big impressive number!",
+        ],
+        'vulgar': [
+            "Total pain delivered. How much f*cking hurt you've dished out.",
+            "Damage dealt counter. Your legacy of destruction, quantified.",
+            "This is how much sh*t you've wrecked. Make it bigger!",
+            "Total damage output. Higher = you're a force of nature.",
+            "How much hurt you've put on enemies. Rack up those numbers!",
+        ]
+    },
+    'stat_damage_taken': {
+        'normal': [
+            "Total damage received from all sources",
+            "Cumulative damage absorbed during combat",
+            "Tracks how much punishment you've endured",
+            "Includes all damage types received",
+            "Durability and survival metrics",
+        ],
+        'dumbed-down': [
+            "How many ouchies your panda has received. Lower is better!",
+            "This is how much you've been hurt. Try to keep it down!",
+            "Damage taken counter. Your panda is tough for surviving this much!",
+            "The 'ouch counter' - every hit you've taken is tracked here.",
+            "Total damage received. You've been through a lot, brave panda!",
+        ],
+        'vulgar': [
+            "How much sh*t you've taken. Your survival badge of honor.",
+            "Damage received tracker. You've been through hell and lived!",
+            "This is your 'got my ass kicked but survived' stat. Proud of you.",
+            "Total beatings endured. You're still here so... winning?",
+            "How much hurt you've tanked. Lower is better but hey, you're alive!",
+        ]
+    },
+    'stat_critical_hits': {
+        'normal': [
+            "Number of critical strikes landed",
+            "Critical hits deal amplified damage",
+            "Tracks devastating blows and lucky strikes",
+            "Critical strikes are marked by bonus damage",
+            "Measure of combat effectiveness and luck",
+        ],
+        'dumbed-down': [
+            "Super strong hits that do extra damage! These are the GOOD hits!",
+            "Critical hits = when you hit REALLY hard. Like, BOOM hard!",
+            "The 'extra awesome attack' counter. More crits = more fun!",
+            "Sometimes you hit so good it's critical. This counts those!",
+            "Special powerful hits that hurt way more. You love to see it!",
+        ],
+        'vulgar': [
+            "Crit count. Those beautiful b*stard hits that just DELETE enemies.",
+            "Critical strikes. When your attack says 'f*ck you' extra hard.",
+            "How many times you've hit like a goddamn truck. Beautiful.",
+            "Crits = bonus damage. The game saying 'nice f*cking hit, dude!'",
+            "Critical hit tracker. Each one is a moment of pure destruction.",
+        ]
+    },
+    'dungeon_enter_button': {
+        'normal': [
+            "Enter a procedurally generated dungeon with multiple floors",
+            "Explore dungeons, fight monsters, and collect treasure",
+            "Begin your dungeon crawling adventure",
+            "Challenge yourself in randomly generated dungeons",
+            "Start a new dungeon exploration session",
+        ],
+        'dumbed-down': [
+            "Click this to go into a dungeon! It's like a video game inside a video game!",
+            "Dungeon time! Fight monsters, get loot, have fun! Simple!",
+            "This button starts an adventure! Press it and see what happens!",
+            "Enter the dungeon! There's monsters and treasure and stuff!",
+            "Click here to go on an adventure! Your panda is ready!",
+        ],
+        'vulgar': [
+            "Enter the f*cking dungeon! Fight sh*t, get loot, be a legend!",
+            "Dungeon button. Click it if you've got the balls to explore!",
+            "Ready to crawl some dungeons? This button says 'let's go!'",
+            "Enter here to kick ass and take names in randomly generated hell!",
+            "Dungeon time, baby! Click this and prepare for chaos!",
+        ]
+    },
+    'dungeon_wasd_controls': {
+        'normal': [
+            "Use WASD or arrow keys to navigate the dungeon",
+            "Move your character through the dungeon corridors",
+            "Standard movement controls for dungeon exploration",
+            "Navigate using keyboard directional controls",
+            "Control your panda's movement with WASD keys",
+        ],
+        'dumbed-down': [
+            "WASD makes your panda walk! W=up, A=left, S=down, D=right! Easy!",
+            "These keys move your panda around. Like walking but with buttons!",
+            "Press W-A-S-D to go places! It's like a tiny joystick!",
+            "Movement keys! Press them and your panda walks that way!",
+            "WASD = walking controls. Simple as that!",
+        ],
+        'vulgar': [
+            "WASD to move your ass around. Not rocket science, people.",
+            "Movement keys. W-A-S-D. You've played games before, right?",
+            "Use WASD to navigate. Pretty f*cking standard controls here.",
+            "Move with WASD. If you can't figure this out, I can't help you.",
+            "Walking controls. WASD. That's it. Don't overcomplicate this.",
+        ]
+    },
+    'dungeon_attack_control': {
+        'normal': [
+            "Press Space to attack nearby enemies",
+            "Attack enemies within melee range",
+            "Combat action key for engaging monsters",
+            "Deal damage to adjacent enemies",
+            "Primary attack button for dungeon combat",
+        ],
+        'dumbed-down': [
+            "Space bar = punch! Press it near bad guys to hit them!",
+            "This makes your panda attack! Press it to fight monsters!",
+            "The fight button! Press Space when near enemies to KAPOW them!",
+            "Attack key! Get close to monsters and press this to bonk them!",
+            "Press Space to make your panda go HI-YAH! at enemies!",
+        ],
+        'vulgar': [
+            "Space bar = violence. Press it near enemies to f*ck them up.",
+            "Attack button. Get in range and press Space to wreck sh*t.",
+            "Space = beatdown time. Press it to introduce enemies to pain.",
+            "Combat button. Press Space to remind monsters who's boss.",
+            "Attack key. Space bar. Use it to murder things. Got it?",
+        ]
+    },
+    'dungeon_stairs_control': {
+        'normal': [
+            "Press E when standing on stairs to change floors",
+            "Use stairs to navigate between dungeon levels",
+            "Floor transition key for multi-level exploration",
+            "Move up or down floors using the E key",
+            "Interact with stairs to access different levels",
+        ],
+        'dumbed-down': [
+            "E key = use stairs! Stand on stairs and press E to go up or down!",
+            "This makes you use stairs! Find stairs, stand on them, press E!",
+            "Stairs button! E makes you climb up or go down levels!",
+            "Press E on stairs to change floors! Like an elevator but stairs!",
+            "The 'use stairs' key! E when on stairs = go to new floor!",
+        ],
+        'vulgar': [
+            "E = use f*cking stairs. Stand on them, press E, change floors. Easy.",
+            "Stairs key. Find stairs, press E, go to next floor. Not complicated.",
+            "E button uses stairs. Up or down, doesn't matter. Just press it.",
+            "Stair navigation. Press E when on stairs. Boom. New floor. Done.",
+            "E key = level transition. Stand on stairs and press E. That's it.",
+        ]
+    },
 }
 
 

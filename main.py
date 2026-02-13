@@ -7481,24 +7481,28 @@ Built with:
         base_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
         base_items = [
-            ("⭐ Level", 'Level', base_stats.get('Level', 1)),
-            ("✨ Experience", 'Experience', base_stats.get('Experience', '0/100')),
-            ("❤️ Health", 'Health', f"{base_stats.get('Health', 100)}/{base_stats.get('Max Health', 100)}"),
-            ("🛡️ Defense", 'Defense', base_stats.get('Defense', 10)),
-            ("🔮 Magic", 'Magic', base_stats.get('Magic', 10)),
-            ("🧠 Intelligence", 'Intelligence', base_stats.get('Intelligence', 10)),
-            ("💪 Strength", 'Strength', base_stats.get('Strength', 10)),
-            ("🏃 Agility", 'Agility', base_stats.get('Agility', 10)),
-            ("💚 Vitality", 'Vitality', base_stats.get('Vitality', 10)),
-            ("🌟 Skill Points", 'Skill Points', base_stats.get('Skill Points', 0)),
+            ("⭐ Level", 'Level', base_stats.get('Level', 1), 'stat_level'),
+            ("✨ Experience", 'Experience', base_stats.get('Experience', '0/100'), 'stat_experience'),
+            ("❤️ Health", 'Health', f"{base_stats.get('Health', 100)}/{base_stats.get('Max Health', 100)}", 'stat_health'),
+            ("🛡️ Defense", 'Defense', base_stats.get('Defense', 10), 'stat_defense'),
+            ("🔮 Magic", 'Magic', base_stats.get('Magic', 10), 'stat_magic'),
+            ("🧠 Intelligence", 'Intelligence', base_stats.get('Intelligence', 10), 'stat_intelligence'),
+            ("💪 Strength", 'Strength', base_stats.get('Strength', 10), 'stat_strength'),
+            ("🏃 Agility", 'Agility', base_stats.get('Agility', 10), 'stat_agility'),
+            ("💚 Vitality", 'Vitality', base_stats.get('Vitality', 10), 'stat_vitality'),
+            ("🌟 Skill Points", 'Skill Points', base_stats.get('Skill Points', 0), 'stat_skill_points'),
         ]
-        for label, key, value in base_items:
+        for label, key, value, tooltip_id in base_items:
             row = ctk.CTkFrame(base_scroll)
             row.pack(fill="x", padx=10, pady=2)
-            ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150).pack(side="left", padx=5)
+            stat_label = ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150)
+            stat_label.pack(side="left", padx=5)
             val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12), text_color="#00cc00")
             val_lbl.pack(side="right", padx=10)
             self._stats_labels[f'base_{key}'] = val_lbl
+            # Add tooltips
+            if self.tooltip_manager:
+                self._tooltips.append(WidgetTooltip(row, self._get_tooltip_text(tooltip_id), widget_id=tooltip_id, tooltip_manager=self.tooltip_manager))
         
         # ─────── Combat Stats Tab ───────
         combat_stats = stats.get('combat_stats', {})
@@ -7506,22 +7510,26 @@ Built with:
         combat_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
         combat_items = [
-            ("⚔️ Total Attacks", 'Total Attacks', combat_stats.get('Total Attacks', 0)),
-            ("💀 Monsters Slain", 'Monsters Slain', combat_stats.get('Monsters Slain', 0)),
-            ("💥 Damage Dealt", 'Damage Dealt', combat_stats.get('Damage Dealt', 0)),
-            ("🩸 Damage Taken", 'Damage Taken', combat_stats.get('Damage Taken', 0)),
-            ("🎯 Critical Hits", 'Critical Hits', combat_stats.get('Critical Hits', 0)),
-            ("🌀 Perfect Dodges", 'Perfect Dodges', combat_stats.get('Perfect Dodges', 0)),
-            ("✨ Spells Cast", 'Spells Cast', combat_stats.get('Spells Cast', 0)),
-            ("💚 Healing Done", 'Healing Done', combat_stats.get('Healing Done', 0)),
+            ("⚔️ Total Attacks", 'Total Attacks', combat_stats.get('Total Attacks', 0), 'stat_total_attacks'),
+            ("💀 Monsters Slain", 'Monsters Slain', combat_stats.get('Monsters Slain', 0), 'stat_monsters_slain'),
+            ("💥 Damage Dealt", 'Damage Dealt', combat_stats.get('Damage Dealt', 0), 'stat_damage_dealt'),
+            ("🩸 Damage Taken", 'Damage Taken', combat_stats.get('Damage Taken', 0), 'stat_damage_taken'),
+            ("🎯 Critical Hits", 'Critical Hits', combat_stats.get('Critical Hits', 0), 'stat_critical_hits'),
+            ("🌀 Perfect Dodges", 'Perfect Dodges', combat_stats.get('Perfect Dodges', 0), 'stat_critical_hits'),
+            ("✨ Spells Cast", 'Spells Cast', combat_stats.get('Spells Cast', 0), 'stat_critical_hits'),
+            ("💚 Healing Done", 'Healing Done', combat_stats.get('Healing Done', 0), 'stat_critical_hits'),
         ]
-        for label, key, value in combat_items:
+        for label, key, value, tooltip_id in combat_items:
             row = ctk.CTkFrame(combat_scroll)
             row.pack(fill="x", padx=10, pady=2)
-            ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150).pack(side="left", padx=5)
+            stat_label = ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150)
+            stat_label.pack(side="left", padx=5)
             val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12), text_color="#ff6600")
             val_lbl.pack(side="right", padx=10)
             self._stats_labels[f'combat_{key}'] = val_lbl
+            # Add tooltips
+            if self.tooltip_manager:
+                self._tooltips.append(WidgetTooltip(row, self._get_tooltip_text(tooltip_id), widget_id=tooltip_id, tooltip_manager=self.tooltip_manager))
         
         # ─────── Interaction Stats Tab ───────
         interaction_stats = stats.get('interaction_stats', {})
@@ -7805,10 +7813,16 @@ Built with:
         button_frame = ctk.CTkFrame(self.tab_dungeon)
         button_frame.pack(fill="x", padx=10, pady=20)
         
-        ctk.CTkButton(button_frame, text="🏰 Enter Dungeon",
+        enter_dungeon_btn = ctk.CTkButton(button_frame, text="🏰 Enter Dungeon",
                      font=("Arial Bold", 16), height=50,
                      fg_color="#2fa572", hover_color="#1f7050",
-                     command=self.open_dungeon_window).pack(pady=10)
+                     command=self.open_dungeon_window)
+        enter_dungeon_btn.pack(pady=10)
+        
+        # Add tooltip
+        if self.tooltip_manager:
+            self._tooltips.append(WidgetTooltip(enter_dungeon_btn, self._get_tooltip_text('dungeon_enter_button'), 
+                                                widget_id='dungeon_enter_button', tooltip_manager=self.tooltip_manager))
     
     def open_dungeon_window(self):
         """Open a new window with the integrated dungeon system."""
