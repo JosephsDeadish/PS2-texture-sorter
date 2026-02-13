@@ -4804,6 +4804,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 if clothing_item:
                     equipped_items.append(clothing_item.emoji)
             
+            pants_id = getattr(appearance, 'pants', None)
+            if pants_id:
+                pants_item = self.panda_closet.get_item(pants_id)
+                if pants_item:
+                    equipped_items.append(pants_item.emoji)
+            
             if appearance.shoes:
                 shoes_item = self.panda_closet.get_item(appearance.shoes)
                 if shoes_item:

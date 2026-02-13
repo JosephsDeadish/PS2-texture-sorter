@@ -1212,8 +1212,7 @@ class PandaCloset:
                 for other in self.items.values():
                     if (other.category == CustomizationCategory.CLOTHING
                             and other.equipped
-                            and (other.clothing_type == 'pants'
-                                 or other.clothing_type in ('full_body', 'dress'))):
+                            and other.clothing_type in ('pants', 'full_body', 'dress')):
                         other.equipped = False
                 item.equipped = True
                 self.appearance.pants = item_id
