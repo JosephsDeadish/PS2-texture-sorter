@@ -6,15 +6,15 @@ REM
 REM This script builds the application for Windows.
 REM 
 REM Usage:
-REM   build.bat              - Build single EXE (original, portable)
-REM   build.bat folder       - Build one-folder with external assets (faster startup)
+REM   build.bat              - Build one-folder with external assets (DEFAULT, faster startup)
+REM   build.bat single       - Build single EXE (portable, optional)
 REM 
 REM It will:
 REM   1. Check for Python installation
 REM   2. Create/activate virtual environment
 REM   3. Install dependencies
-REM   4. Run PyInstaller to create EXE
-REM   5. Package the final executable
+REM   4. Run PyInstaller to create the build
+REM   5. Package the final output
 REM ============================================================================
 
 echo.
@@ -24,9 +24,9 @@ echo   Author: Dead On The Inside / JosephsDeadish
 echo ========================================================================
 echo.
 
-REM Parse build mode
-set BUILD_MODE=single
-if /I "%1"=="folder" set BUILD_MODE=folder
+REM Parse build mode - DEFAULT is now folder (with external assets)
+set BUILD_MODE=folder
+if /I "%1"=="single" set BUILD_MODE=single
 
 echo Build mode: %BUILD_MODE%
 echo.

@@ -6,21 +6,21 @@ This guide explains how to build the Game Texture Sorter for Windows.
 
 There are **two build modes** available:
 
-### Single-EXE Mode (Default)
+### One-Folder Mode (Default) ⭐
 - **Command**: `build.bat` or `.\build.ps1`
+- **Output**: Folder with EXE + external assets
+- **Pros**: **Much faster startup**, easier asset modification, better performance
+- **Cons**: Multiple files to distribute (but as a single folder)
+- **Best for**: General use, development, testing, users who want fast startup
+
+### Single-EXE Mode (Optional)
+- **Command**: `build.bat single` or `.\build.ps1 single`
 - **Output**: One portable EXE file (~50-100 MB)
 - **Pros**: Fully portable, single file, easy to distribute
 - **Cons**: Slower startup (extracts to temp on each launch)
-- **Best for**: Distribution to end users, USB drive usage
+- **Best for**: Maximum portability when needed
 
-### One-Folder Mode (Faster Performance)
-- **Command**: `build.bat folder`
-- **Output**: Folder with EXE + external assets
-- **Pros**: **Much faster startup**, easier asset modification, better performance
-- **Cons**: Multiple files to distribute
-- **Best for**: Development, testing, users who want fast startup
-
-**Recommended**: Use **one-folder mode** (`build.bat folder`) for better performance!
+**Default behavior**: The one-folder mode is now the default for better performance!
 
 ## Quick Start - Automated Build
 
@@ -28,14 +28,14 @@ The easiest way to build is using the automated build scripts:
 
 ### Option 1: Windows Batch File (Recommended)
 ```cmd
-build.bat folder    # One-folder build (FASTER startup, recommended)
-build.bat           # Single-EXE build (portable)
+build.bat           # One-folder build (DEFAULT, faster startup)
+build.bat single    # Single-EXE build (optional, portable)
 ```
 
 ### Option 2: PowerShell Script (Better error handling)
 ```powershell
-.\build.ps1 folder  # One-folder build (FASTER startup, recommended)
-.\build.ps1         # Single-EXE build (portable)
+.\build.ps1         # One-folder build (DEFAULT, faster startup)
+.\build.ps1 single  # Single-EXE build (optional, portable)
 ```
 
 Both scripts will:
@@ -81,21 +81,21 @@ pip install -r requirements.txt
 
 ### 5. Build with PyInstaller
 
-For **single-EXE** build:
-```cmd
-pyinstaller build_spec.spec --clean --noconfirm
-```
-
-For **one-folder** build (faster startup):
+For **one-folder** build (DEFAULT, faster startup):
 ```cmd
 pyinstaller build_spec_onefolder.spec --clean --noconfirm
 ```
 
+For **single-EXE** build (optional, portable):
+```cmd
+pyinstaller build_spec.spec --clean --noconfirm
+```
+
 ### 6. Find Your Build
 
-**Single-EXE**: The executable will be in: `dist\GameTextureSorter.exe`
+**One-Folder** (default): The application will be in: `dist\GameTextureSorter\`
 
-**One-Folder**: The application will be in: `dist\GameTextureSorter\`
+**Single-EXE** (optional): The executable will be in: `dist\GameTextureSorter.exe`
 
 ## Build Output
 

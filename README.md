@@ -95,25 +95,25 @@ Build a standalone executable using build scripts:
 
 **Windows Batch:**
 ```cmd
-build.bat folder    # One-folder build (FASTER startup, recommended)
-build.bat           # Single-EXE build (portable)
+build.bat           # One-folder build (DEFAULT, faster startup)
+build.bat single    # Single-EXE build (optional, portable)
 ```
 
 **PowerShell:**
 ```powershell
-.\build.ps1 folder  # One-folder build (FASTER startup, recommended)
-.\build.ps1         # Single-EXE build (portable)
+.\build.ps1         # One-folder build (DEFAULT, faster startup)
+.\build.ps1 single  # Single-EXE build (optional, portable)
 ```
 
 **Two build modes available:**
 
-1. **One-Folder Mode** (`build.bat folder`) - **RECOMMENDED**
+1. **One-Folder Mode** (`build.bat`) - **DEFAULT** ⭐
    - Much faster startup (no extraction to temp)
    - Better overall performance
    - External assets for easy modification
    - Output: `dist/GameTextureSorter/` folder with EXE + resources
 
-2. **Single-EXE Mode** (`build.bat`) - For portability
+2. **Single-EXE Mode** (`build.bat single`) - Optional for portability
    - Fully portable single file
    - Slower startup (extracts on each launch)
    - Output: `dist/GameTextureSorter.exe`

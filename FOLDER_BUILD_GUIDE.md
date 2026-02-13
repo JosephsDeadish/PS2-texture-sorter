@@ -1,41 +1,47 @@
 # One-Folder Build Guide 📦
 
-## What's Different?
+## What Changed?
 
-Previously, the build system only created a single-EXE build (~206MB) that extracts everything to a temporary folder on each launch. This causes **slow startup times** and performance issues.
+**The one-folder build is now the DEFAULT!** 🎉
 
-Now, we support **two build modes**:
+Previously, the build system defaulted to a single-EXE build (~206MB) that extracts everything to a temporary folder on each launch, causing **slow startup times** and performance issues.
 
-### 1. Single-EXE Build (Original)
-- **Size**: ~50-100 MB
-- **Startup**: SLOW - extracts to temp folder on every launch
-- **Best for**: Distribution, USB drives, single-file portability
+Now, the **one-folder build is the standard**, with single-EXE as an optional mode for special portability needs.
 
-### 2. One-Folder Build (NEW!) ⭐ **RECOMMENDED**
+## Build Modes
+
+### 1. One-Folder Build (DEFAULT) ⭐
+- **Command**: `build.bat` (no parameters needed!)
 - **Size**: ~100-150 MB folder
 - **Startup**: FAST - no extraction needed!
 - **Best for**: Daily use, development, better performance
+
+### 2. Single-EXE Build (Optional)
+- **Command**: `build.bat single`
+- **Size**: ~50-100 MB
+- **Startup**: SLOW - extracts to temp folder on every launch
+- **Best for**: Special cases requiring single-file portability
 
 ## How to Build
 
 ### Using Windows Batch (Easiest)
 
 ```cmd
-build.bat folder    # One-folder build (FASTER, recommended)
-build.bat           # Single-EXE build (portable)
+build.bat           # One-folder build (DEFAULT, faster)
+build.bat single    # Single-EXE build (optional, portable)
 ```
 
 ### Using PowerShell
 
 ```powershell
-.\build.ps1 folder  # One-folder build (FASTER, recommended)
-.\build.ps1         # Single-EXE build (portable)
+.\build.ps1         # One-folder build (DEFAULT, faster)
+.\build.ps1 single  # Single-EXE build (optional, portable)
 ```
 
 ### Manual Build with PyInstaller
 
 ```cmd
-# One-folder build
+# One-folder build (DEFAULT)
 pyinstaller build_spec_onefolder.spec --clean --noconfirm
 
 # Single-EXE build
@@ -44,9 +50,9 @@ pyinstaller build_spec.spec --clean --noconfirm
 
 ## What You Get
 
-### One-Folder Build Output
+### One-Folder Build Output (DEFAULT)
 
-After running `build.bat folder`, you'll get:
+After running `build.bat`, you'll get:
 
 ```
 dist/
@@ -68,9 +74,9 @@ dist/
         └── models/
 ```
 
-### Single-EXE Build Output
+### Single-EXE Build Output (Optional)
 
-After running `build.bat`, you'll get:
+After running `build.bat single`, you'll get:
 
 ```
 dist/
@@ -79,7 +85,7 @@ dist/
 
 ## Performance Comparison
 
-| Feature | Single-EXE | One-Folder |
+| Feature | Single-EXE (Optional) | One-Folder (DEFAULT) ⭐ |
 |---------|-----------|------------|
 | Startup Time | 10-30 seconds ❌ | 1-3 seconds ✅ |
 | File Size | 50-100 MB | 100-150 MB total |
@@ -88,8 +94,9 @@ dist/
 | Asset Access | Not accessible | ✅ Easy to modify |
 | Theme Customization | Embedded | ✅ External files |
 | Cache Storage | Temp folder | ✅ Local folder |
+| **Default Mode** | No (use `single` flag) | **Yes** ✅ |
 
-## Why One-Folder is Better
+## Why One-Folder is Now the Default
 
 ### 🚀 Much Faster Startup
 - **Single-EXE**: Extracts ~100MB to temp folder on EVERY launch
@@ -112,14 +119,14 @@ dist/
 
 ## How to Distribute
 
-### For End Users (One-Folder)
-1. Build with `build.bat folder`
+### For End Users (One-Folder - Standard)
+1. Build with `build.bat` (default)
 2. Zip the entire `dist/GameTextureSorter/` folder
 3. Users extract and run `GameTextureSorter.exe`
 4. They can move the folder anywhere
 
-### For Maximum Portability (Single-EXE)
-1. Build with `build.bat`
+### For Maximum Portability (Single-EXE - Optional)
+1. Build with `build.bat single`
 2. Distribute `dist/GameTextureSorter.exe`
 3. Users can run it from anywhere, including USB drives
 
@@ -131,11 +138,11 @@ The one-folder build is slightly larger (~100-150 MB vs 50-100 MB) because files
 ### "I want both builds"
 You can create both! Just run:
 ```cmd
-build.bat           # Creates dist/GameTextureSorter.exe
-build.bat folder    # Creates dist/GameTextureSorter/ folder
+build.bat           # Creates dist/GameTextureSorter/ folder (DEFAULT)
+build.bat single    # Creates dist/GameTextureSorter.exe (optional)
 ```
 
-Keep them in separate releases or rename the EXE before building the folder.
+Keep them in separate releases or move the folder before building the single-EXE.
 
 ### "Where's my database/config/cache?"
 - **Single-EXE**: Stored in `%TEMP%\<random>\_MEI<numbers>\` (temporary)
@@ -148,17 +155,17 @@ No, you need to rebuild. The internal structure is different:
 
 ## Recommended Usage
 
-For **developers and power users**:
+For **everyone** (now the default):
 ```cmd
-build.bat folder
+build.bat           # One-folder build - faster, better performance
 ```
 
-For **distributing to non-technical users** who want simplicity:
+For **special portability needs only**:
 ```cmd
-build.bat
+build.bat single    # Single-EXE - if you absolutely need one file
 ```
 
-For **best of both worlds**, provide both options in your release!
+The one-folder build is now the standard because of its superior performance!
 
 ## Technical Details
 

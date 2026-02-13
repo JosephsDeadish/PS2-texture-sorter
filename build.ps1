@@ -7,19 +7,19 @@
 # It provides better error handling and progress reporting than the batch file.
 #
 # Usage:
-#   .\build.ps1          - Build single-EXE (portable)
-#   .\build.ps1 folder   - Build one-folder with external assets (faster startup)
+#   .\build.ps1          - Build one-folder with external assets (DEFAULT, faster startup)
+#   .\build.ps1 single   - Build single-EXE (portable, optional)
 ################################################################################
 
 param(
     [Parameter(Position=0)]
     [ValidateSet("single", "folder", "")]
-    [string]$BuildMode = "single"
+    [string]$BuildMode = "folder"
 )
 
-# If no parameter or empty, default to single
+# If no parameter or empty, default to folder
 if ($BuildMode -eq "") {
-    $BuildMode = "single"
+    $BuildMode = "folder"
 }
 
 $ErrorActionPreference = "Stop"
