@@ -28,7 +28,7 @@ SVG (Scalable Vector Graphics) support requires the Cairo graphics library and i
 
 **The solution:**
 We provide two build options:
-1. **Standard build** (`build_spec.spec`) - No SVG support, CI-compatible, smaller size
+1. **Standard build** (`build_spec_onefolder.spec`) - No SVG support, CI-compatible, smaller size
 2. **SVG-enabled build** (`build_spec_with_svg.spec`) - Full SVG support, requires Cairo DLLs
 
 The application handles missing SVG support gracefully - it will simply log a warning if you try to load an SVG file without Cairo DLLs.
@@ -532,7 +532,7 @@ python main.py
 Use the standard build without SVG:
 ```yaml
 - name: Build (no SVG)
-  run: pyinstaller build_spec.spec --clean --noconfirm
+  run: pyinstaller build_spec_onefolder.spec --clean --noconfirm
 ```
 
 SVG support can be added in a separate release build with Cairo DLLs.

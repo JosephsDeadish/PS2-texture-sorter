@@ -6,7 +6,7 @@ Author: Dead On The Inside / JosephsDeadish
 This spec file creates a single-EXE application for Windows
 with SVG support by bundling Cairo DLLs and dependencies.
 
-For standard builds without SVG, use: build_spec.spec
+For standard builds without SVG, use: build_spec_onefolder.spec
 """
 
 import sys

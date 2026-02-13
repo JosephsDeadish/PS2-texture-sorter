@@ -151,7 +151,7 @@ The EXE is large (~50-100 MB) because it includes:
 This is normal for single-EXE applications. The benefit is **zero dependencies** for end users.
 
 ### UPX Compression Errors
-If you get UPX-related errors, edit `build_spec.spec` and change:
+If you get UPX-related errors, edit `build_spec_onefolder.spec` and change:
 ```python
 upx=True,
 ```
@@ -202,13 +202,13 @@ To integrate with CI/CD pipelines (GitHub Actions, etc.):
 - name: Build EXE
   run: |
     python -m pip install -r requirements.txt
-    pyinstaller build_spec.spec --clean --noconfirm
+    pyinstaller build_spec_onefolder.spec --clean --noconfirm
     
 - name: Upload Artifact
   uses: actions/upload-artifact@v3
   with:
     name: GameTextureSorter
-    path: dist/GameTextureSorter.exe
+    path: dist/GameTextureSorter/
 ```
 
 ## Next Steps

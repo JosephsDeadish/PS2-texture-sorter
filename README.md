@@ -123,7 +123,7 @@ SVG support is optional and requires Cairo DLLs. Two build options are available
 
 **Standard Build (no SVG):**
 ```bash
-pyinstaller build_spec.spec
+pyinstaller build_spec_onefolder.spec
 ```
 
 **Build with SVG Support:**
@@ -310,7 +310,7 @@ GameTextureSorter/
 │   ├── utils/                   # Helper utilities
 │   └── resources/               # Icons, cursors, themes, sounds
 ├── requirements.txt             # Python dependencies
-├── build_spec.spec              # PyInstaller configuration
+├── build_spec_onefolder.spec     # PyInstaller configuration (one-folder build)
 ├── file_version_info.txt        # EXE metadata
 ├── build.bat                    # Automated build (Batch)
 ├── build.ps1                    # Automated build (PowerShell)
