@@ -896,8 +896,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_bob = sit_phase * 28 + math.sin(phase * 0.4) * 2  # Body drops low for squat
         elif anim == 'belly_grab':
             # Both hands reach to belly, grab it, and shake causing jiggle
+            # Expanded to 60 frames for smoother belly grab animation
             grab_phase = min(1.0, frame_idx / 12.0)
-            grab_cycle = (frame_idx % 48) / 48.0
+            grab_cycle = (frame_idx % 60) / 60.0
             if grab_cycle < 0.25:
                 # Arms reaching inward to belly
                 ramp = grab_cycle / 0.25
@@ -1186,7 +1187,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 body_bob = 4 * (1 - settle) + math.sin(phase * 0.5) * 2
         elif anim == 'cartwheel':
             # Full dramatic cartwheel with body rotation and ground contact
-            cart_cycle = (frame_idx % 36) / 36.0  # Slower for more detail
+            # Expanded to 60 frames for ultra-smooth rotation
+            cart_cycle = (frame_idx % 60) / 60.0
             rotation = cart_cycle * 2 * math.pi
             # Multi-phase cartwheel: windup, rotate, land
             if cart_cycle < 0.15:
@@ -1210,7 +1212,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 body_bob = 8 * math.sin(land * math.pi) * (1 - land * 0.6)
         elif anim == 'backflip':
             # Dramatic backflip with full rotation and landing
-            flip_phase = (frame_idx % 36) / 36.0  # Slower for detail
+            # Expanded to 60 frames for ultra-smooth rotation
+            flip_phase = (frame_idx % 60) / 60.0
             if flip_phase < 0.2:
                 # Crouch with arms back
                 ramp = flip_phase / 0.2
@@ -1572,13 +1575,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         if anim == 'dancing':
             body_sway = math.sin(phase * 1.5) * 6
         elif anim == 'cartwheel':
-            cart_cycle = (frame_idx % 36) / 36.0
+            cart_cycle = (frame_idx % 60) / 60.0
             if 0.15 < cart_cycle < 0.75:
                 rot_t = (cart_cycle - 0.15) / 0.6
                 body_sway = math.sin(rot_t * 2 * math.pi) * 15
         elif anim == 'spinning':
             # Large sway to simulate the body rotating around its center
-            spin_cycle = (frame_idx % 48) / 48.0
+            spin_cycle = (frame_idx % 60) / 60.0
             spin_angle = spin_cycle * 2 * math.pi
             body_sway = math.sin(spin_angle) * 18
         elif anim == 'belly_rub':
@@ -1595,7 +1598,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_sway = math.sin(phase * 2) * 5
         elif anim == 'backflip':
             # Backward rotation: body tilts backward through the flip
-            flip_phase = (frame_idx % 36) / 36.0
+            flip_phase = (frame_idx % 60) / 60.0
             if flip_phase < 0.2:
                 body_sway = 0
             elif flip_phase < 0.35:
@@ -3201,7 +3204,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
 
         # --- Backflip: rotate the entire body backward through a full 360° ---
         if anim == 'backflip':
-            flip_phase = (frame_idx % 36) / 36.0
+            flip_phase = (frame_idx % 60) / 60.0
             if 0.35 < flip_phase < 0.7:
                 # During the airborne rotation, tilt the whole body
                 flip_t = (flip_phase - 0.35) / 0.35
@@ -5893,8 +5896,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._prev_drag_time = now
         
         # Update facing direction based on drag velocity
-        # Only update facing when grabbed by body/butt — dragging by limbs or
-        # ears should not cause the panda to change the direction he's facing.
+        # CRITICAL: Only update facing when grabbed by body/butt.
+        # When dragged by limbs (arms, legs, ears), the panda should NOT change
+        # the direction he's facing - he should maintain his orientation and just
+        # be rotated/flipped by the body angle (like being dragged away).
+        # Exception: When dragged by foot upward, body rotates upside-down but
+        # facing direction stays locked - this creates the "dragged away" effect.
         # IMPORTANT: Limbs continue to dangle even when facing direction changes
         # during belly/body grabs - the dangle physics is independent of facing.
         vx = self._toss_velocity_x
@@ -5923,8 +5930,20 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._detect_drag_patterns()
         
         # Compute body hang angle based on grabbed part and drag velocity.
-        # Legs: full rotation range (can flip upside down).
-        # Arms/ears: partial tilt (body sways from the grabbed limb).
+        # This creates the visual rotation effect without changing facing direction.
+        # 
+        # Legs/Feet: Full rotation range (can flip completely upside down).
+        #   - Body rotates to follow drag direction
+        #   - Facing direction STAYS THE SAME (locked)
+        #   - Result: "dragged away" appearance with body rotating
+        # 
+        # Arms/Ears: Partial tilt (body sways from grabbed limb, max ~45°).
+        #   - Body tilts in drag direction but limited rotation
+        #   - Facing direction STAYS THE SAME (locked)
+        # 
+        # Body/Butt: No body rotation applied here.
+        #   - Facing direction CHANGES with drag (handled above)
+        #   - No rotation angle - panda maintains upright orientation
         grabbed = self._drag_grab_part
         drag_speed = (vx**2 + vy**2) ** 0.5
         if grabbed in ('left_leg', 'right_leg'):
@@ -5935,6 +5954,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self._is_upside_down = False
             
             # Full rotation: body hangs from the foot in the drag direction
+            # This creates smooth rotation as the foot is pulled in any direction
             if drag_speed > 1.5:
                 angle = math.atan2(-vy, -vx) + math.pi / 2
                 self._drag_body_angle_target = math.atan2(math.sin(angle), math.cos(angle))
