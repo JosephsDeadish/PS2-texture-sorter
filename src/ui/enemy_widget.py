@@ -17,6 +17,8 @@ except ImportError:
     ctk = None
 
 from src.features.enemy_system import Enemy
+from src.features.damage_system import DamageTracker, DamageCategory, LimbType
+from src.ui.visual_effects_renderer import VisualEffectsRenderer
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +85,10 @@ class EnemyWidget(ctk.CTkFrame if ctk else tk.Frame):
         self.animation_timer = None
         self.movement_timer = None
         self._destroyed = False
+        
+        # Damage tracking and visual effects
+        self.damage_tracker = DamageTracker()
+        self.vfx_renderer = VisualEffectsRenderer()
         
         # Configure the proxy frame as transparent
         if ctk:
@@ -175,6 +181,35 @@ class EnemyWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Fallback position
             self._toplevel.geometry(f"+100+100")
     
+    def take_damage(self, amount: float, category: DamageCategory = DamageCategory.SHARP,
+                   limb: LimbType = LimbType.TORSO, can_sever: bool = False) -> dict:
+        """
+        Apply damage to the enemy.
+        
+        Args:
+            amount: Damage amount
+            category: Type of damage
+            limb: Which limb to damage
+            can_sever: Whether this hit can sever limbs (critical hits)
+            
+        Returns:
+            Dict with damage result info
+        """
+        # Apply damage to damage tracker
+        result = self.damage_tracker.apply_damage(limb, category, amount, can_sever)
+        
+        # Also apply damage to enemy health
+        self.enemy.take_damage(amount)
+        
+        # Check if enemy died
+        if not self.enemy.is_alive():
+            self._handle_death()
+        else:
+            # Redraw to show wounds
+            self._draw_enemy()
+        
+        return result
+    
     def _start_animation(self):
         """Start the animation loop."""
         if not self._destroyed:
@@ -246,6 +281,23 @@ class EnemyWidget(ctk.CTkFrame if ctk else tk.Frame):
             fill="#FFFFFF" if sys.platform == 'win32' else "#000000",
             tags="level"
         )
+        
+        # Draw damage effects (wounds, stuck projectiles)
+        wounds = self.damage_tracker.get_all_wounds()
+        if wounds:
+            self.vfx_renderer.render_wounds(c, wounds, cx, cy, scale=0.8)
+        
+        stuck_projectiles = self.damage_tracker.get_stuck_projectiles()
+        if stuck_projectiles:
+            self.vfx_renderer.render_stuck_projectiles(c, stuck_projectiles, cx, cy, scale=0.8)
+        
+        # Draw bleeding effect if bleeding
+        if self.damage_tracker.total_bleeding_rate > 0:
+            self.vfx_renderer.render_bleeding_effect(
+                c, cx, cy + 20, 
+                self.damage_tracker.total_bleeding_rate,
+                self.animation_frame
+            )
     
     def _start_movement(self):
         """Start the movement loop."""
