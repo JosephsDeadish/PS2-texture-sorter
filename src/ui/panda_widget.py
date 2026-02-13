@@ -880,10 +880,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 body_bob = math.sin(phase * 3) * 5
         elif anim in ('sleeping', 'laying_down'):
             # Settle into sleeping pose over ~30 frames, then gentle breathing
+            # Body should be very low like fully laying down
             settle_phase = min(1.0, frame_idx / 30.0)
-            leg_swing = (1 - settle_phase) * math.sin(phase) * 3 + settle_phase * 8
-            arm_swing = settle_phase * 10  # arms rest tucked in
-            body_bob = settle_phase * 48 + math.sin(phase * 0.3) * 1.5  # settles to 48px low
+            leg_swing = (1 - settle_phase) * math.sin(phase) * 3 + settle_phase * 10  # Legs more extended
+            arm_swing = settle_phase * 12  # arms rest tucked in, further forward
+            body_bob = settle_phase * 55 + math.sin(phase * 0.3) * 1.5  # Lower to ground (was 48, now 55)
         elif anim in ('laying_back', 'laying_side'):
             leg_swing = math.sin(phase * 0.3) * 2
             arm_swing = 5
@@ -895,28 +896,28 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = sit_phase * 10 + math.sin(phase * 0.5) * 2  # Arms resting outward on knees
             body_bob = sit_phase * 28 + math.sin(phase * 0.4) * 2  # Body drops low for squat
         elif anim == 'belly_grab':
-            # Both hands reach to belly, grab it, and shake causing jiggle
+            # Both hands reach DRAMATICALLY to belly center, grab it, and shake causing STRONG jiggle
             # Expanded to 60 frames for smoother belly grab animation
             grab_phase = min(1.0, frame_idx / 12.0)
             grab_cycle = (frame_idx % 60) / 60.0
             if grab_cycle < 0.25:
-                # Arms reaching inward to belly
+                # Arms reaching inward STRONGLY to belly center
                 ramp = grab_cycle / 0.25
-                arm_swing = -ramp * 20  # Both arms move strongly inward
-                leg_swing = ramp * 3
-                body_bob = ramp * 4
+                arm_swing = -ramp * 35  # Much stronger inward reach (was -20)
+                leg_swing = ramp * 5  # More leg movement
+                body_bob = ramp * 6  # More body lean forward
             elif grab_cycle < 0.75:
-                # Grabbing and shaking belly — wobble effect
+                # Grabbing and SHAKING belly hard — strong wobble effect
                 shake_t = (grab_cycle - 0.25) / 0.5
-                arm_swing = -20 + math.sin(shake_t * 8 * math.pi) * 4  # Arms vibrate on belly
-                leg_swing = math.sin(shake_t * 6 * math.pi) * 3
-                body_bob = 4 + math.sin(shake_t * 8 * math.pi) * 5  # Jiggle wobble
+                arm_swing = -35 + math.sin(shake_t * 10 * math.pi) * 8  # Arms shake HARD on belly (was 4)
+                leg_swing = math.sin(shake_t * 8 * math.pi) * 6  # More leg bounce (was 3)
+                body_bob = 6 + math.sin(shake_t * 10 * math.pi) * 10  # STRONG jiggle wobble (was 5)
             else:
                 # Release, settle back
                 settle = (grab_cycle - 0.75) / 0.25
-                arm_swing = -20 * (1 - settle) + math.sin(phase) * 2 * (1 - settle)
-                leg_swing = 3 * (1 - settle)
-                body_bob = 4 * (1 - settle) + math.sin(phase * 0.5) * 2
+                arm_swing = -35 * (1 - settle) + math.sin(phase) * 3 * (1 - settle)
+                leg_swing = 5 * (1 - settle) * (1 - settle)  # Decay faster
+                body_bob = 6 * (1 - settle) + math.sin(phase * 0.5) * 2
         elif anim == 'belly_jiggle':
             # Belly poke jiggle - bouncy wobble that decays
             jiggle_phase = min(1.0, frame_idx / 36.0)  # decay over ~36 frames
@@ -1081,38 +1082,38 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = -18 * (1 - settle) + math.sin(phase * 2) * 5 * (1 - settle)
                 body_bob = 2 * (1 - settle)
         elif anim == 'jumping':
-            # Expanded to 60 frames for smoother jumping motion
+            # Expanded to 60 frames - BOTH FEET TOGETHER jumping motion
             jump_cycle = (frame_idx % 60) / 60.0
             if jump_cycle < 0.15:
-                # Crouch down — both legs bend together
+                # Crouch down — both legs bend together, symmetric
                 crouch = jump_cycle / 0.15
-                leg_swing = crouch * 10  # Legs bend down (squat)
-                arm_swing = crouch * 6
-                body_bob = crouch * 14  # Body drops in crouch
+                leg_swing = 0  # NO leg swing - both feet stay together!
+                arm_swing = crouch * 8  # Arms swing back for momentum
+                body_bob = crouch * 16  # Body drops in crouch
             elif jump_cycle < 0.35:
-                # Launch upward — both feet spring up, body rises high
+                # Launch upward — both feet spring up together
                 launch = (jump_cycle - 0.15) / 0.2
-                leg_swing = 10 - launch * 20  # Legs snap up together
-                arm_swing = 6 - launch * 28  # Arms swing up
-                body_bob = 14 - launch * 44  # Large upward movement
+                leg_swing = 0  # Legs stay together during launch
+                arm_swing = 8 - launch * 32  # Arms swing up powerfully
+                body_bob = 16 - launch * 50  # Large upward spring movement
             elif jump_cycle < 0.55:
-                # Airborne / peak — legs tucked, arms up, body high
+                # Airborne / peak — both legs tucked together, arms up
                 air = (jump_cycle - 0.35) / 0.2
-                leg_swing = -10 + math.sin(air * math.pi) * 3  # Both legs tucked up
-                arm_swing = -22 + math.sin(air * math.pi) * 4  # Arms raised
-                body_bob = -30 + math.sin(air * math.pi) * 4  # Peak height
+                leg_swing = 0  # Legs stay together at peak
+                arm_swing = -24 + math.sin(air * math.pi) * 4  # Arms raised high
+                body_bob = -34 + math.sin(air * math.pi) * 3  # Peak height with float
             elif jump_cycle < 0.75:
-                # Falling down — legs extend for landing
+                # Falling down — both legs extend together for landing
                 fall = (jump_cycle - 0.55) / 0.2
-                leg_swing = -10 + fall * 14  # Legs come back down together
-                arm_swing = -22 + fall * 26
-                body_bob = -30 + fall * 38  # Fall back to ground
+                leg_swing = 0  # Still together on the way down
+                arm_swing = -24 + fall * 30  # Arms come back down
+                body_bob = -34 + fall * 42  # Fall back to ground
             else:
-                # Landing bounce — slight squash
+                # Landing bounce — slight squash, both feet hit together
                 land = (jump_cycle - 0.75) / 0.25
-                leg_swing = 4 * math.sin(land * math.pi * 2) * (1 - land)
-                arm_swing = 4 * math.sin(land * math.pi * 2) * (1 - land)
-                body_bob = 8 * math.sin(land * math.pi) * (1 - land * 0.7)
+                leg_swing = 0  # Feet stay together on landing!
+                arm_swing = 6 * math.sin(land * math.pi * 2) * (1 - land)
+                body_bob = 8 + 6 * math.sin(land * math.pi) * (1 - land * 0.7)  # Squash and bounce
         elif anim == 'yawning':
             # Expanded to 60 frames for smoother yawning motion
             yawn_cycle = (frame_idx % 60) / 60.0
@@ -1274,11 +1275,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = 18 + math.sin(phase * 0.3) * 2  # Arms spread wide outward
             body_bob = 50  # Very low position (on ground)
         elif anim == 'lay_on_side':
-            # Lying on side like a person: extreme sideways tilt with body very low
+            # Lying on side: body positioned as if lying down, not compressed
+            # This creates a proper side-lying pose
             settle = min(1.0, frame_idx / 24.0)  # settle over ~24 frames
-            leg_swing = settle * 14 + math.sin(phase * 0.3) * 1  # Legs together, forward
-            arm_swing = settle * (-15) + math.sin(phase * 0.2) * 1  # Arm tucked under head
-            body_bob = settle * 60 + math.sin(phase * 0.3) * 1  # Very low to ground
+            leg_swing = settle * 8 + math.sin(phase * 0.3) * 1  # Legs together, slightly bent
+            arm_swing = settle * (-8) + math.sin(phase * 0.2) * 1  # One arm tucked, one extended
+            body_bob = settle * 45 + math.sin(phase * 0.3) * 1.5  # Low to ground but not extreme
         elif anim in ('walking_left', 'walking_right'):
             # Walking sideways: multi-layered stride with foot contact, toe-off,
             # mid-stride, and knee lift for smooth realistic motion
@@ -1591,9 +1593,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         elif anim in ('idle', 'working', 'sarcastic', 'thinking'):
             body_sway = math.sin(phase * 0.3) * 2
         elif anim == 'lay_on_side':
-            # Very large sway to tilt the body far to the side — like toppling over
+            # Moderate sway to show lying on side without extreme tilt
             settle = min(1.0, frame_idx / 24.0)
-            body_sway = settle * 45 + math.sin(phase * 0.2) * 0.5
+            body_sway = settle * 25 + math.sin(phase * 0.2) * 0.5  # Reduced from 45 to 25
         elif anim == 'celebrating':
             body_sway = math.sin(phase * 2) * 5
         elif anim == 'backflip':
@@ -3168,7 +3170,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               font=("Arial Bold", int(10 * sx)),
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
-        # --- Lay-on-side tilt: vertically compress and skew to simulate rotation ---
+        # --- Lay-on-side tilt: show side position without too much compression ---
         if anim in ('lay_on_side', 'tip_over_side'):
             if anim == 'lay_on_side':
                 settle = min(1.0, frame_idx / 24.0)
@@ -3178,10 +3180,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 # Pivot at the bottom-center (where the body contacts the ground)
                 ground_y = h - int(10 * sy)
                 pivot_x = w / 2
-                # Compress vertically to simulate body rotated onto its side
-                v_scale = 1.0 - settle * 0.45  # squish to ~55% height
+                # Light compression to simulate body rotated onto its side (not too much!)
+                v_scale = 1.0 - settle * 0.25  # squish to ~75% height (was 55%)
                 # Widen horizontally slightly (body seen from side is wider on ground)
-                h_scale = 1.0 + settle * 0.15
+                h_scale = 1.0 + settle * 0.1  # Less widening
                 c.scale("all", pivot_x, ground_y, h_scale, v_scale)
 
         # --- Barrel roll: rotate the entire body sideways through a full 360° ---
