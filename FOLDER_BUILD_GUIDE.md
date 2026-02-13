@@ -7,7 +7,7 @@ Previously, the build system only created a single-EXE build (~206MB) that extra
 Now, we support **two build modes**:
 
 ### 1. Single-EXE Build (Original)
-- **Size**: ~50-100 MB (or larger with all features)
+- **Size**: ~50-100 MB
 - **Startup**: SLOW - extracts to temp folder on every launch
 - **Best for**: Distribution, USB drives, single-file portability
 
