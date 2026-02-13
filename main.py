@@ -7851,9 +7851,12 @@ Built with:
             dungeon_window.title("🏰 Dungeon Explorer")
             dungeon_window.geometry("1000x700")
             
-            # Make it modal-ish
+            # Make it modal-ish (grab_set may fail on some platforms)
             dungeon_window.focus_set()
-            dungeon_window.grab_set()
+            try:
+                dungeon_window.grab_set()
+            except Exception:
+                pass
             
             # Create dungeon
             dungeon = IntegratedDungeon(width=80, height=80, num_floors=5)
@@ -8109,12 +8112,18 @@ Built with:
             def on_close():
                 """Handle window close."""
                 game_state['running'] = False
-                dungeon_window.grab_release()
+                try:
+                    dungeon_window.grab_release()
+                except Exception:
+                    pass
                 dungeon_window.destroy()
             
             # Bind events
             dungeon_window.bind('<KeyPress>', on_key)
             dungeon_window.protocol("WM_DELETE_WINDOW", on_close)
+            
+            # Reveal the area around the spawn point so the player can see tiles
+            renderer.mark_explored(player_x, player_y, radius=5)
             
             # Initial render and start game loop
             render_game()

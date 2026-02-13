@@ -2559,7 +2559,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             _drag_anims = ('dragging', 'wall_hit')
             is_being_dragged = (anim in _drag_anims and self.is_dragging)
         
-        if not self._is_being_dragged_on_ground and ((is_being_dragged) or
+        # Only remap to directional walking views for body/butt grabs and
+        # toss physics.  Limb/ear/head grabs keep the front-facing 'dragging'
+        # animation so dangle physics and body-angle rotation remain visible.
+        _body_grab_parts = ('body', 'butt')
+        _is_body_grab_drag = is_being_dragged and self._drag_grab_part in _body_grab_parts
+        if not self._is_being_dragged_on_ground and ((_is_body_grab_drag) or
             (anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing)):
             facing = getattr(self, '_facing_direction', 'front')
             if facing == 'left':
@@ -2582,10 +2587,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             facing_right = (anim == 'walking_right')
             side_dir = 1 if facing_right else -1
             
+            # Dangle offsets for side views during drag (body/butt grabs)
+            _side_leg_dangle = int((self._dangle_left_leg + self._dangle_right_leg) / 2) if is_being_dragged else 0
+            _side_arm_dangle = int((self._dangle_left_arm + self._dangle_right_arm) / 2) if is_being_dragged else 0
+            
             leg_top = int(145 * sy + by)
             leg_len = int(30 * sy)
             # Back leg (further from viewer)
-            back_leg_swing = -leg_swing
+            back_leg_swing = -leg_swing + _side_leg_dangle
             c.create_oval(
                 cx_draw - int(8 * sx), leg_top + back_leg_swing,
                 cx_draw + int(16 * sx), leg_top + leg_len + back_leg_swing,
@@ -2616,7 +2625,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             
             # Front leg (closer to viewer)
-            front_leg_swing = leg_swing
+            front_leg_swing = leg_swing + _side_leg_dangle
             c.create_oval(
                 cx_draw - int(16 * sx), leg_top + front_leg_swing,
                 cx_draw + int(8 * sx), leg_top + leg_len + front_leg_swing,
@@ -2631,7 +2640,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Back arm (further from viewer, behind body)
             arm_top = int(95 * sy + by)
             arm_len = int(35 * sy)
-            ba_swing = -arm_swing
+            ba_swing = -arm_swing + _side_arm_dangle
             c.create_oval(
                 cx_draw - int(10 * sx) - int(8 * sx * side_dir), arm_top + ba_swing,
                 cx_draw + int(10 * sx) - int(8 * sx * side_dir), arm_top + arm_len + ba_swing,
@@ -2639,7 +2648,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             
             # Front arm (closer to viewer, in front of body)
-            fa_swing = arm_swing
+            fa_swing = arm_swing + _side_arm_dangle
             c.create_oval(
                 cx_draw - int(10 * sx) + int(8 * sx * side_dir), arm_top + fa_swing,
                 cx_draw + int(10 * sx) + int(8 * sx * side_dir), arm_top + arm_len + fa_swing,
@@ -2731,12 +2740,18 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         elif anim == 'walking_up':
             # --- BACK VIEW: panda walking away from viewer ---
+            # Dangle offsets during drag (body/butt grabs)
+            _back_left_leg_dangle = int(self._dangle_left_leg) if is_being_dragged else 0
+            _back_right_leg_dangle = int(self._dangle_right_leg) if is_being_dragged else 0
+            _back_left_arm_dangle = int(self._dangle_left_arm) if is_being_dragged else 0
+            _back_right_arm_dangle = int(self._dangle_right_arm) if is_being_dragged else 0
+            
             leg_top = int(145 * sy + by)
             leg_len = int(30 * sy)
             
             # Left leg
             left_leg_x = cx_draw - int(25 * sx)
-            left_leg_swing_val = leg_swing
+            left_leg_swing_val = leg_swing + _back_left_leg_dangle
             c.create_oval(
                 left_leg_x - int(12 * sx), leg_top + left_leg_swing_val,
                 left_leg_x + int(12 * sx), leg_top + leg_len + left_leg_swing_val,
@@ -2749,7 +2764,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             # Right leg
             right_leg_x = cx_draw + int(25 * sx)
-            right_leg_swing_val = -leg_swing
+            right_leg_swing_val = -leg_swing + _back_right_leg_dangle
             c.create_oval(
                 right_leg_x - int(12 * sx), leg_top + right_leg_swing_val,
                 right_leg_x + int(12 * sx), leg_top + leg_len + right_leg_swing_val,
@@ -2783,13 +2798,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Arms
             arm_top = int(95 * sy + by)
             arm_len = int(35 * sy)
-            la_swing = arm_swing
+            la_swing = arm_swing + _back_left_arm_dangle
             c.create_oval(
                 cx_draw - int(55 * sx), arm_top + la_swing,
                 cx_draw - int(30 * sx), arm_top + arm_len + la_swing,
                 fill=black, outline=black, tags="arm"
             )
-            ra_swing = -arm_swing
+            ra_swing = -arm_swing + _back_right_arm_dangle
             c.create_oval(
                 cx_draw + int(30 * sx), arm_top + ra_swing,
                 cx_draw + int(55 * sx), arm_top + arm_len + ra_swing,
@@ -2845,13 +2860,19 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         elif anim == 'walking_down':
             # --- FRONT VIEW: panda walking toward viewer ---
+            # Dangle offsets during drag (body/butt grabs)
+            _down_left_leg_dangle = int(self._dangle_left_leg) if is_being_dragged else 0
+            _down_right_leg_dangle = int(self._dangle_right_leg) if is_being_dragged else 0
+            _down_left_arm_dangle = int(self._dangle_left_arm) if is_being_dragged else 0
+            _down_right_arm_dangle = int(self._dangle_right_arm) if is_being_dragged else 0
+            
             # Similar to default front view but with walking animation
             leg_top = int(145 * sy + by)
             leg_len = int(30 * sy)
             
             # Left leg with walking animation
             left_leg_x = cx_draw - int(25 * sx)
-            left_leg_swing_val = leg_swing
+            left_leg_swing_val = leg_swing + _down_left_leg_dangle
             c.create_oval(
                 left_leg_x - int(12 * sx), leg_top + left_leg_swing_val,
                 left_leg_x + int(12 * sx), leg_top + leg_len + left_leg_swing_val,
@@ -2865,7 +2886,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Right leg with walking animation (opposite phase)
             right_leg_x = cx_draw + int(25 * sx)
-            right_leg_swing_val = -leg_swing
+            right_leg_swing_val = -leg_swing + _down_right_leg_dangle
             c.create_oval(
                 right_leg_x - int(12 * sx), leg_top + right_leg_swing_val,
                 right_leg_x + int(12 * sx), leg_top + leg_len + right_leg_swing_val,
@@ -2900,14 +2921,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_top = int(95 * sy + by)
             arm_len = int(35 * sy)
             # Left arm
-            la_swing = arm_swing
+            la_swing = arm_swing + _down_left_arm_dangle
             c.create_oval(
                 cx_draw - int(62 * sx), arm_top + la_swing,
                 cx_draw - int(36 * sx), arm_top + arm_len + la_swing,
                 fill=black, outline=black, tags="arm"
             )
             # Right arm (opposite phase)
-            ra_swing = -arm_swing
+            ra_swing = -arm_swing + _down_right_arm_dangle
             c.create_oval(
                 cx_draw + int(36 * sx), arm_top + ra_swing,
                 cx_draw + int(62 * sx), arm_top + arm_len + ra_swing,
@@ -3484,15 +3505,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                             'left_arm', 'right_arm',
                             'left_ear', 'right_ear')
         if is_being_dragged and self._drag_grab_part in _grabbed_rotates:
-            # Smoothly animate _drag_body_angle toward target
-            angle_speed = 0.15  # radians per frame
+            # Smoothly animate _drag_body_angle toward target using exponential lerp
+            # for jerk-free rotation (0.30 = ~30% of gap closed per frame)
             diff = self._drag_body_angle_target - self._drag_body_angle
             # Normalize diff to [-pi, pi] using atan2
             diff = math.atan2(math.sin(diff), math.cos(diff))
-            if abs(diff) < angle_speed:
-                self._drag_body_angle = self._drag_body_angle_target
-            else:
-                self._drag_body_angle += angle_speed if diff > 0 else -angle_speed
+            self._drag_body_angle += diff * 0.30
 
             angle = self._drag_body_angle
             if abs(angle) > 0.05:
@@ -3505,7 +3523,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     pivot_y = int(100 * sy + by)
                 else:  # ears
                     pivot_y = int(25 * sy + by)
-                pivot_x = w / 2
+                # Anchor pivot_x on the grabbed side so the limb stays under the mouse
+                if self._drag_grab_part in ('left_leg', 'left_arm', 'left_ear'):
+                    pivot_x = w / 2 - int(25 * sx)
+                elif self._drag_grab_part in ('right_leg', 'right_arm', 'right_ear'):
+                    pivot_x = w / 2 + int(25 * sx)
+                else:
+                    pivot_x = w / 2
                 # cos(angle) = vertical scale (1=upright, -1=upside down)
                 # sin(angle) = horizontal tilt
                 v_scale = math.cos(angle)
