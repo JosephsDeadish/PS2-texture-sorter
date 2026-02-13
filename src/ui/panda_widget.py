@@ -1855,8 +1855,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Apply body sway to center position for turning/direction effect
         cx_draw = cx + int(body_sway)
         
-        # During toss physics, use _facing_direction to pick the correct view
-        if anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing:
+        # During toss physics or dragging, use _facing_direction to pick the correct view
+        if ((anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing) or
+            (anim == 'dragging' and self.is_dragging)):
             facing = getattr(self, '_facing_direction', 'front')
             if facing == 'left':
                 anim = 'walking_left'
@@ -2342,6 +2343,200 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               font=("Arial Bold", int(10 * sx)),
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
+        elif anim in ('walking_up_left', 'walking_up_right', 
+                      'walking_down_left', 'walking_down_right'):
+            # --- DIAGONAL VIEW: 3/4 perspective combining front/back with side ---
+            # Determine diagonal direction
+            is_back_facing = anim in ('walking_up_left', 'walking_up_right')
+            facing_left = anim in ('walking_up_left', 'walking_down_left')
+            side_dir = -1 if facing_left else 1
+            
+            # Diagonal view uses intermediate perspective (between side and front/back)
+            # Body is slightly narrower than front view but wider than side view
+            diag_body_scale = 0.85
+            
+            leg_top = int(145 * sy + by)
+            leg_len = int(30 * sy)
+            
+            # Apply individual limb dangle physics during drag
+            left_leg_dangle = int(self._dangle_left_leg) if anim == 'dragging' else 0
+            right_leg_dangle = int(self._dangle_right_leg) if anim == 'dragging' else 0
+            left_arm_dangle = int(self._dangle_left_arm) if anim == 'dragging' else 0
+            right_arm_dangle = int(self._dangle_right_arm) if anim == 'dragging' else 0
+            left_leg_dangle_h = int(self._dangle_left_leg_h) if anim == 'dragging' else 0
+            right_leg_dangle_h = int(self._dangle_right_leg_h) if anim == 'dragging' else 0
+            left_arm_dangle_h = int(self._dangle_left_arm_h) if anim == 'dragging' else 0
+            right_arm_dangle_h = int(self._dangle_right_arm_h) if anim == 'dragging' else 0
+            
+            # Legs with perspective - one more forward, one more back
+            if is_back_facing:
+                # Back-diagonal: left leg on left, right leg on right (walking away)
+                back_leg_x = cx_draw - int(22 * sx * diag_body_scale) + left_leg_dangle_h
+                back_leg_swing = leg_swing + left_leg_dangle
+                front_leg_x = cx_draw + int(22 * sx * diag_body_scale) + right_leg_dangle_h
+                front_leg_swing = -leg_swing + right_leg_dangle
+            else:
+                # Front-diagonal: standard left/right (walking toward viewer)
+                back_leg_x = cx_draw - int(22 * sx * diag_body_scale) + left_leg_dangle_h
+                back_leg_swing = -leg_swing + left_leg_dangle
+                front_leg_x = cx_draw + int(22 * sx * diag_body_scale) + right_leg_dangle_h
+                front_leg_swing = leg_swing + right_leg_dangle
+            
+            # Back leg (further from viewer)
+            c.create_oval(
+                back_leg_x - int(10 * sx), leg_top + back_leg_swing,
+                back_leg_x + int(10 * sx), leg_top + leg_len + back_leg_swing,
+                fill=black, outline=black, tags="leg"
+            )
+            c.create_oval(
+                back_leg_x - int(9 * sx), leg_top + leg_len - int(8 * sy) + back_leg_swing,
+                back_leg_x + int(9 * sx), leg_top + leg_len + int(4 * sy) + back_leg_swing,
+                fill=white, outline=black, width=1, tags="foot"
+            )
+            
+            # Body - oval with diagonal compression
+            body_top = int(75 * sy + by)
+            body_bot = int(160 * sy + by)
+            body_rx = int(38 * sx * diag_body_scale * breath_scale)
+            body_ry = int(42 * sy * breath_scale)
+            c.create_oval(
+                cx_draw - body_rx, body_top,
+                cx_draw + body_rx, body_bot,
+                fill=white, outline=black, width=2, tags="body"
+            )
+            
+            # Belly patch - shifted slightly based on facing direction
+            belly_shift_x = int(4 * sx * side_dir)
+            c.create_oval(
+                cx_draw - int(22 * sx * diag_body_scale) + belly_shift_x, body_top + int(18 * sy),
+                cx_draw + int(22 * sx * diag_body_scale) + belly_shift_x, body_bot - int(14 * sy),
+                fill="#FAFAFA", outline="", tags="belly"
+            )
+            
+            # Front leg (closer to viewer)
+            c.create_oval(
+                front_leg_x - int(11 * sx), leg_top + front_leg_swing,
+                front_leg_x + int(11 * sx), leg_top + leg_len + front_leg_swing,
+                fill=black, outline=black, tags="leg"
+            )
+            c.create_oval(
+                front_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + front_leg_swing,
+                front_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + front_leg_swing,
+                fill=white, outline=black, width=1, tags="foot"
+            )
+            
+            # Arms - positioned with diagonal offset
+            arm_top = int(95 * sy + by)
+            arm_len = int(35 * sy)
+            
+            # Back arm (further side)
+            back_arm_x = cx_draw - int(30 * sx * diag_body_scale * side_dir) + left_arm_dangle_h
+            back_arm_swing = -arm_swing + left_arm_dangle
+            c.create_oval(
+                back_arm_x - int(9 * sx), arm_top + back_arm_swing,
+                back_arm_x + int(9 * sx), arm_top + arm_len + back_arm_swing,
+                fill=black, outline=black, tags="arm"
+            )
+            
+            # Front arm (near side)
+            front_arm_x = cx_draw + int(30 * sx * diag_body_scale * side_dir) + right_arm_dangle_h
+            front_arm_swing = arm_swing + right_arm_dangle
+            c.create_oval(
+                front_arm_x - int(10 * sx), arm_top + front_arm_swing,
+                front_arm_x + int(10 * sx), arm_top + arm_len + front_arm_swing,
+                fill=black, outline=black, tags="arm"
+            )
+            
+            # Head - slightly rotated perspective
+            head_cy = int(52 * sy + by)
+            head_rx = int(34 * sx * diag_body_scale)
+            head_ry = int(32 * sy)
+            c.create_oval(
+                cx_draw - head_rx, head_cy - head_ry,
+                cx_draw + head_rx, head_cy + head_ry,
+                fill=white, outline=black, width=2, tags="head"
+            )
+            
+            # Ears - both visible but one smaller (perspective)
+            ear_y = head_cy - head_ry + int(5 * sy)
+            ear_w = int(22 * sx)
+            
+            # Far ear (smaller)
+            far_ear_x = cx_draw - int(head_rx * 0.7 * side_dir) + ear_wiggle
+            c.create_oval(
+                far_ear_x - int(ear_w * 0.4), ear_y - int(14 * sy),
+                far_ear_x + int(ear_w * 0.4), ear_y + int(8 * sy),
+                fill=black, outline=black, tags="ear"
+            )
+            c.create_oval(
+                far_ear_x - int(ear_w * 0.25), ear_y - int(9 * sy),
+                far_ear_x + int(ear_w * 0.25), ear_y + int(3 * sy),
+                fill=pink, outline="", tags="ear_inner"
+            )
+            
+            # Near ear (larger)
+            near_ear_x = cx_draw + int(head_rx * 0.7 * side_dir) + ear_wiggle
+            c.create_oval(
+                near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
+                near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
+                fill=black, outline=black, tags="ear"
+            )
+            c.create_oval(
+                near_ear_x - int(ear_w * 0.3), ear_y - int(10 * sy),
+                near_ear_x + int(ear_w * 0.3), ear_y + int(2 * sy),
+                fill=pink, outline="", tags="ear_inner"
+            )
+            
+            # Eye patches - both visible with diagonal positioning
+            eye_y = head_cy - int(4 * sy)
+            patch_rx = int(12 * sx * diag_body_scale)
+            patch_ry = int(10 * sy)
+            
+            # Far eye patch (smaller, partially obscured)
+            far_eye_x = cx_draw - int(16 * sx * diag_body_scale * side_dir)
+            c.create_oval(
+                far_eye_x - int(patch_rx * 0.8), eye_y - patch_ry,
+                far_eye_x + int(patch_rx * 0.8), eye_y + patch_ry,
+                fill=black, outline="", tags="eye_patch"
+            )
+            
+            # Near eye patch (larger, fully visible)
+            near_eye_x = cx_draw + int(16 * sx * diag_body_scale * side_dir)
+            c.create_oval(
+                near_eye_x - patch_rx, eye_y - patch_ry,
+                near_eye_x + patch_rx, eye_y + patch_ry,
+                fill=black, outline="", tags="eye_patch"
+            )
+            
+            # Draw equipped items on panda body
+            self._draw_equipped_items(c, cx_draw, by, sx, sy)
+            
+            # Eyes with diagonal gaze
+            self._draw_eye_on_patch(c, far_eye_x, eye_y, eye_style, sx, sy, 0.8)
+            self._draw_eye_on_patch(c, near_eye_x, eye_y, eye_style, sx, sy, 1.0)
+            
+            # Nose - centered
+            nose_y = head_cy + int(8 * sy)
+            c.create_oval(
+                cx_draw - int(5 * sx), nose_y - int(4 * sy),
+                cx_draw + int(5 * sx), nose_y + int(4 * sy),
+                fill=nose_color, outline="", tags="nose"
+            )
+            
+            # Mouth
+            self._draw_mouth(c, cx_draw, nose_y + int(8 * sy), mouth_style, 
+                           sx, sy, black, white)
+            
+            # Animation extras
+            self._draw_animation_extras(c, cx_draw, by, anim, frame_idx, sx, sy)
+            
+            # Name tag
+            if self.panda and self.panda.name:
+                name_y = int(h - 12 * sy)
+                c.create_text(cx_draw, name_y, text=self.panda.name,
+                              font=("Arial Bold", int(10 * sx)),
+                              fill="#666666", width=int(w * 0.9), tags="name_tag")
+        
         else:
             # --- FRONT VIEW (default): standard forward-facing panda ---
             leg_top = int(145 * sy + by)
@@ -2754,10 +2949,59 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         '🔩': '#808080', '🌱': '#228B22', '🧸': '#DEB887', '⛈️': '#4682B4',
         '🌟': '#FFD700', '🌌': '#191970', '⌚': '#C0C0C0', '🤘': '#8B0000',
     }
+    
+    # Item-specific color overrides (takes priority over emoji colors)
+    _ITEM_COLORS = {
+        # Shirts
+        'tshirt': '#4169E1',  # Royal blue t-shirt
+        'red_tee': '#DC143C',  # Crimson red
+        'blue_tee': '#1E90FF',  # Dodger blue
+        'green_tee': '#32CD32',  # Lime green
+        'yellow_polo': '#FFD700',  # Gold yellow
+        'striped_shirt': '#4682B4',  # Steel blue with stripes
+        'tank_top': '#F5F5F5',  # White smoke
+        # Jackets
+        'hoodie': '#708090',  # Slate gray hoodie
+        'raincoat': '#FFD700',  # Yellow raincoat
+        'leather_jacket': '#2F4F4F',  # Dark slate gray
+        'denim_jacket': '#1E90FF',  # Blue denim
+        'bomber_jacket': '#2E8B57',  # Sea green
+        'puffer_jacket': '#FF4500',  # Orange red
+        'letterman_jacket': '#8B0000',  # Dark red
+        'windbreaker': '#00FF7F',  # Spring green
+        # Pants
+        'overalls': '#4169E1',  # Royal blue denim
+        'jeans': '#191970',  # Midnight blue
+        'cargo_pants': '#6B8E23',  # Olive drab
+        'sweatpants': '#808080',  # Gray
+        'dress_pants': '#1a1a1a',  # Black
+        'shorts': '#87CEEB',  # Sky blue
+        # Dresses and full-body outfits
+        'dress': '#FF69B4',  # Hot pink dress
+        'kimono': '#DC143C',  # Crimson kimono
+        'suit': '#1a1a1a',  # Black business suit
+        # Themed costumes
+        'superhero': '#DC143C',  # Red superhero
+        'ninja': '#333333',  # Dark gray ninja
+        'wizard': '#4B0082',  # Indigo wizard
+        'pirate': '#8B4513',  # Saddle brown pirate
+        'astronaut': '#F5F5F5',  # White spacesuit
+        'chef': '#FFFFFF',  # White chef coat
+        'detective': '#8B7355',  # Burlywood detective coat
+        'spacesuit': '#C0C0C0',  # Silver space suit
+        'toga': '#F5F5F5',  # White toga
+        'lab_coat': '#FFFFFF',  # White lab coat
+        'superhero_cape': '#DC143C',  # Red cape
+    }
 
     @staticmethod
-    def _color_for_emoji(emoji: str, fallback: str = '#888888') -> str:
-        """Return a color corresponding to the given emoji icon."""
+    def _color_for_emoji(emoji: str, fallback: str = '#888888', item_id: str = None) -> str:
+        """Return a color corresponding to the given emoji icon or item ID.
+        
+        Priority: item_id > emoji > fallback
+        """
+        if item_id and item_id in PandaWidget._ITEM_COLORS:
+            return PandaWidget._ITEM_COLORS[item_id]
         return PandaWidget._EMOJI_COLORS.get(emoji, fallback)
 
     def _compute_limb_offsets(self, anim: str, frame_idx: int) -> tuple:
@@ -2901,8 +3145,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
 
             # Perspective scale: narrow clothing for side views
             anim = self.current_animation
-            # During toss physics, use _facing_direction for clothing perspective
-            if anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing:
+            # During toss physics or dragging, use _facing_direction for clothing perspective
+            if ((anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing) or
+                (anim == 'dragging' and self.is_dragging)):
                 facing = getattr(self, '_facing_direction', 'front')
                 if facing == 'left':
                     anim = 'walking_left'
@@ -3095,7 +3340,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
 
             # --- Helper: draw upper-body clothing ---
             def _draw_upper_clothing(clothing_item, ctype):
-                color = self._color_for_emoji(clothing_item.emoji, '#4169E1')
+                color = self._color_for_emoji(clothing_item.emoji, '#4169E1', clothing_item.id)
                 shadow = self._shade_color(color, -30)
                 highlight = self._shade_color(color, 40)
 
@@ -3322,7 +3567,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             if pants_id:
                 pants_item = self.panda_closet.get_item(pants_id)
                 if pants_item:
-                    p_color = self._color_for_emoji(pants_item.emoji, '#4169E1')
+                    p_color = self._color_for_emoji(pants_item.emoji, '#4169E1', pants_item.id)
                     p_shadow = self._shade_color(p_color, -30)
                     p_highlight = self._shade_color(p_color, 40)
                     _draw_pants_piece(p_color, p_shadow, p_highlight)
@@ -3333,7 +3578,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     ctype = clothing_item.clothing_type or 'shirt'
                     if ctype == 'pants':
                         # Legacy: if pants ended up in clothing slot, draw them
-                        color = self._color_for_emoji(clothing_item.emoji, '#4169E1')
+                        color = self._color_for_emoji(clothing_item.emoji, '#4169E1', clothing_item.id)
                         shadow = self._shade_color(color, -30)
                         highlight = self._shade_color(color, 40)
                         _draw_pants_piece(color, shadow, highlight)
@@ -3344,36 +3589,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             if appearance.hat:
                 hat_item = self.panda_closet.get_item(appearance.hat)
                 if hat_item:
-                    color = self._color_for_emoji(hat_item.emoji, '#1a1a1a')
-                    shadow = self._shade_color(color, -30)
-                    highlight = self._shade_color(color, 50)
-
-                    hat_y = int(20 * sy + by)
-
-                    # Hat brim - wider, slightly rounded
-                    c.create_oval(
-                        cx - int(34 * persp_sx), hat_y - int(2 * sy),
-                        cx + int(34 * persp_sx), hat_y + int(8 * sy),
-                        fill=color, outline=shadow, width=1, tags="equipped_hat")
-
-                    # Hat crown - rounded top
-                    c.create_oval(
-                        cx - int(22 * persp_sx), hat_y - int(22 * sy),
-                        cx + int(22 * persp_sx), hat_y + int(4 * sy),
-                        fill=color, outline=shadow, width=1, tags="equipped_hat")
-
-                    # Hat band / ribbon detail
-                    c.create_rectangle(
-                        cx - int(22 * persp_sx), hat_y - int(4 * sy),
-                        cx + int(22 * persp_sx), hat_y + int(1 * sy),
-                        fill=shadow, outline='', tags="equipped_hat")
-
-                    # Highlight on crown
-                    c.create_arc(
-                        cx - int(14 * persp_sx), hat_y - int(20 * sy),
-                        cx + int(6 * persp_sx), hat_y - int(8 * sy),
-                        start=20, extent=140, style="arc",
-                        outline=highlight, width=1, tags="equipped_hat")
+                    self._draw_hat(c, cx, by, persp_sx, sy, hat_item.id, hat_item.emoji)
 
             # --- Draw accessories with type-specific positioning ---
             if appearance.accessories:
@@ -3692,6 +3908,540 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             return f'#{r:02x}{g:02x}{b:02x}'
         except Exception:
             return hex_color
+    
+    def _draw_hat(self, c: tk.Canvas, cx: int, by: float, persp_sx: float, sy: float, hat_id: str, emoji: str):
+        """Draw a hat with type-specific shape on the panda's head.
+        
+        Each hat type has a unique visual representation to distinguish it from others.
+        """
+        color = self._color_for_emoji(emoji, '#1a1a1a')
+        shadow = self._shade_color(color, -30)
+        highlight = self._shade_color(color, 50)
+        hat_y = int(20 * sy + by)
+        
+        # --- Baseball Cap ---
+        if hat_id == 'baseball_cap':
+            # Rounded crown with forward-facing bill
+            c.create_arc(
+                cx - int(24 * persp_sx), hat_y - int(18 * sy),
+                cx + int(24 * persp_sx), hat_y + int(6 * sy),
+                start=0, extent=180, style="chord",
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Bill extending forward
+            c.create_oval(
+                cx - int(8 * persp_sx), hat_y + int(2 * sy),
+                cx + int(38 * persp_sx), hat_y + int(8 * sy),
+                fill=shadow, outline=shadow, width=1, tags="equipped_hat")
+            # Front panels detail
+            for i in range(-1, 2):
+                c.create_line(
+                    cx + i * int(8 * persp_sx), hat_y - int(16 * sy),
+                    cx + i * int(8 * persp_sx), hat_y + int(2 * sy),
+                    fill=shadow, width=1, tags="equipped_hat")
+        
+        # --- Beanie ---
+        elif hat_id == 'beanie':
+            # Snug-fitting knit cap with ribbed texture
+            c.create_oval(
+                cx - int(26 * persp_sx), hat_y - int(20 * sy),
+                cx + int(26 * persp_sx), hat_y + int(6 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Ribbed texture lines
+            for i in range(-2, 3):
+                c.create_arc(
+                    cx + i * int(6 * persp_sx) - int(3 * persp_sx), hat_y - int(16 * sy),
+                    cx + i * int(6 * persp_sx) + int(3 * persp_sx), hat_y + int(2 * sy),
+                    start=0, extent=180, style="arc",
+                    outline=shadow, width=1, tags="equipped_hat")
+            # Pom-pom on top
+            c.create_oval(
+                cx - int(6 * persp_sx), hat_y - int(28 * sy),
+                cx + int(6 * persp_sx), hat_y - int(20 * sy),
+                fill=highlight, outline=shadow, width=1, tags="equipped_hat")
+        
+        # --- Bandana (Head Wrap) ---
+        elif hat_id == 'bandana_hat':
+            # Triangular fold on top of head
+            c.create_polygon(
+                cx - int(28 * persp_sx), hat_y + int(6 * sy),
+                cx, hat_y - int(8 * sy),
+                cx + int(28 * persp_sx), hat_y + int(6 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Band wrapped around head
+            c.create_rectangle(
+                cx - int(30 * persp_sx), hat_y + int(4 * sy),
+                cx + int(30 * persp_sx), hat_y + int(10 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Knot/tie in back
+            c.create_oval(
+                cx - int(6 * persp_sx), hat_y + int(12 * sy),
+                cx + int(6 * persp_sx), hat_y + int(18 * sy),
+                fill=shadow, outline=shadow, width=1, tags="equipped_hat")
+            # Pattern dots on bandana
+            for i in range(-2, 3):
+                for j in range(2):
+                    dot_x = cx + i * int(8 * persp_sx)
+                    dot_y = hat_y + j * int(4 * sy)
+                    c.create_oval(
+                        dot_x - int(2 * persp_sx), dot_y - int(1 * sy),
+                        dot_x + int(2 * persp_sx), dot_y + int(1 * sy),
+                        fill=highlight, outline='', tags="equipped_hat")
+        
+        # --- Top Hat ---
+        elif hat_id == 'top_hat':
+            # Tall cylinder with wide brim
+            c.create_oval(
+                cx - int(34 * persp_sx), hat_y - int(2 * sy),
+                cx + int(34 * persp_sx), hat_y + int(8 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Tall crown
+            c.create_rectangle(
+                cx - int(20 * persp_sx), hat_y - int(38 * sy),
+                cx + int(20 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Top of crown
+            c.create_oval(
+                cx - int(20 * persp_sx), hat_y - int(42 * sy),
+                cx + int(20 * persp_sx), hat_y - int(34 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Ribbon band
+            c.create_rectangle(
+                cx - int(20 * persp_sx), hat_y - int(4 * sy),
+                cx + int(20 * persp_sx), hat_y + int(1 * sy),
+                fill=shadow, outline='', tags="equipped_hat")
+        
+        # --- Cowboy Hat ---
+        elif hat_id == 'cowboy_hat':
+            # Wide curved brim
+            c.create_arc(
+                cx - int(40 * persp_sx), hat_y - int(6 * sy),
+                cx + int(40 * persp_sx), hat_y + int(10 * sy),
+                start=0, extent=180, style="chord",
+                fill=color, outline=shadow, width=2, tags="equipped_hat")
+            # Crown with indented top
+            c.create_polygon(
+                cx - int(22 * persp_sx), hat_y,
+                cx - int(18 * persp_sx), hat_y - int(18 * sy),
+                cx - int(6 * persp_sx), hat_y - int(20 * sy),
+                cx + int(6 * persp_sx), hat_y - int(20 * sy),
+                cx + int(18 * persp_sx), hat_y - int(18 * sy),
+                cx + int(22 * persp_sx), hat_y,
+                fill=color, outline=shadow, width=1, smooth=True, tags="equipped_hat")
+        
+        # --- Crown ---
+        elif hat_id in ('crown', 'ice_crown'):
+            # Base band
+            c.create_rectangle(
+                cx - int(28 * persp_sx), hat_y - int(8 * sy),
+                cx + int(28 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Crown points
+            for i in range(-2, 3):
+                c.create_polygon(
+                    cx + i * int(10 * persp_sx) - int(4 * persp_sx), hat_y - int(8 * sy),
+                    cx + i * int(10 * persp_sx), hat_y - int(22 * sy),
+                    cx + i * int(10 * persp_sx) + int(4 * persp_sx), hat_y - int(8 * sy),
+                    fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Jewels on each point
+            for i in range(-2, 3):
+                c.create_oval(
+                    cx + i * int(10 * persp_sx) - int(2 * persp_sx), hat_y - int(24 * sy),
+                    cx + i * int(10 * persp_sx) + int(2 * persp_sx), hat_y - int(20 * sy),
+                    fill='#FF0000' if i % 2 == 0 else '#0000FF', outline='',
+                    tags="equipped_hat")
+        
+        # --- Wizard Hat ---
+        elif hat_id == 'wizard_hat':
+            # Tall pointed cone
+            c.create_polygon(
+                cx - int(26 * persp_sx), hat_y + int(2 * sy),
+                cx, hat_y - int(50 * sy),
+                cx + int(26 * persp_sx), hat_y + int(2 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Wide brim
+            c.create_oval(
+                cx - int(32 * persp_sx), hat_y - int(2 * sy),
+                cx + int(32 * persp_sx), hat_y + int(8 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Stars and moons decoration
+            c.create_text(
+                cx - int(8 * persp_sx), hat_y - int(25 * sy),
+                text='⭐', font=("Arial", int(10 * sy)), tags="equipped_hat")
+            c.create_text(
+                cx + int(10 * persp_sx), hat_y - int(15 * sy),
+                text='🌙', font=("Arial", int(8 * sy)), tags="equipped_hat")
+        
+        # --- Chef Hat ---
+        elif hat_id == 'chef_hat':
+            # Puffy top
+            c.create_oval(
+                cx - int(24 * persp_sx), hat_y - int(26 * sy),
+                cx + int(24 * persp_sx), hat_y - int(2 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Multiple puffs
+            for i in range(-1, 2):
+                c.create_oval(
+                    cx + i * int(12 * persp_sx) - int(8 * persp_sx), hat_y - int(30 * sy),
+                    cx + i * int(12 * persp_sx) + int(8 * persp_sx), hat_y - int(14 * sy),
+                    fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Band at bottom
+            c.create_rectangle(
+                cx - int(26 * persp_sx), hat_y - int(6 * sy),
+                cx + int(26 * persp_sx), hat_y + int(2 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+        
+        # --- Party Hat ---
+        elif hat_id == 'party_hat':
+            # Cone shape
+            c.create_polygon(
+                cx - int(18 * persp_sx), hat_y + int(2 * sy),
+                cx, hat_y - int(36 * sy),
+                cx + int(18 * persp_sx), hat_y + int(2 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Pom-pom on top
+            c.create_oval(
+                cx - int(5 * persp_sx), hat_y - int(42 * sy),
+                cx + int(5 * persp_sx), hat_y - int(34 * sy),
+                fill=highlight, outline=shadow, width=1, tags="equipped_hat")
+            # Elastic band
+            c.create_line(
+                cx - int(18 * persp_sx), hat_y + int(2 * sy),
+                cx - int(30 * persp_sx), hat_y + int(30 * sy),
+                fill=shadow, width=2, tags="equipped_hat")
+            c.create_line(
+                cx + int(18 * persp_sx), hat_y + int(2 * sy),
+                cx + int(30 * persp_sx), hat_y + int(30 * sy),
+                fill=shadow, width=2, tags="equipped_hat")
+        
+        # --- Pirate Hat ---
+        elif hat_id == 'pirate_hat':
+            # Tricorn base
+            c.create_polygon(
+                cx - int(36 * persp_sx), hat_y + int(4 * sy),
+                cx - int(12 * persp_sx), hat_y - int(12 * sy),
+                cx + int(12 * persp_sx), hat_y - int(12 * sy),
+                cx + int(36 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Upturned sides
+            c.create_arc(
+                cx - int(40 * persp_sx), hat_y - int(8 * sy),
+                cx - int(10 * persp_sx), hat_y + int(8 * sy),
+                start=60, extent=60, style="arc",
+                outline=shadow, width=2, tags="equipped_hat")
+            c.create_arc(
+                cx + int(10 * persp_sx), hat_y - int(8 * sy),
+                cx + int(40 * persp_sx), hat_y + int(8 * sy),
+                start=60, extent=60, style="arc",
+                outline=shadow, width=2, tags="equipped_hat")
+            # Skull and crossbones
+            c.create_text(
+                cx, hat_y - int(6 * sy),
+                text='☠️', font=("Arial", int(12 * sy)), tags="equipped_hat")
+        
+        # --- Viking Helmet ---
+        elif hat_id == 'viking_helmet':
+            # Dome
+            c.create_oval(
+                cx - int(24 * persp_sx), hat_y - int(20 * sy),
+                cx + int(24 * persp_sx), hat_y + int(6 * sy),
+                fill=color, outline=shadow, width=2, tags="equipped_hat")
+            # Nose guard
+            c.create_rectangle(
+                cx - int(3 * persp_sx), hat_y + int(2 * sy),
+                cx + int(3 * persp_sx), hat_y + int(20 * sy),
+                fill=shadow, outline=shadow, width=1, tags="equipped_hat")
+            # Horns
+            for side in [-1, 1]:
+                horn_x = cx + side * int(24 * persp_sx)
+                c.create_polygon(
+                    horn_x, hat_y - int(8 * sy),
+                    horn_x + side * int(16 * persp_sx), hat_y - int(22 * sy),
+                    horn_x + side * int(12 * persp_sx), hat_y - int(6 * sy),
+                    fill='#F5DEB3', outline='#8B4513', width=1, tags="equipped_hat")
+        
+        # --- Propeller Hat ---
+        elif hat_id == 'propeller_hat':
+            # Beanie base
+            c.create_oval(
+                cx - int(24 * persp_sx), hat_y - int(18 * sy),
+                cx + int(24 * persp_sx), hat_y + int(6 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Propeller on top (spinning effect)
+            prop_angle = (self.animation_frame * 15) % 360
+            for angle in [prop_angle, prop_angle + 90]:
+                rad = math.radians(angle)
+                dx = int(18 * persp_sx * math.cos(rad))
+                dy = int(6 * sy * math.sin(rad))
+                c.create_line(
+                    cx - dx, hat_y - int(22 * sy) - dy,
+                    cx + dx, hat_y - int(22 * sy) + dy,
+                    fill='#FFD700', width=3, tags="equipped_hat")
+        
+        # --- Sombrero ---
+        elif hat_id == 'sombrero':
+            # Very wide brim
+            c.create_arc(
+                cx - int(50 * persp_sx), hat_y - int(4 * sy),
+                cx + int(50 * persp_sx), hat_y + int(12 * sy),
+                start=0, extent=180, style="chord",
+                fill=color, outline=shadow, width=2, tags="equipped_hat")
+            # High pointed crown
+            c.create_oval(
+                cx - int(18 * persp_sx), hat_y - int(24 * sy),
+                cx + int(18 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Decorative patterns
+            c.create_arc(
+                cx - int(14 * persp_sx), hat_y - int(2 * sy),
+                cx + int(14 * persp_sx), hat_y + int(2 * sy),
+                start=0, extent=180, style="arc",
+                outline=highlight, width=2, tags="equipped_hat")
+        
+        # --- Beret ---
+        elif hat_id == 'beret':
+            # Flat disk tilted slightly
+            c.create_oval(
+                cx - int(28 * persp_sx), hat_y - int(14 * sy),
+                cx + int(28 * persp_sx), hat_y + int(2 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Small top knob
+            c.create_oval(
+                cx - int(3 * persp_sx), hat_y - int(16 * sy),
+                cx + int(3 * persp_sx), hat_y - int(12 * sy),
+                fill=shadow, outline='', tags="equipped_hat")
+        
+        # --- Graduation Cap ---
+        elif hat_id == 'graduation_cap':
+            # Mortarboard - flat square top
+            c.create_polygon(
+                cx - int(30 * persp_sx), hat_y - int(18 * sy),
+                cx + int(30 * persp_sx), hat_y - int(18 * sy),
+                cx + int(28 * persp_sx), hat_y - int(14 * sy),
+                cx - int(28 * persp_sx), hat_y - int(14 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Cap base
+            c.create_oval(
+                cx - int(22 * persp_sx), hat_y - int(16 * sy),
+                cx + int(22 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Tassel
+            c.create_line(
+                cx, hat_y - int(18 * sy),
+                cx + int(8 * persp_sx), hat_y - int(24 * sy),
+                fill='#FFD700', width=2, tags="equipped_hat")
+            c.create_oval(
+                cx + int(6 * persp_sx), hat_y - int(26 * sy),
+                cx + int(10 * persp_sx), hat_y - int(22 * sy),
+                fill='#FFD700', outline='', tags="equipped_hat")
+        
+        # --- Tiara ---
+        elif hat_id == 'tiara':
+            # Curved band
+            c.create_arc(
+                cx - int(28 * persp_sx), hat_y - int(4 * sy),
+                cx + int(28 * persp_sx), hat_y + int(12 * sy),
+                start=0, extent=180, style="arc",
+                outline=color, width=3, tags="equipped_hat")
+            # Decorative points with gems
+            for i in range(-1, 2):
+                point_x = cx + i * int(12 * persp_sx)
+                point_height = int(20 * sy) if i == 0 else int(14 * sy)
+                c.create_line(
+                    point_x, hat_y + int(2 * sy),
+                    point_x, hat_y - point_height,
+                    fill=color, width=2, tags="equipped_hat")
+                # Gem on top
+                c.create_oval(
+                    point_x - int(3 * persp_sx), hat_y - point_height - int(4 * sy),
+                    point_x + int(3 * persp_sx), hat_y - point_height,
+                    fill='#FF1493', outline='', tags="equipped_hat")
+        
+        # --- Halo (Angel) ---
+        elif hat_id == 'halo':
+            # Glowing ring above head
+            halo_y = hat_y - int(28 * sy)
+            c.create_oval(
+                cx - int(20 * persp_sx), halo_y - int(4 * sy),
+                cx + int(20 * persp_sx), halo_y + int(4 * sy),
+                fill='', outline='#FFD700', width=3, tags="equipped_hat")
+            # Inner glow
+            c.create_oval(
+                cx - int(18 * persp_sx), halo_y - int(2 * sy),
+                cx + int(18 * persp_sx), halo_y + int(2 * sy),
+                fill='', outline='#FFFF99', width=2, tags="equipped_hat")
+        
+        # --- Space Helmet ---
+        elif hat_id == 'space_helmet':
+            # Transparent dome
+            c.create_oval(
+                cx - int(28 * persp_sx), hat_y - int(30 * sy),
+                cx + int(28 * persp_sx), hat_y + int(10 * sy),
+                fill='', outline='#ADD8E6', width=3, tags="equipped_hat")
+            # Reflections on glass
+            c.create_arc(
+                cx - int(20 * persp_sx), hat_y - int(24 * sy),
+                cx + int(4 * persp_sx), hat_y - int(8 * sy),
+                start=20, extent=100, style="arc",
+                outline='#E0FFFF', width=2, tags="equipped_hat")
+            # Collar
+            c.create_rectangle(
+                cx - int(30 * persp_sx), hat_y + int(6 * sy),
+                cx + int(30 * persp_sx), hat_y + int(12 * sy),
+                fill='#C0C0C0', outline=shadow, width=1, tags="equipped_hat")
+        
+        # --- Samurai Helmet ---
+        elif hat_id == 'samurai_helmet':
+            # Dome
+            c.create_oval(
+                cx - int(24 * persp_sx), hat_y - int(20 * sy),
+                cx + int(24 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=2, tags="equipped_hat")
+            # Crest/horns on sides
+            for side in [-1, 1]:
+                crest_x = cx + side * int(26 * persp_sx)
+                c.create_polygon(
+                    crest_x, hat_y - int(12 * sy),
+                    crest_x + side * int(12 * persp_sx), hat_y - int(20 * sy),
+                    crest_x + side * int(8 * persp_sx), hat_y - int(8 * sy),
+                    fill='#FFD700', outline='#8B4513', width=1, tags="equipped_hat")
+            # Face plate attachment
+            c.create_rectangle(
+                cx - int(20 * persp_sx), hat_y + int(2 * sy),
+                cx + int(20 * persp_sx), hat_y + int(6 * sy),
+                fill=shadow, outline='', tags="equipped_hat")
+        
+        # --- Straw Hat ---
+        elif hat_id in ('straw_hat', 'bamboo_hat'):
+            # Wide conical/flat brim
+            c.create_oval(
+                cx - int(42 * persp_sx), hat_y - int(4 * sy),
+                cx + int(42 * persp_sx), hat_y + int(8 * sy),
+                fill='#F4A460', outline='#8B4513', width=1, tags="equipped_hat")
+            # Shallow crown
+            c.create_oval(
+                cx - int(20 * persp_sx), hat_y - int(12 * sy),
+                cx + int(20 * persp_sx), hat_y + int(4 * sy),
+                fill='#F4A460', outline='#8B4513', width=1, tags="equipped_hat")
+            # Woven texture
+            for i in range(-2, 3):
+                c.create_arc(
+                    cx + i * int(8 * persp_sx) - int(4 * persp_sx), hat_y - int(2 * sy),
+                    cx + i * int(8 * persp_sx) + int(4 * persp_sx), hat_y + int(4 * sy),
+                    start=0, extent=180, style="arc",
+                    outline='#8B4513', width=1, tags="equipped_hat")
+        
+        # --- Flower Crown ---
+        elif hat_id in ('flower_crown', 'flower_crown_hat'):
+            # Band of flowers
+            for i in range(-2, 3):
+                flower_x = cx + i * int(12 * persp_sx)
+                flower_y = hat_y - int(10 * sy)
+                # Flower petals
+                for petal in range(5):
+                    angle = petal * 72
+                    rad = math.radians(angle)
+                    px = flower_x + int(6 * persp_sx * math.cos(rad))
+                    py = flower_y + int(4 * sy * math.sin(rad))
+                    c.create_oval(
+                        px - int(4 * persp_sx), py - int(3 * sy),
+                        px + int(4 * persp_sx), py + int(3 * sy),
+                        fill='#FF69B4' if i % 2 == 0 else '#FFD700',
+                        outline='', tags="equipped_hat")
+                # Flower center
+                c.create_oval(
+                    flower_x - int(3 * persp_sx), flower_y - int(2 * sy),
+                    flower_x + int(3 * persp_sx), flower_y + int(2 * sy),
+                    fill='#FFFF00', outline='', tags="equipped_hat")
+        
+        # --- Ninja Mask ---
+        elif hat_id == 'ninja_mask':
+            # Headband covering top of head
+            c.create_rectangle(
+                cx - int(28 * persp_sx), hat_y - int(4 * sy),
+                cx + int(28 * persp_sx), hat_y + int(8 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Ties in back
+            for side in [-1, 1]:
+                c.create_line(
+                    cx + side * int(28 * persp_sx), hat_y + int(2 * sy),
+                    cx + side * int(38 * persp_sx), hat_y + int(6 * sy),
+                    fill=color, width=3, tags="equipped_hat")
+        
+        # --- Detective Hat ---
+        elif hat_id == 'detective_hat':
+            # Fedora style
+            # Crown
+            c.create_oval(
+                cx - int(22 * persp_sx), hat_y - int(18 * sy),
+                cx + int(22 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Brim - angled down in front
+            c.create_arc(
+                cx - int(32 * persp_sx), hat_y - int(2 * sy),
+                cx + int(32 * persp_sx), hat_y + int(10 * sy),
+                start=0, extent=180, style="chord",
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Hat band
+            c.create_rectangle(
+                cx - int(22 * persp_sx), hat_y - int(2 * sy),
+                cx + int(22 * persp_sx), hat_y + int(2 * sy),
+                fill=shadow, outline='', tags="equipped_hat")
+        
+        # --- Firefighter Helmet ---
+        elif hat_id == 'firefighter_hat':
+            # Helmet dome
+            c.create_oval(
+                cx - int(26 * persp_sx), hat_y - int(22 * sy),
+                cx + int(26 * persp_sx), hat_y + int(4 * sy),
+                fill='#FF0000', outline='#8B0000', width=2, tags="equipped_hat")
+            # Rear brim
+            c.create_rectangle(
+                cx - int(28 * persp_sx), hat_y + int(2 * sy),
+                cx + int(28 * persp_sx), hat_y + int(10 * sy),
+                fill='#FF0000', outline='#8B0000', width=1, tags="equipped_hat")
+            # Front shield/badge
+            c.create_rectangle(
+                cx - int(8 * persp_sx), hat_y - int(18 * sy),
+                cx + int(8 * persp_sx), hat_y - int(6 * sy),
+                fill='#FFD700', outline='#8B4513', width=1, tags="equipped_hat")
+        
+        # --- Sports Headband ---
+        elif hat_id == 'headband':
+            # Simple band around head
+            c.create_rectangle(
+                cx - int(30 * persp_sx), hat_y + int(4 * sy),
+                cx + int(30 * persp_sx), hat_y + int(10 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Absorbent texture
+            for i in range(-2, 3):
+                c.create_line(
+                    cx + i * int(8 * persp_sx), hat_y + int(5 * sy),
+                    cx + i * int(8 * persp_sx), hat_y + int(9 * sy),
+                    fill=highlight, width=1, tags="equipped_hat")
+        
+        # --- Default: Generic hat (for any undefined types) ---
+        else:
+            # Hat brim - wider, slightly rounded
+            c.create_oval(
+                cx - int(34 * persp_sx), hat_y - int(2 * sy),
+                cx + int(34 * persp_sx), hat_y + int(8 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Hat crown - rounded top
+            c.create_oval(
+                cx - int(22 * persp_sx), hat_y - int(22 * sy),
+                cx + int(22 * persp_sx), hat_y + int(4 * sy),
+                fill=color, outline=shadow, width=1, tags="equipped_hat")
+            # Hat band / ribbon detail
+            c.create_rectangle(
+                cx - int(22 * persp_sx), hat_y - int(4 * sy),
+                cx + int(22 * persp_sx), hat_y + int(1 * sy),
+                fill=shadow, outline='', tags="equipped_hat")
+            # Highlight on crown
+            c.create_arc(
+                cx - int(14 * persp_sx), hat_y - int(20 * sy),
+                cx + int(6 * persp_sx), hat_y - int(8 * sy),
+                start=20, extent=140, style="arc",
+                outline=highlight, width=1, tags="equipped_hat")
     
     def _draw_animation_extras(self, c: tk.Canvas, cx: int, by: float,
                                 anim: str, frame_idx: int, sx: float = 1.0, sy: float = 1.0):

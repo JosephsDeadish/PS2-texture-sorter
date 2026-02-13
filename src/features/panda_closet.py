@@ -461,6 +461,10 @@ class PandaCloset:
             'beanie', 'Cozy Beanie', CustomizationCategory.HAT,
             '🧢', 'Warm and casual', ItemRarity.COMMON, 40, False, False
         ),
+        'bandana_hat': CustomizationItem(
+            'bandana_hat', 'Cool Bandana', CustomizationCategory.HAT,
+            '🏴', 'Stylish head bandana', ItemRarity.COMMON, 35, False, False
+        ),
 
         # Additional Clothing — Jackets
         'raincoat': CustomizationItem(
