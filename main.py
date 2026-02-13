@@ -410,6 +410,16 @@ class GameTextureSorter(ctk.CTk):
         self.file_handler = FileHandler(create_backup=config.get('file_handling', 'create_backup', default=True))
         self.database = None  # Will be initialized when needed
         
+        # Initialize AI incremental learner for feedback-based learning
+        self.learner = None
+        try:
+            from src.ai.training import IncrementalLearner
+            self.learner = IncrementalLearner()
+            logger.info("AI IncrementalLearner initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize IncrementalLearner: {e}")
+            self.learner = None
+        
         # Initialize profile manager for game identification
         try:
             from src.features.profile_manager import ProfileManager
@@ -4561,6 +4571,89 @@ class GameTextureSorter(ctk.CTk):
             min_conf_label.configure(text=f"{float(value):.1f}")
         min_conf_slider.configure(command=update_min_conf_label)
         
+        # AI Training Data Import/Export
+        training_frame = ctk.CTkFrame(ai_scroll)
+        training_frame.pack(fill="x", padx=10, pady=5)
+        
+        ctk.CTkLabel(training_frame, text="📊 AI Training Data:",
+                    font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=3)
+        
+        ctk.CTkLabel(training_frame, 
+                    text="The AI learns from your corrections. Export to share with others or import to benefit from shared knowledge.",
+                    font=("Arial", 9), text_color="gray", wraplength=400).pack(anchor="w", padx=20, pady=(0, 5))
+        
+        training_btn_frame = ctk.CTkFrame(training_frame)
+        training_btn_frame.pack(fill="x", padx=20, pady=5)
+        
+        def _export_training_data():
+            try:
+                from tkinter import filedialog as fd
+                default_name = f"ai_training_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                filepath = fd.asksaveasfilename(
+                    title="Export AI Training Data",
+                    defaultextension=".json",
+                    initialfile=default_name,
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+                )
+                if filepath and self.learner:
+                    if self.learner.export_training_data(Path(filepath)):
+                        stats = self.learner.get_learning_stats()
+                        messagebox.showinfo("Success", 
+                            f"Exported {stats['total_corrections']} corrections to:\n{filepath}")
+                    else:
+                        messagebox.showerror("Error", "Export failed — check logs for details")
+                elif not self.learner:
+                    messagebox.showwarning("Warning", "AI learner is not initialized")
+            except Exception as e:
+                logger.error(f"Error exporting training data: {e}")
+                messagebox.showerror("Error", f"Failed to export: {e}")
+        
+        def _import_training_data():
+            try:
+                from tkinter import filedialog as fd
+                filepath = fd.askopenfilename(
+                    title="Import AI Training Data",
+                    filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
+                )
+                if filepath and self.learner:
+                    if self.learner.import_training_data(Path(filepath)):
+                        stats = self.learner.get_learning_stats()
+                        messagebox.showinfo("Success",
+                            f"Imported successfully!\nTotal corrections: {stats['total_corrections']}\n"
+                            f"Categories learned: {stats['total_categories']}")
+                    else:
+                        messagebox.showerror("Error", "Import failed — check logs for details")
+                elif not self.learner:
+                    messagebox.showwarning("Warning", "AI learner is not initialized")
+            except Exception as e:
+                logger.error(f"Error importing training data: {e}")
+                messagebox.showerror("Error", f"Failed to import: {e}")
+        
+        export_train_btn = ctk.CTkButton(training_btn_frame, text="📤 Export Training Data",
+                                         command=_export_training_data, width=180)
+        export_train_btn.pack(side="left", padx=5)
+        
+        import_train_btn = ctk.CTkButton(training_btn_frame, text="📥 Import Training Data",
+                                         command=_import_training_data, width=180)
+        import_train_btn.pack(side="left", padx=5)
+        
+        # Show learning stats
+        if self.learner:
+            stats = self.learner.get_learning_stats()
+            stats_text = f"Corrections recorded: {stats['total_corrections']} | Categories learned: {stats['total_categories']}"
+        else:
+            stats_text = "AI learner not available"
+        ctk.CTkLabel(training_frame, text=stats_text,
+                    font=("Arial", 9), text_color="gray").pack(anchor="w", padx=20, pady=(0, 5))
+        
+        if WidgetTooltip:
+            self._tooltips.append(WidgetTooltip(export_train_btn,
+                "Export your AI training corrections to a JSON file so others can import and benefit from your sorting decisions",
+                widget_id='export_training_btn'))
+            self._tooltips.append(WidgetTooltip(import_train_btn,
+                "Import AI training data from another user's exported JSON file to improve your AI's accuracy",
+                widget_id='import_training_btn'))
+        
         # === SYSTEM TAB ===
         system_scroll = ctk.CTkScrollableFrame(tab_system)
         system_scroll.pack(fill="both", expand=True, padx=5, pady=5)
@@ -8130,14 +8223,17 @@ Built with:
                             selected_category = [None]  # Use list to allow modification in nested function
                             
                             def show_manual_dialog():
-                                """Show manual classification dialog"""
+                                """Show manual classification dialog with feedback support"""
                                 # Get sorted category list
                                 category_list = sorted(list(ALL_CATEGORIES.keys()))
+                                
+                                # Track current AI suggestion (may change after feedback)
+                                current_ai = [ai_category, ai_confidence]
                                 
                                 # Create a simple selection dialog
                                 dialog_window = ctk.CTkToplevel(self)
                                 dialog_window.title("Manual Classification")
-                                dialog_window.geometry("550x500")
+                                dialog_window.geometry("550x530")
                                 
                                 # Make modal
                                 dialog_window.transient(self)
@@ -8146,8 +8242,8 @@ Built with:
                                 # Center on screen
                                 dialog_window.update_idletasks()
                                 x = (dialog_window.winfo_screenwidth() // 2) - (550 // 2)
-                                y = (dialog_window.winfo_screenheight() // 2) - (500 // 2)
-                                dialog_window.geometry(f"550x500+{x}+{y}")
+                                y = (dialog_window.winfo_screenheight() // 2) - (530 // 2)
+                                dialog_window.geometry(f"550x530+{x}+{y}")
                                 
                                 # File info with counter
                                 ctk.CTkLabel(dialog_window, text=f"File {i+1} of {total}: {file_path.name}", 
@@ -8166,9 +8262,10 @@ Built with:
                                     ctk.CTkLabel(dialog_window, text="[Preview unavailable]",
                                                font=("Arial", 10), text_color="gray").pack(pady=5)
                                 
-                                ctk.CTkLabel(dialog_window, 
+                                ai_label = ctk.CTkLabel(dialog_window, 
                                            text=f"AI Suggestion: {ai_category} ({ai_confidence:.0%} confidence)",
-                                           font=("Arial", 11)).pack(pady=5)
+                                           font=("Arial", 11))
+                                ai_label.pack(pady=5)
                                 
                                 # Category selection with search filter
                                 ctk.CTkLabel(dialog_window, text="Select Category:", 
@@ -8189,12 +8286,59 @@ Built with:
                                 self._make_category_filter(search_var, category_var,
                                                            category_dropdown, category_list)
                                 
+                                # Feedback frame
+                                feedback_frame = ctk.CTkFrame(dialog_window)
+                                feedback_frame.pack(pady=5)
+                                
+                                feedback_label = ctk.CTkLabel(feedback_frame, text="", 
+                                                             font=("Arial", 10), text_color="gray")
+                                feedback_label.pack(side="left", padx=5)
+                                
+                                def on_bad_suggestion():
+                                    """Record negative feedback and re-classify"""
+                                    old_suggestion = current_ai[0]
+                                    if self.learner:
+                                        self.learner.record_correction(
+                                            texture_path=str(file_path),
+                                            corrected_category="__rejected__",
+                                            original_predictions=[{'category': old_suggestion,
+                                                                   'confidence': current_ai[1]}]
+                                        )
+                                    new_cat, new_conf = self.classifier.classify_texture(file_path)
+                                    if new_cat == old_suggestion and self.learner:
+                                        preds = [{'category': c, 'confidence': 0.5}
+                                                 for c in category_list if c != old_suggestion]
+                                        adjusted = self.learner.adjust_predictions(preds)
+                                        if adjusted:
+                                            new_cat = adjusted[0]['category']
+                                            new_conf = adjusted[0]['confidence']
+                                    current_ai[0] = new_cat
+                                    current_ai[1] = new_conf
+                                    category_var.set(new_cat)
+                                    ai_label.configure(
+                                        text=f"AI Suggestion: {new_cat} ({new_conf:.0%} confidence)")
+                                    feedback_label.configure(
+                                        text=f"🔄 AI re-suggested: {new_cat} (was: {old_suggestion})")
+                                
+                                bad_btn = ctk.CTkButton(feedback_frame, text="👎 Bad Suggestion", 
+                                            command=on_bad_suggestion, width=130, fg_color="#8B0000")
+                                bad_btn.pack(side="left", padx=3)
+                                
                                 # Buttons
                                 button_frame = ctk.CTkFrame(dialog_window)
-                                button_frame.pack(pady=20)
+                                button_frame.pack(pady=15)
                                 
                                 def on_confirm():
-                                    selected_category[0] = category_var.get()
+                                    chosen = category_var.get()
+                                    # Implicit learning: record if user chose differently than AI
+                                    if self.learner and chosen != current_ai[0]:
+                                        self.learner.record_correction(
+                                            texture_path=str(file_path),
+                                            corrected_category=chosen,
+                                            original_predictions=[{'category': current_ai[0],
+                                                                   'confidence': current_ai[1]}]
+                                        )
+                                    selected_category[0] = chosen
                                     dialog_window.destroy()
                                     result_event.set()
                                 
@@ -8229,7 +8373,7 @@ Built with:
                                 # Tooltips for manual mode dialog buttons
                                 if WidgetTooltip:
                                     self._tooltips.append(WidgetTooltip(confirm_btn,
-                                        "Sort this texture into the category selected in the dropdown above",
+                                        "Sort this texture into the category selected in the dropdown above. The AI learns from your choice.",
                                         widget_id='manual_confirm_btn'))
                                     self._tooltips.append(WidgetTooltip(skip_btn,
                                         "Skip this texture — leave it unsorted and move to the next one",
@@ -8240,6 +8384,9 @@ Built with:
                                     self._tooltips.append(WidgetTooltip(cancel_btn,
                                         "Cancel the entire sorting operation and stop processing files",
                                         widget_id='manual_cancel_btn'))
+                                    self._tooltips.append(WidgetTooltip(bad_btn,
+                                        "Tell the AI this suggestion is wrong — it will learn and try a different category",
+                                        widget_id='manual_bad_btn'))
                                     self._tooltips.append(WidgetTooltip(category_dropdown,
                                         "Choose which category to sort this texture into",
                                         widget_id='manual_category_dropdown'))
@@ -8290,13 +8437,16 @@ Built with:
                             confirmed_category = [None]
                             
                             def show_suggested_dialog():
-                                """Show suggested classification dialog"""
+                                """Show suggested classification dialog with feedback support"""
                                 # Get sorted category list
                                 category_list = sorted(list(ALL_CATEGORIES.keys()))
                                 
+                                # Track current AI suggestion (may change after feedback)
+                                current_ai = [ai_category, ai_confidence]
+                                
                                 dialog_window = ctk.CTkToplevel(self)
                                 dialog_window.title("Confirm Classification")
-                                dialog_window.geometry("550x450")
+                                dialog_window.geometry("550x520")
                                 
                                 # Make modal
                                 dialog_window.transient(self)
@@ -8305,8 +8455,8 @@ Built with:
                                 # Center on screen
                                 dialog_window.update_idletasks()
                                 x = (dialog_window.winfo_screenwidth() // 2) - (550 // 2)
-                                y = (dialog_window.winfo_screenheight() // 2) - (450 // 2)
-                                dialog_window.geometry(f"550x450+{x}+{y}")
+                                y = (dialog_window.winfo_screenheight() // 2) - (520 // 2)
+                                dialog_window.geometry(f"550x520+{x}+{y}")
                                 
                                 # File info with counter
                                 ctk.CTkLabel(dialog_window, text=f"File {i+1} of {total}: {file_path.name}", 
@@ -8325,9 +8475,10 @@ Built with:
                                     ctk.CTkLabel(dialog_window, text="[Preview unavailable]",
                                                font=("Arial", 10), text_color="gray").pack(pady=5)
                                 
-                                ctk.CTkLabel(dialog_window, 
+                                ai_label = ctk.CTkLabel(dialog_window, 
                                            text=f"AI Classification: {ai_category} ({ai_confidence:.0%} confidence)",
-                                           font=("Arial Bold", 13), text_color="green").pack(pady=10)
+                                           font=("Arial Bold", 13), text_color="green")
+                                ai_label.pack(pady=10)
                                 
                                 ctk.CTkLabel(dialog_window, text="Confirm or change the category below:", 
                                            font=("Arial", 11)).pack(pady=(5, 2))
@@ -8347,12 +8498,63 @@ Built with:
                                 self._make_category_filter(search_var, category_var,
                                                            category_dropdown, category_list)
                                 
-                                # Buttons
+                                # Feedback frame
+                                feedback_frame = ctk.CTkFrame(dialog_window)
+                                feedback_frame.pack(pady=5)
+                                
+                                feedback_label = ctk.CTkLabel(feedback_frame, text="", 
+                                                             font=("Arial", 10), text_color="gray")
+                                feedback_label.pack(side="left", padx=5)
+                                
+                                def on_bad_suggestion():
+                                    """Record negative feedback and re-classify"""
+                                    old_suggestion = current_ai[0]
+                                    # Record the bad suggestion as feedback
+                                    if self.learner:
+                                        self.learner.record_correction(
+                                            texture_path=str(file_path),
+                                            corrected_category="__rejected__",
+                                            original_predictions=[{'category': old_suggestion,
+                                                                   'confidence': current_ai[1]}]
+                                        )
+                                    # Re-classify to get a new suggestion
+                                    new_cat, new_conf = self.classifier.classify_texture(file_path)
+                                    # If same as rejected, try to find next best
+                                    if new_cat == old_suggestion and self.learner:
+                                        # Adjust predictions to penalize the rejected one
+                                        preds = [{'category': c, 'confidence': 0.5}
+                                                 for c in category_list if c != old_suggestion]
+                                        adjusted = self.learner.adjust_predictions(preds)
+                                        if adjusted:
+                                            new_cat = adjusted[0]['category']
+                                            new_conf = adjusted[0]['confidence']
+                                    current_ai[0] = new_cat
+                                    current_ai[1] = new_conf
+                                    category_var.set(new_cat)
+                                    ai_label.configure(
+                                        text=f"AI Classification: {new_cat} ({new_conf:.0%} confidence)")
+                                    feedback_label.configure(
+                                        text=f"🔄 AI re-suggested: {new_cat} (was: {old_suggestion})")
+                                
+                                bad_btn = ctk.CTkButton(feedback_frame, text="👎 Bad Suggestion", 
+                                            command=on_bad_suggestion, width=130, fg_color="#8B0000")
+                                bad_btn.pack(side="left", padx=3)
+                                
+                                # Action buttons
                                 button_frame = ctk.CTkFrame(dialog_window)
-                                button_frame.pack(pady=20)
+                                button_frame.pack(pady=15)
                                 
                                 def on_confirm():
-                                    confirmed_category[0] = category_var.get()
+                                    chosen = category_var.get()
+                                    # Implicit learning: if user changed AI suggestion, record it
+                                    if self.learner and chosen != current_ai[0]:
+                                        self.learner.record_correction(
+                                            texture_path=str(file_path),
+                                            corrected_category=chosen,
+                                            original_predictions=[{'category': current_ai[0],
+                                                                   'confidence': current_ai[1]}]
+                                        )
+                                    confirmed_category[0] = chosen
                                     dialog_window.destroy()
                                     result_event.set()
                                 
@@ -8389,7 +8591,7 @@ Built with:
                                 # Tooltips for suggested mode dialog buttons
                                 if WidgetTooltip:
                                     self._tooltips.append(WidgetTooltip(confirm_btn,
-                                        "Sort this texture using the category in the dropdown — change it first if the AI got it wrong",
+                                        "Sort this texture using the category in the dropdown — change it first if the AI got it wrong. The AI learns from your changes.",
                                         widget_id='suggested_confirm_btn'))
                                     self._tooltips.append(WidgetTooltip(skip_btn,
                                         "Skip this texture — leave it unsorted and move to the next one",
@@ -8400,6 +8602,9 @@ Built with:
                                     self._tooltips.append(WidgetTooltip(cancel_btn,
                                         "Cancel the entire sorting operation and stop processing files",
                                         widget_id='suggested_cancel_btn'))
+                                    self._tooltips.append(WidgetTooltip(bad_btn,
+                                        "Tell the AI this suggestion is wrong — it will learn from the feedback and try a different category",
+                                        widget_id='suggested_bad_btn'))
                                     self._tooltips.append(WidgetTooltip(category_dropdown,
                                         "The AI-suggested category — change it here if incorrect, then click Confirm",
                                         widget_id='suggested_category_dropdown'))
