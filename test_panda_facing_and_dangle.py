@@ -576,17 +576,17 @@ def test_dangle_uses_dragging_state_not_anim():
         import inspect
         source = inspect.getsource(PandaWidget._draw_panda)
         
-        # Check that _is_being_dragged flag is defined
-        assert '_is_being_dragged' in source, \
-            "_draw_panda should define _is_being_dragged flag"
+        # Check that is_being_dragged flag is defined
+        assert 'is_being_dragged' in source, \
+            "_draw_panda should define is_being_dragged flag"
         
-        # Check that dangle offsets use _is_being_dragged instead of anim == 'dragging'
+        # Check that dangle offsets use is_being_dragged instead of anim == 'dragging'
         # Count occurrences of the flag in dangle checks
-        dangle_uses = source.count('_is_being_dragged else')
+        dangle_uses = source.count('is_being_dragged else')
         assert dangle_uses >= 10, \
-            f"_is_being_dragged should be used in at least 10 dangle offset checks (found {dangle_uses})"
+            f"is_being_dragged should be used in at least 10 dangle offset checks (found {dangle_uses})"
         
-        print("✓ Dangle physics uses _is_being_dragged state for correct behavior during drag")
+        print("✓ Dangle physics uses is_being_dragged state for correct behavior during drag")
     except ImportError:
         print("⚠ Skipping dangle state test (GUI not available)")
 

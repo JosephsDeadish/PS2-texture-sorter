@@ -1857,8 +1857,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # During toss physics or dragging, use _facing_direction to pick the correct view
         # Save original dragging state before anim is remapped for view
-        _is_being_dragged = (anim == 'dragging' and self.is_dragging)
-        if ((_is_being_dragged) or
+        is_being_dragged = (anim == 'dragging' and self.is_dragging)
+        if ((is_being_dragged) or
             (anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing)):
             facing = getattr(self, '_facing_direction', 'front')
             if facing == 'left':
@@ -2148,14 +2148,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             leg_len = int(30 * sy)
             
             # Apply individual limb dangle physics during drag
-            left_leg_dangle = int(self._dangle_left_leg) if _is_being_dragged else 0
-            right_leg_dangle = int(self._dangle_right_leg) if _is_being_dragged else 0
-            left_arm_dangle = int(self._dangle_left_arm) if _is_being_dragged else 0
-            right_arm_dangle = int(self._dangle_right_arm) if _is_being_dragged else 0
-            left_leg_dangle_h = int(self._dangle_left_leg_h) if _is_being_dragged else 0
-            right_leg_dangle_h = int(self._dangle_right_leg_h) if _is_being_dragged else 0
-            left_arm_dangle_h = int(self._dangle_left_arm_h) if _is_being_dragged else 0
-            right_arm_dangle_h = int(self._dangle_right_arm_h) if _is_being_dragged else 0
+            left_leg_dangle = int(self._dangle_left_leg) if is_being_dragged else 0
+            right_leg_dangle = int(self._dangle_right_leg) if is_being_dragged else 0
+            left_arm_dangle = int(self._dangle_left_arm) if is_being_dragged else 0
+            right_arm_dangle = int(self._dangle_right_arm) if is_being_dragged else 0
+            left_leg_dangle_h = int(self._dangle_left_leg_h) if is_being_dragged else 0
+            right_leg_dangle_h = int(self._dangle_right_leg_h) if is_being_dragged else 0
+            left_arm_dangle_h = int(self._dangle_left_arm_h) if is_being_dragged else 0
+            right_arm_dangle_h = int(self._dangle_right_arm_h) if is_being_dragged else 0
             
             # Legs with perspective - one more forward, one more back
             if is_back_facing:
@@ -2333,8 +2333,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Apply individual limb dangle physics during drag
             # Left leg (vertical + horizontal dangle)
-            left_leg_dangle = int(self._dangle_left_leg) if _is_being_dragged else 0
-            left_leg_dangle_h = int(self._dangle_left_leg_h) if _is_being_dragged else 0
+            left_leg_dangle = int(self._dangle_left_leg) if is_being_dragged else 0
+            left_leg_dangle_h = int(self._dangle_left_leg_h) if is_being_dragged else 0
             left_leg_x = cx_draw - int(25 * sx) + left_leg_dangle_h
             left_leg_swing = leg_swing + left_leg_dangle
             c.create_oval(
@@ -2350,8 +2350,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             
             # Right leg (vertical + horizontal dangle)
-            right_leg_dangle = int(self._dangle_right_leg) if _is_being_dragged else 0
-            right_leg_dangle_h = int(self._dangle_right_leg_h) if _is_being_dragged else 0
+            right_leg_dangle = int(self._dangle_right_leg) if is_being_dragged else 0
+            right_leg_dangle_h = int(self._dangle_right_leg_h) if is_being_dragged else 0
             right_leg_x = cx_draw + int(25 * sx) + right_leg_dangle_h
             right_leg_swing = -leg_swing + right_leg_dangle
             c.create_oval(
@@ -2393,8 +2393,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Apply individual limb dangle physics during drag
             # Left arm (vertical + horizontal dangle)
-            left_arm_dangle = int(self._dangle_left_arm) if _is_being_dragged else 0
-            left_arm_dangle_h = int(self._dangle_left_arm_h) if _is_being_dragged else 0
+            left_arm_dangle = int(self._dangle_left_arm) if is_being_dragged else 0
+            left_arm_dangle_h = int(self._dangle_left_arm_h) if is_being_dragged else 0
             la_swing = arm_swing + left_arm_dangle
             c.create_oval(
                 cx_draw - int(55 * sx) + left_arm_dangle_h, arm_top + la_swing,
@@ -2403,8 +2403,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             
             # Right arm (vertical + horizontal dangle)
-            right_arm_dangle = int(self._dangle_right_arm) if _is_being_dragged else 0
-            right_arm_dangle_h = int(self._dangle_right_arm_h) if _is_being_dragged else 0
+            right_arm_dangle = int(self._dangle_right_arm) if is_being_dragged else 0
+            right_arm_dangle_h = int(self._dangle_right_arm_h) if is_being_dragged else 0
             ra_swing = -arm_swing + right_arm_dangle
             c.create_oval(
                 cx_draw + int(30 * sx) + right_arm_dangle_h, arm_top + ra_swing,
@@ -2428,8 +2428,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             ear_h = int(24 * sy)
             
             # Individual ear stretch/dangle during drag
-            left_ear_stretch_px = int(self._dangle_left_ear * sy) if _is_being_dragged else int(self._ear_stretch * sy)
-            right_ear_stretch_px = int(self._dangle_right_ear * sy) if _is_being_dragged else int(self._ear_stretch * sy)
+            left_ear_stretch_px = int(self._dangle_left_ear * sy) if is_being_dragged else int(self._ear_stretch * sy)
+            right_ear_stretch_px = int(self._dangle_right_ear * sy) if is_being_dragged else int(self._ear_stretch * sy)
             
             # Left ear
             c.create_oval(cx_draw - head_rx - int(2 * sx) + ear_wiggle, ear_y - int(16 * sy) - left_ear_stretch_px,
@@ -2488,7 +2488,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
         # --- Upside-down flip when grabbed by foot and dragged upward ---
-        if self._is_upside_down and _is_being_dragged:
+        if self._is_upside_down and is_being_dragged:
             # Flip all canvas items vertically around the canvas center
             c.scale("all", w / 2, h / 2, 1.0, -1.0)
     
@@ -4808,7 +4808,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         avx = abs(vx)
         avy = abs(vy)
         if avx > 1 or avy > 1:  # Only update when there's meaningful movement
-            if avx > 0 and avy > 0 and min(avx, avy) / max(avx, avy) > self.DIAGONAL_MOVEMENT_THRESHOLD:
+            max_av = max(avx, avy)
+            if max_av > 0 and min(avx, avy) / max_av > self.DIAGONAL_MOVEMENT_THRESHOLD:
                 if vy < 0 and vx < 0:
                     self._facing_direction = 'back_left'
                 elif vy < 0 and vx > 0:
@@ -5264,9 +5265,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         """Handle left click on panda with body part detection."""
         try:
             if self.panda:
-                # If auto-walking, stop the walk but preserve facing direction
-                was_auto_walking = self._is_auto_walking
-                if was_auto_walking:
+                # Stop auto-walk if in progress (click interrupts walk)
+                if self._is_auto_walking:
                     self._is_auto_walking = False
                 
                 # Detect which body part was clicked
