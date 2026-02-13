@@ -447,6 +447,9 @@ class GameTextureSorter(ctk.CTk):
         self._sorting_cancelled = threading.Event()
         self._sorting_paused = threading.Event()
         
+        # Sentinel value for skip actions in sorting dialogs
+        self.SKIP_SENTINEL = "_SKIP_FILE_"
+        
         # Initialize features if GUI available
         if GUI_AVAILABLE:
             try:
@@ -8186,13 +8189,13 @@ Built with:
                                     result_event.set()
                                 
                                 def on_skip():
-                                    selected_category[0] = "__SKIP__"
+                                    selected_category[0] = self.SKIP_SENTINEL
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_skip_all():
                                     self._sorting_skip_all.set()
-                                    selected_category[0] = "__SKIP__"
+                                    selected_category[0] = self.SKIP_SENTINEL
                                     dialog_window.destroy()
                                     result_event.set()
                                 
@@ -8248,7 +8251,7 @@ Built with:
                                 if self._sorting_cancelled.is_set():
                                     self.log("⚠️ Sorting cancelled by user")
                                     return
-                                if selected_category[0] == "__SKIP__":
+                                if selected_category[0] == self.SKIP_SENTINEL:
                                     continue  # Skip this file — don't sort it
                                 category = selected_category[0] if selected_category[0] else ai_category
                                 confidence = 1.0  # User selection is 100% confident
@@ -8344,13 +8347,13 @@ Built with:
                                     result_event.set()
                                 
                                 def on_skip():
-                                    confirmed_category[0] = "__SKIP__"
+                                    confirmed_category[0] = self.SKIP_SENTINEL
                                     dialog_window.destroy()
                                     result_event.set()
                                 
                                 def on_skip_all():
                                     self._sorting_skip_all.set()
-                                    confirmed_category[0] = "__SKIP__"
+                                    confirmed_category[0] = self.SKIP_SENTINEL
                                     dialog_window.destroy()
                                     result_event.set()
                                 
@@ -8408,7 +8411,7 @@ Built with:
                                 if self._sorting_cancelled.is_set():
                                     self.log("⚠️ Sorting cancelled by user")
                                     return
-                                if confirmed_category[0] == "__SKIP__":
+                                if confirmed_category[0] == self.SKIP_SENTINEL:
                                     continue  # Skip this file — don't sort it
                                 category = confirmed_category[0] if confirmed_category[0] else ai_category
                                 confidence = 1.0  # User confirmation is 100% confident
