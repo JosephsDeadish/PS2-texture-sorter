@@ -270,6 +270,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._active_item_emoji = None  # Emoji for the item (e.g. "🎋")
         self._active_item_type = None  # 'food' or 'toy'
         self._active_item_key = None   # Widget key (e.g. 'bamboo') for per-item responses
+        self._active_item_physics = None  # ItemPhysics object for the active item
         
         # Eating sequence state
         self._eating_phase = 0
@@ -369,6 +370,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._auto_walk_step_dx = 0.0
         self._auto_walk_step_dy = 0.0
         self._auto_walk_steps_remaining = 0
+        
+        # Ground crack effects (for heavy items landing and panda falling)
+        self._ground_cracks = []  # List of (x, y, creation_time, crack_type) tuples
+        self._crack_duration_ms = 3000  # How long cracks stay visible (3 seconds)
+        
+        # Damage tracking and visual effects
+        self.damage_tracker = None  # Will be initialized lazily when needed
+        self.vfx_renderer = None  # Will be initialized lazily when needed
         
         # Configure the proxy frame – it stays in the widget tree for API
         # compatibility but is intentionally empty / zero-size.
@@ -3225,6 +3234,69 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 if abs(self._drag_body_angle) < 0.05:
                     self._drag_body_angle = 0.0
             self._flip_progress = max(0.0, self._flip_progress - 0.15)
+        
+        # Draw ground cracks (for heavy items landing or panda falling)
+        self._draw_ground_cracks(c, w, h)
+    
+    def _draw_ground_cracks(self, c: tk.Canvas, canvas_w: int, canvas_h: int):
+        """Draw temporary ground crack effects from heavy impacts.
+        
+        Args:
+            c: Canvas to draw on
+            canvas_w: Canvas width
+            canvas_h: Canvas height
+        """
+        current_time = time.time()
+        
+        # Remove expired cracks
+        self._ground_cracks = [
+            (x, y, t, crack_type) for x, y, t, crack_type in self._ground_cracks
+            if (current_time - t) * 1000 < self._crack_duration_ms
+        ]
+        
+        # Draw active cracks
+        for crack_x, crack_y, crack_time, crack_type in self._ground_cracks:
+            age = (current_time - crack_time) * 1000  # age in ms
+            fade_progress = age / self._crack_duration_ms
+            
+            # Fade out opacity
+            opacity = int(255 * (1.0 - fade_progress))
+            if opacity < 10:
+                continue
+            
+            # Convert opacity to hex color (gray cracks that fade out)
+            MAX_GRAY_VALUE = 100
+            gray_val = max(0, MAX_GRAY_VALUE - int(MAX_GRAY_VALUE * fade_progress))
+            color = f"#{gray_val:02x}{gray_val:02x}{gray_val:02x}"
+            
+            # Draw crack lines radiating from impact point
+            # Different crack patterns for different impact types
+            if crack_type == 'heavy':
+                # Larger cracks for heavy items
+                crack_lines = 5
+                crack_length = 15
+            else:
+                # Smaller cracks for panda falls
+                crack_lines = 3
+                crack_length = 10
+            
+            for i in range(crack_lines):
+                # Full circle (2*pi radians) divided by number of crack lines
+                angle = (i / crack_lines) * 2 * math.pi
+                end_x = crack_x + int(crack_length * math.cos(angle))
+                end_y = crack_y + int(crack_length * math.sin(angle))
+                c.create_line(crack_x, crack_y, end_x, end_y,
+                             fill=color, width=2, tags="crack_effect")
+    
+    def _add_ground_crack(self, x: int, y: int, crack_type: str = 'normal'):
+        """Add a new ground crack effect at the specified position.
+        
+        Args:
+            x: X position relative to canvas
+            y: Y position relative to canvas
+            crack_type: Type of crack ('normal' or 'heavy')
+        """
+        self._ground_cracks.append((x, y, time.time(), crack_type))
     
     def _draw_eyes(self, c: tk.Canvas, cx: int, ey: int, style: str, sx: float = 1.0, sy: float = 1.0):
         """Draw panda eyes based on the current animation style."""
@@ -5097,26 +5169,67 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                                   font=("Arial", max(8, item_size)), tags="active_item")
             elif anim == 'playing':
                 # Draw toy item near panda's hands with play motion
+                # Use physics properties for enhanced animation if available
                 play_cycle = (frame_idx % 60) / 60.0
+                
+                # Get physics properties for enhanced animation
+                bounciness = 1.0
+                springiness = 0.0
+                wobble = 0.0
+                if self._active_item_physics:
+                    bounciness = getattr(self._active_item_physics, 'bounciness', 1.0)
+                    springiness = getattr(self._active_item_physics, 'springiness', 0.0)
+                    wobble = getattr(self._active_item_physics, 'wobble', 0.0)
+                
                 if play_cycle < 0.3:
                     # Bouncing - toy in front, bouncing up and down
-                    bounce = abs(math.sin(frame_idx * 0.5)) * int(20 * sy)
+                    # Higher bounciness = more exaggerated bounce
+                    bounce_height = int(20 * sy * bounciness)
+                    bounce = abs(math.sin(frame_idx * 0.5)) * bounce_height
+                    
+                    # Springy items have extra oscillation
+                    if springiness > 0.5:
+                        spring_effect = math.sin(frame_idx * 1.5) * int(8 * sy * springiness)
+                        bounce += spring_effect
+                    
                     item_x = cx
-                    item_y = int(160 * sy + by) - bounce
+                    item_y = int(160 * sy + by) - int(bounce)
                     item_size = int(18 * sx)
+                    
+                    # Wobble effect for squishy items
+                    if wobble > 0.5:
+                        item_x += int(math.sin(frame_idx * 2) * 5 * wobble)
+                    
                 elif play_cycle < 0.6:
                     # Playful swipe - toy near hand
                     swing = math.sin(frame_idx * 0.8) * int(25 * sx)
+                    
+                    # Springy items stretch during swing
+                    if springiness > 0.5:
+                        swing *= (1.0 + springiness * 0.5)
+                    
                     item_x = cx + int(swing)
                     item_y = int(100 * sy + by)
                     item_size = int(16 * sx)
+                    
+                    # Wobble adds vertical movement
+                    if wobble > 0.5:
+                        item_y += int(math.sin(frame_idx * 2.5) * 8 * wobble)
+                    
                 else:
                     # Tossed in air then caught
                     toss_phase = (play_cycle - 0.6) / 0.4
-                    arc = -math.sin(toss_phase * math.pi) * int(40 * sy)
-                    item_x = cx + int(20 * sx)
-                    item_y = int(80 * sy + by) + arc
+                    arc = -math.sin(toss_phase * math.pi) * int(40 * sy * bounciness)
+                    
+                    # Springy items wobble in the air
+                    wobble_effect = 0
+                    if springiness > 0.5:
+                        wobble_effect = math.sin(frame_idx * 3) * int(10 * sx * springiness)
+                    
+                    item_x = cx + int(20 * sx) + int(wobble_effect)
+                    item_y = int(80 * sy + by) + int(arc)
                     item_size = int(16 * sx)
+                
                 c.create_text(item_x, item_y, text=self._active_item_emoji,
                               font=("Arial", max(8, item_size)), tags="active_item")
         
@@ -5131,9 +5244,35 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 rub_y = int(120 * sy + by) + int(math.sin(rub_angle) * 6 * sy)
                 c.create_text(rub_x, rub_y, text="💕",
                               font=("Arial", max(8, int(10 * sx))), tags="rub_effect")
+        
+        # Draw damage effects (wounds, stuck projectiles, bleeding)
+        if self.damage_tracker is not None and self.vfx_renderer is not None:
+            # Get center position for damage effects
+            damage_center_x = cx
+            damage_center_y = int(100 * sy + by)  # Around torso area
+            
+            # Render wounds
+            wounds = self.damage_tracker.get_all_wounds()
+            if wounds:
+                self.vfx_renderer.render_wounds(c, wounds, damage_center_x, damage_center_y, scale=sx)
+            
+            # Render stuck projectiles (arrows, bolts, etc.)
+            stuck_projectiles = self.damage_tracker.get_stuck_projectiles()
+            if stuck_projectiles:
+                self.vfx_renderer.render_stuck_projectiles(
+                    c, stuck_projectiles, damage_center_x, damage_center_y, scale=sx
+                )
+            
+            # Render bleeding effect
+            if self.damage_tracker.total_bleeding_rate > 0:
+                self.vfx_renderer.render_bleeding_effect(
+                    c, damage_center_x, damage_center_y + int(40 * sy),
+                    self.damage_tracker.total_bleeding_rate,
+                    frame_idx
+                )
     
     def set_active_item(self, item_name: str = None, item_emoji: str = None,
-                       item_type: str = None, item_key: str = None):
+                       item_type: str = None, item_key: str = None, item_physics = None):
         """Set the item currently being used by the panda during eating/playing.
         
         Args:
@@ -5141,15 +5280,69 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             item_emoji: Emoji character for the item
             item_type: 'food' or 'toy'
             item_key: Widget key (e.g. 'bamboo') for per-item eating responses
+            item_physics: ItemPhysics object for physics-based animations
         """
         self._active_item_name = item_name
         self._active_item_emoji = item_emoji
         self._active_item_type = item_type
         self._active_item_key = item_key
+        self._active_item_physics = item_physics
+    
+    def take_damage(self, amount: float, category=None, limb=None, can_sever: bool = False) -> dict:
+        """
+        Apply damage to the panda.
+        
+        Args:
+            amount: Damage amount
+            category: Type of damage (from DamageCategory enum)
+            limb: Which limb to damage (from LimbType enum)
+            can_sever: Whether this hit can sever limbs (critical hits)
+            
+        Returns:
+            Dict with damage result info
+        """
+        # Lazy initialization of damage system
+        if self.damage_tracker is None:
+            try:
+                from src.features.damage_system import DamageTracker, DamageCategory, LimbType
+                from src.ui.visual_effects_renderer import VisualEffectsRenderer
+                self.damage_tracker = DamageTracker()
+                self.vfx_renderer = VisualEffectsRenderer()
+            except ImportError:
+                # If damage system not available, just return empty result
+                return {'stage': 0, 'severed': False}
+        
+        # Default category and limb if not specified
+        if category is None:
+            from src.features.damage_system import DamageCategory
+            category = DamageCategory.SHARP
+        if limb is None:
+            from src.features.damage_system import LimbType
+            limb = LimbType.TORSO
+        
+        # Apply damage
+        result = self.damage_tracker.apply_damage(limb, category, amount, can_sever)
+        
+        # Apply movement penalties from damage
+        movement_penalty = self.damage_tracker.get_movement_penalty()
+        attack_penalty = self.damage_tracker.get_attack_penalty()
+        
+        # TODO: Could integrate penalties into movement speed and attack damage
+        # For now, just track them
+        
+        # Show reaction (if severe damage)
+        if result['stage'] >= 6:
+            # Severe damage reaction
+            self._speak("Ouch! That really hurt!")
+        
+        # Redraw to show wounds
+        self._redraw()
+        
+        return result
     
     def walk_to_item(self, target_x: int, target_y: int, item_name: str = None,
                      item_emoji: str = None, item_type: str = 'toy',
-                     on_arrive=None, item_key: str = None):
+                     on_arrive=None, item_key: str = None, item_physics = None):
         """Animate the panda walking to an item's location on screen.
         
         The panda toplevel smoothly moves towards the target coordinates,
@@ -5165,12 +5358,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             item_type: 'food' or 'toy'
             on_arrive: Optional callback when panda arrives (for food, fires after eating)
             item_key: Widget key (e.g. 'bamboo') for per-item eating responses
+            item_physics: ItemPhysics object for physics-based animations
         """
         if self._destroyed:
             return
         
         # Set the active item so it renders during the interaction
-        self.set_active_item(item_name, item_emoji, item_type, item_key)
+        self.set_active_item(item_name, item_emoji, item_type, item_key, item_physics)
         
         # Start walking animation
         self._set_animation_no_cancel('carrying' if item_type == 'food' else 'playing')
@@ -5202,7 +5396,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # Show speech
         if self.panda and item_name:
-            response = self.panda.on_item_interact(item_name, item_type)
+            response = self.panda.on_item_interact(item_name, item_type, item_physics)
             self.info_label.configure(text=response)
         
         self._walk_tick()
@@ -6014,6 +6208,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # After a rough toss (multiple bounces), panda may fall on face or tip over
         if self._toss_bounce_count >= 3 and random.random() < 0.4:
+            # Add ground crack where panda lands hard
+            crack_x = PANDA_CANVAS_W // 2
+            crack_y = int(PANDA_CANVAS_H * 0.85)  # Near bottom where panda lands
+            self._add_ground_crack(crack_x, crack_y, 'normal')
+            
             if random.random() < 0.5:
                 self._is_face_down = True
                 self._is_on_side = False
@@ -6506,6 +6705,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     item_type='food',
                     on_arrive=_on_eat_complete,
                     item_key=wkey,
+                    item_physics=widget.physics if hasattr(widget, 'physics') else None,
                 )
             else:
                 def _on_toy_arrive():
@@ -6529,6 +6729,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     item_type='toy',
                     on_arrive=_on_toy_arrive,
                     item_key=wkey,
+                    item_physics=widget.physics if hasattr(widget, 'physics') else None,
                 )
         except Exception as e:
             logger.error(f"Error giving widget to panda: {e}")

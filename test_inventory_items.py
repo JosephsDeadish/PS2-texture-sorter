@@ -36,6 +36,40 @@ def test_item_physics_properties():
     assert dumbbell.physics.weight == 3.0, "Dumbbell should be heavy"
     assert dumbbell.physics.gravity == 3.0, "Dumbbell should have high gravity"
     assert dumbbell.physics.bounciness == 0.15, "Dumbbell should barely bounce"
+    assert dumbbell.physics.hurt_on_kick is True, "Dumbbell should hurt when kicked"
+    assert dumbbell.physics.kickable is False, "Dumbbell should not be kickable"
+    assert dumbbell.physics.causes_crack is True, "Dumbbell should cause cracks when dropped"
+
+    slinky = wc.get_widget('slinky')
+    assert slinky is not None, "Slinky should exist"
+    assert slinky.physics.springiness >= 0.9, "Slinky should be very springy"
+    assert slinky.physics.elasticity >= 0.9, "Slinky should be very elastic"
+    assert slinky.physics.kickable is True, "Slinky should be kickable"
+
+    # Test new toys with unique properties
+    balloon = wc.get_widget('balloon')
+    assert balloon is not None, "Balloon should exist"
+    assert balloon.physics.gravity < 0, "Balloon should float (negative gravity)"
+    assert balloon.physics.weight < 0.1, "Balloon should be extremely light"
+    
+    anchor = wc.get_widget('anchor')
+    assert anchor is not None, "Anchor should exist"
+    assert anchor.physics.weight >= 4.0, "Anchor should be very heavy"
+    assert anchor.physics.kickable is False, "Anchor should not be kickable"
+    assert anchor.physics.hurt_on_kick is True, "Anchor should hurt when kicked"
+    
+    feather = wc.get_widget('feather')
+    assert feather is not None, "Feather should exist"
+    assert feather.physics.gravity < 0.5, "Feather should fall slowly"
+    assert feather.physics.wobble > 0.9, "Feather should wobble a lot"
+    
+    beach_ball = wc.get_widget('beach_ball')
+    assert beach_ball is not None, "Beach ball should exist"
+    assert beach_ball.physics.bounciness > 2.5, "Beach ball should be very bouncy"
+    
+    trophy = wc.get_widget('trophy')
+    assert trophy is not None, "Trophy should exist"
+    assert trophy.physics.causes_crack is True, "Trophy should cause cracks when dropped"
 
     carrot = wc.get_widget('bouncy_carrot')
     assert carrot.physics.bounciness == 2.5, "Bouncy carrot should be very bouncy"
@@ -109,9 +143,17 @@ def test_new_widgets_exist():
     """Test that all new widgets were added to the collection."""
     wc = WidgetCollection()
 
-    # New toys
+    # Original toys
     for widget_id in ['skateboard', 'drum', 'telescope', 'bouncy_carrot',
-                      'squishy_ball', 'dumbbell']:
+                      'squishy_ball', 'dumbbell', 'slinky']:
+        widget = wc.get_widget(widget_id)
+        assert widget is not None, f"Widget {widget_id} should exist"
+        assert widget.widget_type == WidgetType.TOY, f"{widget_id} should be a toy"
+        assert widget.consumable is False, f"Toy {widget_id} should not be consumable"
+    
+    # Sample of new toys added
+    for widget_id in ['rubber_duck', 'beach_ball', 'balloon', 'anchor', 'trophy',
+                      'slinky', 'spring_toy', 'feather']:
         widget = wc.get_widget(widget_id)
         assert widget is not None, f"Widget {widget_id} should exist"
         assert widget.widget_type == WidgetType.TOY, f"{widget_id} should be a toy"
@@ -203,6 +245,28 @@ def test_panda_item_interaction():
         f"Toy interact should mention toy-related action: {response}"
     assert panda.toy_interact_count == 1, "Toy interaction should increase toy_interact_count"
     print("✓ Panda item interaction works correctly")
+
+
+def test_panda_special_item_interactions():
+    """Test panda has special responses for heavy and springy items."""
+    panda = PandaCharacter()
+    wc = WidgetCollection()
+    
+    # Test heavy item (dumbbell) - panda hurts foot when kicking
+    dumbbell = wc.get_widget('dumbbell')
+    response = panda.on_item_interact('Super Heavy Dumbbell', 'toy', dumbbell.physics)
+    hurt_keywords = {'ow', 'ouch', 'hurt', 'heavy', 'foot', 'paw'}
+    assert any(kw in response.lower() for kw in hurt_keywords), \
+        f"Heavy item should hurt panda: {response}"
+    
+    # Test springy item (slinky) - panda has fun with springy behavior
+    slinky = wc.get_widget('slinky')
+    response = panda.on_item_interact('Rainbow Slinky', 'toy', slinky.physics)
+    spring_keywords = {'spring', 'boing', 'slink', 'bounce', 'stretch', 'crawl', 'fun'}
+    assert any(kw in response.lower() for kw in spring_keywords), \
+        f"Springy item should show spring behavior: {response}"
+    
+    print("✓ Panda special item interactions work correctly")
 
 
 def test_food_add_quantity_auto_unlocks():
@@ -322,6 +386,7 @@ if __name__ == "__main__":
         test_new_shop_items_exist()
         test_closet_categories_excluded_from_inventory()
         test_panda_item_interaction()
+        test_panda_special_item_interactions()
         test_food_add_quantity_auto_unlocks()
         test_widget_info_includes_consumable()
         test_inventory_only_shows_unlocked_owned()

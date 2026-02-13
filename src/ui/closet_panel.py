@@ -271,17 +271,24 @@ class ClosetPanel(ctk.CTkFrame if ctk else tk.Frame):
         card.pack(pady=5, padx=10, fill="x")
         
         # Item emoji and name
-        name_frame = ctk.CTkFrame(card) if ctk else tk.Frame(card)
+        if ctk:
+            name_frame = ctk.CTkFrame(card, fg_color="transparent")
+        else:
+            name_frame = tk.Frame(card, relief="flat", borderwidth=0, highlightthickness=0)
         name_frame.pack(side="left", padx=10, pady=5)
         
         emoji_label = ctk.CTkLabel(
             name_frame,
             text=item.emoji,
-            font=("Arial", 24)
+            font=("Arial", 24),
+            fg_color="transparent"
         ) if ctk else tk.Label(
             name_frame,
             text=item.emoji,
-            font=("Arial", 24)
+            font=("Arial", 24),
+            bg=name_frame.cget('bg') if hasattr(name_frame, 'cget') else None,
+            borderwidth=0,
+            highlightthickness=0
         )
         emoji_label.pack(side="left", padx=5)
         
