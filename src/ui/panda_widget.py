@@ -270,6 +270,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._active_item_emoji = None  # Emoji for the item (e.g. "🎋")
         self._active_item_type = None  # 'food' or 'toy'
         self._active_item_key = None   # Widget key (e.g. 'bamboo') for per-item responses
+        self._active_item_physics = None  # ItemPhysics object for the active item
         
         # Eating sequence state
         self._eating_phase = 0
@@ -5162,26 +5163,67 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                                   font=("Arial", max(8, item_size)), tags="active_item")
             elif anim == 'playing':
                 # Draw toy item near panda's hands with play motion
+                # Use physics properties for enhanced animation if available
                 play_cycle = (frame_idx % 60) / 60.0
+                
+                # Get physics properties for enhanced animation
+                bounciness = 1.0
+                springiness = 0.0
+                wobble = 0.0
+                if self._active_item_physics:
+                    bounciness = getattr(self._active_item_physics, 'bounciness', 1.0)
+                    springiness = getattr(self._active_item_physics, 'springiness', 0.0)
+                    wobble = getattr(self._active_item_physics, 'wobble', 0.0)
+                
                 if play_cycle < 0.3:
                     # Bouncing - toy in front, bouncing up and down
-                    bounce = abs(math.sin(frame_idx * 0.5)) * int(20 * sy)
+                    # Higher bounciness = more exaggerated bounce
+                    bounce_height = int(20 * sy * bounciness)
+                    bounce = abs(math.sin(frame_idx * 0.5)) * bounce_height
+                    
+                    # Springy items have extra oscillation
+                    if springiness > 0.5:
+                        spring_effect = math.sin(frame_idx * 1.5) * int(8 * sy * springiness)
+                        bounce += spring_effect
+                    
                     item_x = cx
-                    item_y = int(160 * sy + by) - bounce
+                    item_y = int(160 * sy + by) - int(bounce)
                     item_size = int(18 * sx)
+                    
+                    # Wobble effect for squishy items
+                    if wobble > 0.5:
+                        item_x += int(math.sin(frame_idx * 2) * 5 * wobble)
+                    
                 elif play_cycle < 0.6:
                     # Playful swipe - toy near hand
                     swing = math.sin(frame_idx * 0.8) * int(25 * sx)
+                    
+                    # Springy items stretch during swing
+                    if springiness > 0.5:
+                        swing *= (1.0 + springiness * 0.5)
+                    
                     item_x = cx + int(swing)
                     item_y = int(100 * sy + by)
                     item_size = int(16 * sx)
+                    
+                    # Wobble adds vertical movement
+                    if wobble > 0.5:
+                        item_y += int(math.sin(frame_idx * 2.5) * 8 * wobble)
+                    
                 else:
                     # Tossed in air then caught
                     toss_phase = (play_cycle - 0.6) / 0.4
-                    arc = -math.sin(toss_phase * math.pi) * int(40 * sy)
-                    item_x = cx + int(20 * sx)
-                    item_y = int(80 * sy + by) + arc
+                    arc = -math.sin(toss_phase * math.pi) * int(40 * sy * bounciness)
+                    
+                    # Springy items wobble in the air
+                    wobble_effect = 0
+                    if springiness > 0.5:
+                        wobble_effect = math.sin(frame_idx * 3) * int(10 * sx * springiness)
+                    
+                    item_x = cx + int(20 * sx) + int(wobble_effect)
+                    item_y = int(80 * sy + by) + int(arc)
                     item_size = int(16 * sx)
+                
                 c.create_text(item_x, item_y, text=self._active_item_emoji,
                               font=("Arial", max(8, item_size)), tags="active_item")
         
@@ -5198,7 +5240,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               font=("Arial", max(8, int(10 * sx))), tags="rub_effect")
     
     def set_active_item(self, item_name: str = None, item_emoji: str = None,
-                       item_type: str = None, item_key: str = None):
+                       item_type: str = None, item_key: str = None, item_physics = None):
         """Set the item currently being used by the panda during eating/playing.
         
         Args:
@@ -5206,15 +5248,17 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             item_emoji: Emoji character for the item
             item_type: 'food' or 'toy'
             item_key: Widget key (e.g. 'bamboo') for per-item eating responses
+            item_physics: ItemPhysics object for physics-based animations
         """
         self._active_item_name = item_name
         self._active_item_emoji = item_emoji
         self._active_item_type = item_type
         self._active_item_key = item_key
+        self._active_item_physics = item_physics
     
     def walk_to_item(self, target_x: int, target_y: int, item_name: str = None,
                      item_emoji: str = None, item_type: str = 'toy',
-                     on_arrive=None, item_key: str = None):
+                     on_arrive=None, item_key: str = None, item_physics = None):
         """Animate the panda walking to an item's location on screen.
         
         The panda toplevel smoothly moves towards the target coordinates,
@@ -5230,12 +5274,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             item_type: 'food' or 'toy'
             on_arrive: Optional callback when panda arrives (for food, fires after eating)
             item_key: Widget key (e.g. 'bamboo') for per-item eating responses
+            item_physics: ItemPhysics object for physics-based animations
         """
         if self._destroyed:
             return
         
         # Set the active item so it renders during the interaction
-        self.set_active_item(item_name, item_emoji, item_type, item_key)
+        self.set_active_item(item_name, item_emoji, item_type, item_key, item_physics)
         
         # Start walking animation
         self._set_animation_no_cancel('carrying' if item_type == 'food' else 'playing')
@@ -5267,7 +5312,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         # Show speech
         if self.panda and item_name:
-            response = self.panda.on_item_interact(item_name, item_type)
+            response = self.panda.on_item_interact(item_name, item_type, item_physics)
             self.info_label.configure(text=response)
         
         self._walk_tick()
@@ -6576,6 +6621,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     item_type='food',
                     on_arrive=_on_eat_complete,
                     item_key=wkey,
+                    item_physics=widget.physics if hasattr(widget, 'physics') else None,
                 )
             else:
                 def _on_toy_arrive():
@@ -6599,6 +6645,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     item_type='toy',
                     on_arrive=_on_toy_arrive,
                     item_key=wkey,
+                    item_physics=widget.physics if hasattr(widget, 'physics') else None,
                 )
         except Exception as e:
             logger.error(f"Error giving widget to panda: {e}")
