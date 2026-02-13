@@ -3397,39 +3397,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     pivot_y += int(settle * 30 * sy)
                     
                     # Additional rotation for dragged on ground mode
+                    # IMPORTANT: Apply scale FIRST, then rotate to avoid double-transform
                     if self._is_being_dragged_on_ground:
-                        # ROTATE the entire panda to align with drag direction!
-                        # Calculate rotation around center point
-                        drag_angle_deg = math.degrees(self._drag_ground_angle)
-                        
-                        # Get all canvas items
-                        all_items = c.find_all()
-                        
-                        # Rotate each item around the pivot point
-                        # We'll use a rotation matrix to transform coordinates
-                        cos_angle = math.cos(self._drag_ground_angle)
-                        sin_angle = math.sin(self._drag_ground_angle)
-                        
-                        for item in all_items:
-                            coords = c.coords(item)
-                            if len(coords) >= 4:  # Rectangles, ovals, polygons
-                                new_coords = []
-                                for i in range(0, len(coords), 2):
-                                    x, y = coords[i], coords[i+1]
-                                    # Translate to origin (relative to pivot)
-                                    x_rel = x - pivot_x
-                                    y_rel = y - pivot_y
-                                    # Rotate
-                                    x_rot = x_rel * cos_angle - y_rel * sin_angle
-                                    y_rot = x_rel * sin_angle + y_rel * cos_angle
-                                    # Translate back
-                                    new_coords.append(x_rot + pivot_x)
-                                    new_coords.append(y_rot + pivot_y)
-                                c.coords(item, *new_coords)
-                        
-                        # Also adjust the scales based on angle for proper perspective
-                        cos_a = abs(cos_angle)
-                        sin_a = abs(sin_angle)
+                        # Adjust scales based on drag angle for proper perspective
+                        cos_a = abs(math.cos(self._drag_ground_angle))
+                        sin_a = abs(math.sin(self._drag_ground_angle))
                         # When horizontal (sin_a = 1), expand horizontally
                         # When vertical (cos_a = 1), expand vertically
                         h_scale *= (1.0 + 0.3 * sin_a)
@@ -3439,7 +3411,36 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     v_scale = 1.0 - (settle * 0.4)
                     h_scale = 1.0 + (settle * 0.2)
                 
+                # Apply scaling first (before rotation)
                 c.scale("all", pivot_x, pivot_y, h_scale, v_scale)
+                
+                # Now apply rotation if being dragged on ground
+                # This must come AFTER scaling to avoid double-transformation
+                if self._is_being_dragged_on_ground:
+                    # ROTATE the entire panda to align with drag direction!
+                    # Get all canvas items (they've been scaled already)
+                    all_items = c.find_all()
+                    
+                    # Use rotation matrix to transform coordinates
+                    cos_angle = math.cos(self._drag_ground_angle)
+                    sin_angle = math.sin(self._drag_ground_angle)
+                    
+                    for item in all_items:
+                        coords = c.coords(item)
+                        if len(coords) >= 4:  # Rectangles, ovals, polygons
+                            new_coords = []
+                            for i in range(0, len(coords), 2):
+                                x, y = coords[i], coords[i+1]
+                                # Translate to origin (relative to pivot)
+                                x_rel = x - pivot_x
+                                y_rel = y - pivot_y
+                                # Rotate
+                                x_rot = x_rel * cos_angle - y_rel * sin_angle
+                                y_rot = x_rel * sin_angle + y_rel * cos_angle
+                                # Translate back
+                                new_coords.append(x_rot + pivot_x)
+                                new_coords.append(y_rot + pivot_y)
+                            c.coords(item, *new_coords)
 
         # --- Barrel roll: rotate the entire body sideways through a full 360° ---
         if anim == 'barrel_roll':
