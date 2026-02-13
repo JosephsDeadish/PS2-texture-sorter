@@ -182,6 +182,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     # becoming invisible at exactly 0 during mid-rotation)
     MIN_VISIBLE_SCALE = 0.15
     
+    # Number of frames for the backflip animation cycle — more frames means
+    # more distinct angles and smoother rotation (120 ≈ 3° per frame)
+    BACKFLIP_FRAMES = 120
+    
     # Offset in pixels for where food/toy items appear relative to the panda
     # when given from the menu (the panda walks this distance to pick them up)
     ITEM_WALK_OFFSET_X = 80
@@ -1234,7 +1238,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         elif anim == 'backflip':
             # 120-frame backflip with true body rotation at every angle.
             # Each frame is a new perspective so the flip looks smooth.
-            flip_phase = (frame_idx % 120) / 120.0
+            flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
             if flip_phase < 0.12:
                 # Crouch with arms back — preparing to jump
                 ramp = flip_phase / 0.12
@@ -1382,7 +1386,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             breath_scale = 0.5 + 0.5 * abs(math.cos(roll_angle))
         elif anim == 'backflip':
             # Body perspective changes during 120-frame backward rotation
-            flip_phase = (frame_idx % 120) / 120.0
+            flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
             if flip_phase < 0.20:
                 breath_scale = 1.0
             elif flip_phase < 0.80:
@@ -1626,7 +1630,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_sway = math.sin(phase * 2) * 5
         elif anim == 'backflip':
             # Backward rotation body sway — 120-frame cycle
-            flip_phase = (frame_idx % 120) / 120.0
+            flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
             if flip_phase < 0.12:
                 body_sway = 0
             elif flip_phase < 0.20:
@@ -3504,7 +3508,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # shows the panda at a new angle — feet go up, body goes sideways,
         # upside-down, then comes back around. Same technique as dragged-on-ground.
         if anim == 'backflip':
-            flip_phase = (frame_idx % 120) / 120.0
+            flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
             if 0.20 < flip_phase < 0.80:
                 # Each frame during the rotation shows a new body angle
                 flip_t = (flip_phase - 0.20) / 0.60
