@@ -850,6 +850,7 @@ class GameTextureSorter(ctk.CTk):
         self.tab_inventory = self.features_tabview.add("📦 Inventory")
         self.tab_panda_stats = self.features_tabview.add("📊 Panda Stats & Mood")
         self.tab_armory = self.features_tabview.add("⚔️ Armory")
+        self.tab_dungeon = self.features_tabview.add("🏰 Dungeon")
         self.tab_battle_arena = self.features_tabview.add("🏟️ Battle Arena")
         self.tab_travel_hub = self.features_tabview.add("🗺️ Travel Hub")
         
@@ -887,6 +888,7 @@ class GameTextureSorter(ctk.CTk):
             self.create_inventory_tab()
             self.create_panda_stats_tab()
             self.create_armory_tab()
+            self.create_dungeon_tab()
             self.create_battle_arena_tab()
             self.create_travel_hub_tab()
             
@@ -7459,14 +7461,74 @@ Built with:
             font=("Arial", 11), text_color="#aaaaaa")
         self._stats_labels['animation'].pack(pady=(0, 5))
 
-        # ═══════════════════ Interaction Statistics ═══════════════════
+        # ═══════════════════ Statistics Tabview ═══════════════════
         stats = self.panda.get_statistics()
-        stats_frame = ctk.CTkFrame(scrollable_frame)
-        stats_frame.pack(fill="x", padx=10, pady=5)
-        ctk.CTkLabel(stats_frame, text="📈 Interaction Statistics",
-                     font=("Arial Bold", 16)).pack(anchor="w", padx=10, pady=(10, 5))
-
-        stat_items = [
+        
+        # Create tabview for different stat categories
+        stats_tabview = ctk.CTkTabview(scrollable_frame, width=700, height=400)
+        stats_tabview.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Create tabs for each stat category
+        tab_base = stats_tabview.add("⭐ Base Stats")
+        tab_combat = stats_tabview.add("⚔️ Combat")
+        tab_interaction = stats_tabview.add("🖱️ Interaction")
+        tab_system = stats_tabview.add("🛠️ System")
+        tab_skills = stats_tabview.add("🌳 Skills")
+        
+        # ─────── Base Stats Tab ───────
+        base_stats = stats.get('base_stats', {})
+        base_scroll = ctk.CTkScrollableFrame(tab_base)
+        base_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        base_items = [
+            ("⭐ Level", 'Level', base_stats.get('Level', 1)),
+            ("✨ Experience", 'Experience', base_stats.get('Experience', '0/100')),
+            ("❤️ Health", 'Health', f"{base_stats.get('Health', 100)}/{base_stats.get('Max Health', 100)}"),
+            ("🛡️ Defense", 'Defense', base_stats.get('Defense', 10)),
+            ("🔮 Magic", 'Magic', base_stats.get('Magic', 10)),
+            ("🧠 Intelligence", 'Intelligence', base_stats.get('Intelligence', 10)),
+            ("💪 Strength", 'Strength', base_stats.get('Strength', 10)),
+            ("🏃 Agility", 'Agility', base_stats.get('Agility', 10)),
+            ("💚 Vitality", 'Vitality', base_stats.get('Vitality', 10)),
+            ("🌟 Skill Points", 'Skill Points', base_stats.get('Skill Points', 0)),
+        ]
+        for label, key, value in base_items:
+            row = ctk.CTkFrame(base_scroll)
+            row.pack(fill="x", padx=10, pady=2)
+            ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150).pack(side="left", padx=5)
+            val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12), text_color="#00cc00")
+            val_lbl.pack(side="right", padx=10)
+            self._stats_labels[f'base_{key}'] = val_lbl
+        
+        # ─────── Combat Stats Tab ───────
+        combat_stats = stats.get('combat_stats', {})
+        combat_scroll = ctk.CTkScrollableFrame(tab_combat)
+        combat_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        combat_items = [
+            ("⚔️ Total Attacks", 'Total Attacks', combat_stats.get('Total Attacks', 0)),
+            ("💀 Monsters Slain", 'Monsters Slain', combat_stats.get('Monsters Slain', 0)),
+            ("💥 Damage Dealt", 'Damage Dealt', combat_stats.get('Damage Dealt', 0)),
+            ("🩸 Damage Taken", 'Damage Taken', combat_stats.get('Damage Taken', 0)),
+            ("🎯 Critical Hits", 'Critical Hits', combat_stats.get('Critical Hits', 0)),
+            ("🌀 Perfect Dodges", 'Perfect Dodges', combat_stats.get('Perfect Dodges', 0)),
+            ("✨ Spells Cast", 'Spells Cast', combat_stats.get('Spells Cast', 0)),
+            ("💚 Healing Done", 'Healing Done', combat_stats.get('Healing Done', 0)),
+        ]
+        for label, key, value in combat_items:
+            row = ctk.CTkFrame(combat_scroll)
+            row.pack(fill="x", padx=10, pady=2)
+            ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150).pack(side="left", padx=5)
+            val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12), text_color="#ff6600")
+            val_lbl.pack(side="right", padx=10)
+            self._stats_labels[f'combat_{key}'] = val_lbl
+        
+        # ─────── Interaction Stats Tab ───────
+        interaction_stats = stats.get('interaction_stats', {})
+        interaction_scroll = ctk.CTkScrollableFrame(tab_interaction)
+        interaction_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        interaction_items = [
             ("🖱️ Clicks", 'click_count', stats.get('click_count', 0)),
             ("🐾 Pets", 'pet_count', stats.get('pet_count', 0)),
             ("🎋 Feeds", 'feed_count', stats.get('feed_count', 0)),
@@ -7478,18 +7540,85 @@ Built with:
             ("🧸 Toy Interactions", 'toy_interact_count', stats.get('toy_interact_count', 0)),
             ("👔 Clothing Changes", 'clothing_change_count', stats.get('clothing_change_count', 0)),
             ("🎯 Items Thrown At", 'items_thrown_at_count', stats.get('items_thrown_at_count', 0)),
+            ("👇 Belly Pokes", 'belly_poke_count', stats.get('belly_poke_count', 0)),
+            ("⬇️ Falls", 'fall_count', stats.get('fall_count', 0)),
+            ("🔄 Tip-overs", 'tip_over_count', stats.get('tip_over_count', 0)),
+        ]
+        for label, key, value in interaction_items:
+            row = ctk.CTkFrame(interaction_scroll)
+            row.pack(fill="x", padx=10, pady=2)
+            ctk.CTkLabel(row, text=label, font=("Arial", 12), width=150).pack(side="left", padx=5)
+            val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12), text_color="#00cc00")
+            val_lbl.pack(side="right", padx=10)
+            self._stats_labels[key] = val_lbl
+        
+        # ─────── System Stats Tab ───────
+        system_stats = stats.get('system_stats', {})
+        system_scroll = ctk.CTkScrollableFrame(tab_system)
+        system_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        system_items = [
+            ("⏱️ Playtime", 'Playtime', system_stats.get('Playtime', '0h 0m')),
+            ("🎁 Items Collected", 'Items Collected', system_stats.get('Items Collected', 0)),
+            ("🏰 Dungeons Cleared", 'Dungeons Cleared', system_stats.get('Dungeons Cleared', 0)),
+            ("🪜 Floors Explored", 'Floors Explored', system_stats.get('Floors Explored', 0)),
+            ("🚶 Distance Traveled", 'Distance Traveled', f"{system_stats.get('Distance Traveled', 0.0):.1f}"),
+            ("💀 Times Died", 'Times Died', system_stats.get('Times Died', 0)),
+            ("💾 Times Saved", 'Times Saved', system_stats.get('Times Saved', 0)),
             ("📁 Files Processed", 'files_processed', stats.get('files_processed', 0)),
             ("❌ Failed Operations", 'failed_operations', stats.get('failed_operations', 0)),
             ("🥚 Easter Eggs Found", 'easter_eggs_found', stats.get('easter_eggs_found', 0)),
         ]
-        for label, key, value in stat_items:
-            row = ctk.CTkFrame(stats_frame)
-            row.pack(fill="x", padx=20, pady=2)
-            ctk.CTkLabel(row, text=label, font=("Arial", 12)).pack(side="left", padx=5)
-            val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12),
-                         text_color="#00cc00")
+        for label, key, value in system_items:
+            row = ctk.CTkFrame(system_scroll)
+            row.pack(fill="x", padx=10, pady=2)
+            ctk.CTkLabel(row, text=label, font=("Arial", 12), width=180).pack(side="left", padx=5)
+            val_lbl = ctk.CTkLabel(row, text=str(value), font=("Arial Bold", 12), text_color="#6699ff")
             val_lbl.pack(side="right", padx=10)
-            self._stats_labels[key] = val_lbl
+            self._stats_labels[f'system_{key}'] = val_lbl
+        
+        # ─────── Skills Tab ───────
+        skills_scroll = ctk.CTkScrollableFrame(tab_skills)
+        skills_scroll.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        ctk.CTkLabel(skills_scroll, text="🌳 Skill Tree", font=("Arial Bold", 16)).pack(pady=10)
+        
+        try:
+            from src.features.skill_tree import SkillTree
+            if hasattr(self.panda, 'skill_tree'):
+                skill_tree = self.panda.skill_tree
+            else:
+                skill_tree = SkillTree()
+            
+            # Display skill tree branches
+            for branch in ['combat', 'magic', 'utility']:
+                branch_frame = ctk.CTkFrame(skills_scroll)
+                branch_frame.pack(fill="x", padx=10, pady=5)
+                
+                branch_icon = {'combat': '⚔️', 'magic': '✨', 'utility': '🛡️'}
+                ctk.CTkLabel(branch_frame, text=f"{branch_icon.get(branch, '🌟')} {branch.title()} Branch",
+                            font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+                
+                # Show skills in this branch
+                branch_skills = [s for s in skill_tree.skills.values() if s.id.startswith(branch)]
+                for skill in branch_skills[:10]:  # Show first 10 skills per branch
+                    skill_row = ctk.CTkFrame(branch_frame)
+                    skill_row.pack(fill="x", padx=20, pady=2)
+                    
+                    status = "✅" if skill.unlocked else "🔒"
+                    color = "#00cc00" if skill.unlocked else "#666666"
+                    
+                    ctk.CTkLabel(skill_row, text=f"{status} {skill.name}",
+                                font=("Arial", 11), text_color=color).pack(side="left", padx=5)
+                    
+                    if not skill.unlocked:
+                        req_text = f"Req: Lvl {skill.level_required}"
+                        ctk.CTkLabel(skill_row, text=req_text,
+                                    font=("Arial", 9), text_color="#888888").pack(side="right", padx=5)
+                
+        except Exception as e:
+            ctk.CTkLabel(skills_scroll, text=f"Skill tree unavailable: {e}",
+                        font=("Arial", 11), text_color="gray").pack(pady=20)
 
         # ═══════════════════ Level Info ═══════════════════
         if self.panda_level_system:
@@ -7631,6 +7760,345 @@ Built with:
             for widget in self.tab_armory.winfo_children():
                 widget.destroy()
             self.create_armory_tab()
+
+    def create_dungeon_tab(self):
+        """Create dungeon tab for entering procedurally generated dungeons."""
+        header_frame = ctk.CTkFrame(self.tab_dungeon)
+        header_frame.pack(fill="x", pady=10, padx=10)
+        
+        ctk.CTkLabel(header_frame, text="🏰 Dungeon Explorer 🏰",
+                     font=("Arial Bold", 18)).pack(side="left", padx=10)
+        
+        # Description
+        desc_frame = ctk.CTkFrame(self.tab_dungeon)
+        desc_frame.pack(fill="x", padx=10, pady=10)
+        
+        desc_text = ("Enter procedurally generated dungeons with multiple floors!\n\n"
+                     "• Fight enemies and gain experience\n"
+                     "• Collect loot and treasures\n"
+                     "• Navigate 5 floors with stairs\n"
+                     "• Apply your stats and skills in combat\n\n"
+                     "Controls: WASD/Arrows=Move, Space=Attack, E=Use Stairs")
+        ctk.CTkLabel(desc_frame, text=desc_text, font=("Arial", 13),
+                    justify="left").pack(padx=20, pady=10)
+        
+        # Stats preview
+        if self.panda:
+            stats_frame = ctk.CTkFrame(self.tab_dungeon)
+            stats_frame.pack(fill="x", padx=10, pady=5)
+            ctk.CTkLabel(stats_frame, text="Your Stats:",
+                        font=("Arial Bold", 14)).pack(anchor="w", padx=10, pady=5)
+            
+            try:
+                stats = self.panda.get_statistics()
+                base_stats = stats.get('base_stats', {})
+                stats_text = (f"Level {base_stats.get('Level', 1)}  •  "
+                             f"HP: {base_stats.get('Health', 100)}/{base_stats.get('Max Health', 100)}  •  "
+                             f"STR: {base_stats.get('Strength', 10)}  •  "
+                             f"DEF: {base_stats.get('Defense', 10)}")
+                ctk.CTkLabel(stats_frame, text=stats_text, font=("Arial", 12),
+                            text_color="#00cc00").pack(anchor="w", padx=20, pady=5)
+            except Exception:
+                pass
+        
+        # Enter dungeon button
+        button_frame = ctk.CTkFrame(self.tab_dungeon)
+        button_frame.pack(fill="x", padx=10, pady=20)
+        
+        ctk.CTkButton(button_frame, text="🏰 Enter Dungeon",
+                     font=("Arial Bold", 16), height=50,
+                     fg_color="#2fa572", hover_color="#1f7050",
+                     command=self.open_dungeon_window).pack(pady=10)
+    
+    def open_dungeon_window(self):
+        """Open a new window with the integrated dungeon system."""
+        try:
+            from src.features.integrated_dungeon import IntegratedDungeon
+            from src.ui.enhanced_dungeon_renderer import EnhancedDungeonRenderer
+            import tkinter as tk
+            
+            # Create toplevel window
+            dungeon_window = ctk.CTkToplevel(self.root)
+            dungeon_window.title("🏰 Dungeon Explorer")
+            dungeon_window.geometry("1000x700")
+            
+            # Make it modal-ish
+            dungeon_window.focus_set()
+            dungeon_window.grab_set()
+            
+            # Create dungeon
+            dungeon = IntegratedDungeon(width=80, height=80, num_floors=5)
+            
+            # Spawn player at spawn point
+            floor = dungeon.get_floor(0)
+            player_x, player_y = floor.spawn_point
+            dungeon.player_x = player_x
+            dungeon.player_y = player_y
+            dungeon.current_floor = 0
+            
+            # Spawn enemies in rooms
+            dungeon.spawn_enemies_in_rooms()
+            
+            # Create main container
+            main_frame = ctk.CTkFrame(dungeon_window)
+            main_frame.pack(fill="both", expand=True, padx=5, pady=5)
+            
+            # Canvas for dungeon rendering
+            canvas_frame = ctk.CTkFrame(main_frame)
+            canvas_frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+            
+            canvas = tk.Canvas(canvas_frame, width=800, height=600, bg="#1a1a1a", highlightthickness=0)
+            canvas.pack(fill="both", expand=True)
+            
+            # Create renderer
+            renderer = EnhancedDungeonRenderer(canvas, dungeon.generator)
+            renderer.set_floor(0)
+            renderer.center_camera_on_tile(player_x, player_y)
+            
+            # Stats panel
+            stats_frame = ctk.CTkFrame(main_frame, width=180)
+            stats_frame.pack(side="right", fill="y", padx=5, pady=5)
+            stats_frame.pack_propagate(False)
+            
+            ctk.CTkLabel(stats_frame, text="📊 Stats", font=("Arial Bold", 14)).pack(pady=10)
+            
+            # Create stat labels
+            stat_labels = {}
+            stat_items = [
+                ("Floor:", "floor"),
+                ("Position:", "position"),
+                ("Health:", "health"),
+                ("Enemies:", "enemies"),
+                ("Kills:", "kills"),
+                ("Loot:", "loot"),
+            ]
+            for label, key in stat_items:
+                row = ctk.CTkFrame(stats_frame)
+                row.pack(fill="x", padx=10, pady=3)
+                ctk.CTkLabel(row, text=label, font=("Arial", 10)).pack(anchor="w")
+                stat_labels[key] = ctk.CTkLabel(row, text="0", font=("Arial Bold", 11), text_color="#00cc00")
+                stat_labels[key].pack(anchor="w", padx=10)
+            
+            # Controls info
+            controls_frame = ctk.CTkFrame(stats_frame)
+            controls_frame.pack(fill="x", padx=5, pady=10)
+            ctk.CTkLabel(controls_frame, text="🎮 Controls", font=("Arial Bold", 12)).pack(pady=5)
+            controls_text = "WASD/Arrows: Move\nSpace: Attack\nE: Use Stairs\nF: Toggle Fog\nM: Toggle Minimap"
+            ctk.CTkLabel(controls_frame, text=controls_text, font=("Arial", 9),
+                        justify="left").pack(padx=5, pady=5)
+            
+            # Game state
+            game_state = {
+                'running': True,
+                'show_fog': True,
+                'show_minimap': True,
+                'last_update': time.time()
+            }
+            
+            def update_stats():
+                """Update stat labels."""
+                try:
+                    player_state = dungeon.get_player_state()
+                    stat_labels['floor'].configure(text=f"{player_state['current_floor'] + 1}/5")
+                    stat_labels['position'].configure(text=f"({player_state['x']}, {player_state['y']})")
+                    stat_labels['health'].configure(text=f"{player_state['health']}/{player_state['max_health']}")
+                    
+                    enemies_on_floor = len(dungeon.get_enemies_on_floor(player_state['current_floor']))
+                    stat_labels['enemies'].configure(text=str(enemies_on_floor))
+                    stat_labels['kills'].configure(text=str(player_state['monsters_slain']))
+                    stat_labels['loot'].configure(text=str(player_state['items_collected']))
+                except Exception:
+                    pass
+            
+            def render_game():
+                """Render the dungeon and entities."""
+                try:
+                    if not game_state['running']:
+                        return
+                    
+                    # Clear canvas
+                    canvas.delete("all")
+                    
+                    # Render dungeon
+                    renderer.render(show_fog=game_state['show_fog'])
+                    
+                    # Render panda (player)
+                    renderer.render_entity(dungeon.player_x, dungeon.player_y, "🐼", size=24)
+                    
+                    # Render enemies
+                    enemies = dungeon.get_enemies_on_floor(dungeon.current_floor)
+                    for enemy in enemies:
+                        renderer.render_entity(enemy.x, enemy.y, enemy.enemy.icon, size=20)
+                    
+                    # Render loot
+                    loot_items = dungeon.get_loot_on_floor(dungeon.current_floor)
+                    for loot in loot_items:
+                        loot_icon = {"health": "❤️", "weapon": "⚔️", "gold": "💰", "key": "🔑"}.get(loot.loot_type, "🎁")
+                        renderer.render_entity(loot.x, loot.y, loot_icon, size=16)
+                    
+                    # Render minimap if enabled
+                    if game_state['show_minimap']:
+                        renderer.render_minimap(700, 20, size=150)
+                        # Mark player on minimap
+                        canvas.create_oval(770, 90, 780, 100, fill="red", outline="yellow")
+                    
+                    update_stats()
+                except Exception as e:
+                    logger.debug(f"Render error: {e}")
+            
+            def game_loop():
+                """Main game loop."""
+                if not game_state['running']:
+                    return
+                
+                current_time = time.time()
+                delta = current_time - game_state['last_update']
+                game_state['last_update'] = current_time
+                
+                # Update enemies (move toward player)
+                try:
+                    enemies = dungeon.get_enemies_on_floor(dungeon.current_floor)
+                    for enemy in enemies:
+                        dx = dungeon.player_x - enemy.x
+                        dy = dungeon.player_y - enemy.y
+                        distance = (dx*dx + dy*dy) ** 0.5
+                        
+                        if distance < 15 and distance > 1:  # Aggro range
+                            # Move toward player
+                            if abs(dx) > abs(dy):
+                                new_x = enemy.x + (1 if dx > 0 else -1)
+                                if dungeon.generator.is_walkable(dungeon.current_floor, new_x, enemy.y):
+                                    enemy.x = new_x
+                            else:
+                                new_y = enemy.y + (1 if dy > 0 else -1)
+                                if dungeon.generator.is_walkable(dungeon.current_floor, enemy.x, new_y):
+                                    enemy.y = new_y
+                        
+                        # Attack if in range
+                        if distance < 2:
+                            player_state = dungeon.get_player_state()
+                            if player_state['health'] > 0:
+                                damage = enemy.enemy.stats.attack // 2
+                                dungeon.player.take_damage(damage)
+                                logger.debug(f"Enemy attacked! Damage: {damage}")
+                except Exception as e:
+                    logger.debug(f"Enemy update error: {e}")
+                
+                render_game()
+                
+                if game_state['running']:
+                    dungeon_window.after(50, game_loop)  # 20 FPS
+            
+            def on_key(event):
+                """Handle keyboard input."""
+                try:
+                    key = event.keysym.lower()
+                    
+                    # Movement
+                    new_x, new_y = dungeon.player_x, dungeon.player_y
+                    if key in ['w', 'up']:
+                        new_y -= 1
+                    elif key in ['s', 'down']:
+                        new_y += 1
+                    elif key in ['a', 'left']:
+                        new_x -= 1
+                    elif key in ['d', 'right']:
+                        new_x += 1
+                    elif key == 'space':
+                        # Attack nearby enemies
+                        enemies = dungeon.get_enemies_on_floor(dungeon.current_floor)
+                        for enemy in enemies:
+                            dx = abs(enemy.x - dungeon.player_x)
+                            dy = abs(enemy.y - dungeon.player_y)
+                            if dx <= 1 and dy <= 1:
+                                # Apply stats-based damage
+                                base_damage = 10
+                                if self.panda:
+                                    stats = self.panda.get_statistics()
+                                    base_stats = stats.get('base_stats', {})
+                                    strength = base_stats.get('Strength', 10)
+                                    base_damage += strength
+                                
+                                enemy.enemy.take_damage(base_damage)
+                                if not enemy.enemy.is_alive():
+                                    dungeon.enemies_by_floor[dungeon.current_floor].remove(enemy)
+                                    dungeon.player.add_monster_kill()
+                                    dungeon.player.add_experience(50)
+                                    self.panda.stats.add_monster_kill()
+                                    self.panda.stats.add_experience(50)
+                                    logger.debug(f"Enemy defeated!")
+                                break
+                        return
+                    elif key == 'e':
+                        # Use stairs
+                        result = dungeon._check_stairs()
+                        if result == 'up' and dungeon.current_floor > 0:
+                            dungeon.current_floor -= 1
+                            floor = dungeon.get_floor(dungeon.current_floor)
+                            for x, y in floor.stairs_down:
+                                dungeon.player_x, dungeon.player_y = x, y
+                                break
+                            renderer.set_floor(dungeon.current_floor)
+                            renderer.center_camera_on_tile(dungeon.player_x, dungeon.player_y)
+                        elif result == 'down' and dungeon.current_floor < 4:
+                            dungeon.current_floor += 1
+                            floor = dungeon.get_floor(dungeon.current_floor)
+                            for x, y in floor.stairs_up:
+                                dungeon.player_x, dungeon.player_y = x, y
+                                break
+                            renderer.set_floor(dungeon.current_floor)
+                            renderer.center_camera_on_tile(dungeon.player_x, dungeon.player_y)
+                        return
+                    elif key == 'f':
+                        game_state['show_fog'] = not game_state['show_fog']
+                        return
+                    elif key == 'm':
+                        game_state['show_minimap'] = not game_state['show_minimap']
+                        return
+                    else:
+                        return
+                    
+                    # Check if movement is valid
+                    if dungeon.generator.is_walkable(dungeon.current_floor, new_x, new_y):
+                        dungeon.player_x = new_x
+                        dungeon.player_y = new_y
+                        renderer.center_camera_on_tile(new_x, new_y)
+                        renderer.mark_explored(new_x, new_y, radius=5)
+                        
+                        # Check for loot
+                        loot_items = dungeon.get_loot_on_floor(dungeon.current_floor)
+                        for loot in loot_items:
+                            if loot.x == new_x and loot.y == new_y:
+                                dungeon.loot_by_floor[dungeon.current_floor].remove(loot)
+                                dungeon.player.increment_items()
+                                if self.panda:
+                                    self.panda.stats.increment_items()
+                                logger.debug(f"Collected {loot.loot_type}!")
+                                break
+                        
+                        render_game()
+                except Exception as e:
+                    logger.debug(f"Key error: {e}")
+            
+            def on_close():
+                """Handle window close."""
+                game_state['running'] = False
+                dungeon_window.grab_release()
+                dungeon_window.destroy()
+            
+            # Bind events
+            dungeon_window.bind('<KeyPress>', on_key)
+            dungeon_window.protocol("WM_DELETE_WINDOW", on_close)
+            
+            # Initial render and start game loop
+            render_game()
+            game_loop()
+            
+            self.log("🏰 Entered the dungeon!")
+            
+        except Exception as e:
+            logger.error(f"Error opening dungeon: {e}", exc_info=True)
+            self.show_error("Failed to open dungeon", str(e))
 
     def create_battle_arena_tab(self):
         """Create battle arena tab for combat encounters."""
