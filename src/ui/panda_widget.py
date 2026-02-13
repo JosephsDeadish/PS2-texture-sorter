@@ -355,6 +355,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._is_on_side = False        # True when tipped over on side
         self._is_face_down = False      # True when fallen on face
         self._facing_direction = 'front'  # Current facing: front, back, left, right
+        self._is_being_dragged_on_ground = False  # True when being dragged on side by foot
+        self._drag_ground_angle = 0.0   # Angle of body when dragged on ground (0-2π for full rotation)
         
         # Ear stretch physics (elastic stretch during drag)
         self._ear_stretch = 0.0        # Current ear stretch amount
@@ -2539,16 +2541,25 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Apply body sway to center position for turning/direction effect
         cx_draw = cx + int(body_sway)
         
-        # During toss physics or dragging, use _facing_direction to pick the correct view
-        # Save original dragging state before anim is remapped for view.
-        # Only 'dragging' and 'wall_hit' are drag sub-animations here;
-        # 'shaking' and 'spinning' are excluded because they can only be
-        # triggered when grabbed by belly/butt (via _detect_drag_patterns)
-        # and should play their own dedicated animation instead of being
-        # remapped to a walking view.
-        _drag_anims = ('dragging', 'wall_hit')
-        is_being_dragged = (anim in _drag_anims and self.is_dragging)
-        if ((is_being_dragged) or
+        # Special case: If being dragged on ground by foot, override animation
+        # to show laying on side regardless of other states
+        if self._is_being_dragged_on_ground:
+            # Force lay_on_side animation when being dragged by foot
+            anim = 'lay_on_side'
+            # Don't remap to walking animations
+            is_being_dragged = False
+        else:
+            # During toss physics or dragging, use _facing_direction to pick the correct view
+            # Save original dragging state before anim is remapped for view.
+            # Only 'dragging' and 'wall_hit' are drag sub-animations here;
+            # 'shaking' and 'spinning' are excluded because they can only be
+            # triggered when grabbed by belly/butt (via _detect_drag_patterns)
+            # and should play their own dedicated animation instead of being
+            # remapped to a walking view.
+            _drag_anims = ('dragging', 'wall_hit')
+            is_being_dragged = (anim in _drag_anims and self.is_dragging)
+        
+        if not self._is_being_dragged_on_ground and ((is_being_dragged) or
             (anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing)):
             facing = getattr(self, '_facing_direction', 'front')
             if facing == 'left':
@@ -3188,16 +3199,28 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
         # --- Lay-on-side and tip-over: Tilt the entire view to show lying on side ---
-        if anim in ('lay_on_side', 'tip_over_side', 'fall_on_face'):
+        # Also handles "dragged on ground" mode when grabbed by foot
+        if anim in ('lay_on_side', 'tip_over_side', 'fall_on_face') or self._is_being_dragged_on_ground:
             if anim == 'lay_on_side':
                 settle = min(1.0, frame_idx / 24.0)
                 tilt_angle = settle * 90  # Tilt 90 degrees to the side
             elif anim == 'tip_over_side':
                 settle = 1.0
                 tilt_angle = 90  # Immediate 90-degree tilt
-            else:  # fall_on_face
+            elif anim == 'fall_on_face':
                 settle = min(1.0, frame_idx / 24.0)
                 tilt_angle = settle * 45  # Partial forward tilt
+            elif self._is_being_dragged_on_ground:
+                # Being dragged on ground by foot - show laying on side with rotation
+                settle = 1.0  # Fully on side
+                # Convert drag angle to visual rotation
+                # The panda should appear to be laying on its side, rotated to show
+                # feet pointing toward drag direction
+                drag_angle_deg = math.degrees(self._drag_ground_angle)
+                tilt_angle = 90  # Always on side when being dragged
+            else:
+                settle = 0
+                tilt_angle = 0
             
             if settle > 0.01:
                 # Create tilted/rotated appearance by manipulating the canvas
@@ -3209,13 +3232,27 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 
                 # For side-lying (90°): compress vertically, widen horizontally
                 # This simulates the panda viewed from above when on its side
-                if anim in ('lay_on_side', 'tip_over_side'):
+                if anim in ('lay_on_side', 'tip_over_side') or self._is_being_dragged_on_ground:
                     # Vertical compression increases as we approach 90°
                     v_scale = 1.0 - (settle * 0.6)  # Compress to 40% at full tilt
                     # Horizontal expansion to show body lying lengthwise
                     h_scale = 1.0 + (settle * 0.4)  # Expand to 140%
                     # Shift the pivot down as panda falls to side
                     pivot_y += int(settle * 30 * sy)
+                    
+                    # Additional rotation for dragged on ground mode
+                    if self._is_being_dragged_on_ground:
+                        # Rotate the entire canvas to align with drag direction
+                        # This makes the panda appear to be pulled in that direction
+                        drag_angle_deg = math.degrees(self._drag_ground_angle)
+                        # Apply rotation by using canvas rotation
+                        # Since canvas doesn't have native rotation, we simulate it
+                        # by adjusting the scale and position based on angle
+                        cos_a = math.cos(self._drag_ground_angle)
+                        sin_a = math.sin(self._drag_ground_angle)
+                        # Modify scales to simulate rotation
+                        h_scale *= (1.0 + 0.2 * abs(sin_a))
+                        v_scale *= (1.0 - 0.15 * abs(cos_a))
                 else:  # fall_on_face
                     # Forward tilt - compress differently
                     v_scale = 1.0 - (settle * 0.4)
@@ -5985,6 +6022,17 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         grabbed = self._drag_grab_part
         drag_speed = (vx**2 + vy**2) ** 0.5
         if grabbed in ('left_leg', 'right_leg'):
+            # When dragged by foot, activate "dragging on ground" mode
+            # The panda should look like it's being pulled along the ground on its side
+            if drag_speed > 3.0:  # Sufficient movement to drag on ground
+                self._is_being_dragged_on_ground = True
+                # Calculate angle based on drag direction
+                # Feet point toward drag direction, head points opposite
+                drag_angle = math.atan2(vy, vx)
+                self._drag_ground_angle = drag_angle
+            else:
+                self._is_being_dragged_on_ground = False
+            
             # If dragged upward (negative velocity), flip upside down
             if self._toss_velocity_y < -self.UPSIDE_DOWN_VELOCITY_THRESHOLD:
                 self._is_upside_down = True
@@ -5999,6 +6047,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             else:
                 self._drag_body_angle_target = 0.0
         elif grabbed in ('left_arm', 'right_arm', 'left_ear', 'right_ear'):
+            self._is_being_dragged_on_ground = False
             # Partial tilt: body sways in drag direction, max ~45 degrees
             if drag_speed > 1.5:
                 angle = math.atan2(-vy, -vx) + math.pi / 2
@@ -6009,6 +6058,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self._drag_body_angle_target = 0.0
             self._is_upside_down = False
         else:
+            self._is_being_dragged_on_ground = False
             self._is_upside_down = False
             self._drag_body_angle_target = 0.0
         
@@ -6238,6 +6288,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             return
         
         self.is_dragging = False
+        self._is_being_dragged_on_ground = False  # Reset dragged on ground state
         
         if not self._drag_moved:
             # It was just a click (minimal movement)
