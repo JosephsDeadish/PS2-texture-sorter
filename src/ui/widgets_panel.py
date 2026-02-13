@@ -166,11 +166,15 @@ class WidgetsPanel(ctk.CTkFrame if ctk else tk.Frame):
         emoji_label = ctk.CTkLabel(
             name_frame,
             text=widget.emoji,
-            font=("Arial", 24)
+            font=("Arial", 24),
+            fg_color="transparent"
         ) if ctk else tk.Label(
             name_frame,
             text=widget.emoji,
-            font=("Arial", 24)
+            font=("Arial", 24),
+            bg=name_frame.cget('bg') if hasattr(name_frame, 'cget') else None,
+            borderwidth=0,
+            highlightthickness=0
         )
         emoji_label.pack(side="left", padx=5)
         
