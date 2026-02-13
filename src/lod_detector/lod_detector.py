@@ -171,13 +171,9 @@ class LODDetector:
             
             # Load and resize both images to same size for comparison
             with Image.open(file1) as _img1:
-                img1 = _img1.convert('RGB').resize((64, 64))
+                arr1 = np.array(_img1.convert('RGB').resize((64, 64)), dtype=np.float32)
             with Image.open(file2) as _img2:
-                img2 = _img2.convert('RGB').resize((64, 64))
-            
-            # Convert to arrays
-            arr1 = np.array(img1, dtype=np.float32)
-            arr2 = np.array(img2, dtype=np.float32)
+                arr2 = np.array(_img2.convert('RGB').resize((64, 64)), dtype=np.float32)
             
             # Calculate similarity (normalized cross-correlation)
             similarity = np.corrcoef(arr1.flatten(), arr2.flatten())[0, 1]

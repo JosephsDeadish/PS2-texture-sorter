@@ -118,9 +118,8 @@ class AdvancedTextureAnalyzer:
                 return result
             
             # Load image
-            with Image.open(texture_path) as image:
-                image = image.convert('RGB')
-                img_array = np.array(image)
+            with Image.open(texture_path) as _img:
+                img_array = np.array(_img.convert('RGB'))
             
             # Preprocess if enabled
             if preprocess and self.preprocessing:
