@@ -872,33 +872,44 @@ class GameTextureSorter(ctk.CTk):
         if self._deferred_tabs_created:
             return
         self._deferred_tabs_created = True
+        # Wrap every tab creation individually so a failure in one tab
+        # never prevents subsequent tabs from being created (avoids blank tabs).
+        _all_tab_creators = [
+            self.create_convert_tab,
+            self.create_alpha_fixer_tab,
+            self.create_browser_tab,
+            self.create_profiles_tab,
+            self.create_notepad_tab,
+            self.create_upscaler_tab,
+            self.create_about_tab,
+            self.create_shop_tab,
+            self.create_rewards_tab,
+            self.create_achievements_tab,
+        ]
+        if PANDA_CLOSET_AVAILABLE and self.panda_closet:
+            _all_tab_creators.append(self.create_closet_tab)
+        _all_tab_creators += [
+            self.create_inventory_tab,
+            self.create_panda_stats_tab,
+            self.create_armory_tab,
+            self.create_dungeon_tab,
+            self.create_battle_arena_tab,
+            self.create_travel_hub_tab,
+        ]
+        for _tab_creator in _all_tab_creators:
+            try:
+                _tab_creator()
+            except Exception as tab_err:
+                logger.error(f"Error creating tab {_tab_creator.__name__}: {tab_err}", exc_info=True)
+        
         try:
-            self.create_convert_tab()
-            self.create_alpha_fixer_tab()
-            self.create_browser_tab()
-            self.create_profiles_tab()
-            self.create_notepad_tab()
-            self.create_upscaler_tab()
-            self.create_about_tab()
-            self.create_shop_tab()
-            self.create_rewards_tab()
-            self.create_achievements_tab()
-            if PANDA_CLOSET_AVAILABLE and self.panda_closet:
-                self.create_closet_tab()
-            self.create_inventory_tab()
-            self.create_panda_stats_tab()
-            self.create_armory_tab()
-            self.create_dungeon_tab()
-            self.create_battle_arena_tab()
-            self.create_travel_hub_tab()
-            
             # Throttle scroll events on all scrollable frames to reduce lag/tearing
             self._throttle_scroll_frames()
             
             # Add pop-out buttons to dockable tabs
             self._add_popout_buttons()
         except Exception as e:
-            logger.error(f"Error creating deferred tabs: {e}", exc_info=True)
+            logger.error(f"Error in post-tab setup: {e}", exc_info=True)
     
     def _throttle_scroll_frames(self):
         """Patch CTkScrollableFrame widgets to throttle scroll events and reduce lag."""
@@ -8280,13 +8291,13 @@ Built with:
                 weapon = self.weapon_collection.equipped_weapon
                 from src.features.weapon_system import WeaponType
                 if weapon.weapon_type == WeaponType.MELEE:
-                    self.panda_widget.set_animation('swing', duration_ms=500)
+                    self.panda_widget.play_animation_once('swing')
                 elif weapon.weapon_type == WeaponType.RANGED:
-                    self.panda_widget.set_animation('shoot', duration_ms=500)
+                    self.panda_widget.play_animation_once('shoot')
                 elif weapon.weapon_type == WeaponType.MAGIC:
-                    self.panda_widget.set_animation('cast_spell', duration_ms=500)
+                    self.panda_widget.play_animation_once('cast_spell')
             else:
-                self.panda_widget.set_animation('swing', duration_ms=500)
+                self.panda_widget.play_animation_once('swing')
         
         # Calculate panda damage
         base_damage = self.combat_stats.attack_power
@@ -8302,7 +8313,7 @@ Built with:
         if not self.current_enemy.is_alive():
             self._combat_log.append(f"🎉 {self.current_enemy.name} defeated! +{self.current_enemy.xp_reward} XP")
             if hasattr(self, 'panda_widget') and self.panda_widget:
-                self.panda_widget.set_animation('victory', duration_ms=1000)
+                self.panda_widget.play_animation_once('victory')
             self.current_enemy = None
         else:
             # Enemy counterattack
@@ -8348,7 +8359,7 @@ Built with:
         
         # Show panda getting hit
         if hasattr(self, 'panda_widget') and self.panda_widget:
-            self.panda_widget.set_animation('hit', duration_ms=400)
+            self.panda_widget.play_animation_once('hit')
         
         damage, is_crit = self.current_enemy.attack(self.combat_stats.physical_defense)
         actual = self.combat_stats.take_damage(damage)
@@ -8357,7 +8368,7 @@ Built with:
         if not self.combat_stats.is_alive():
             self._combat_log.append("💀 You were defeated! Retreating to recover...")
             if hasattr(self, 'panda_widget') and self.panda_widget:
-                self.panda_widget.set_animation('defeat', duration_ms=1000)
+                self.panda_widget.play_animation_once('defeat')
             self.combat_stats.current_health = self.combat_stats.max_health
             self.current_enemy = None
 
@@ -8796,6 +8807,17 @@ Built with:
         try:
             if not hasattr(self, 'tab_panda_stats') or not self.tab_panda_stats.winfo_exists():
                 return
+            # Auto-update mood from context so it reflects current activity
+            if self.panda and hasattr(self.panda, 'update_mood_from_context'):
+                try:
+                    idle_time = time.time() - self.panda.start_time
+                    self.panda.update_mood_from_context(
+                        files_processed=self.panda.files_processed_count,
+                        errors=self.panda.failed_operations,
+                        idle_time_seconds=idle_time,
+                    )
+                except Exception:
+                    pass
             if hasattr(self, 'panda_mood_label') and self.panda:
                 try:
                     mood_indicator = self.panda.get_mood_indicator()
@@ -8817,6 +8839,29 @@ Built with:
                         lbl = self._stats_labels.get(key)
                         if lbl:
                             new_val = str(stats.get(key, 0))
+                            if lbl.cget("text") != new_val:
+                                lbl.configure(text=new_val)
+                    # Update base stats
+                    base_stats = stats.get('base_stats', {})
+                    for key in ('Level', 'Experience', 'Health', 'Defense', 'Magic',
+                                'Intelligence', 'Strength', 'Agility', 'Vitality',
+                                'Skill Points'):
+                        lbl = self._stats_labels.get(f'base_{key}')
+                        if lbl:
+                            if key == 'Health':
+                                new_val = f"{base_stats.get('Health', 100)}/{base_stats.get('Max Health', 100)}"
+                            else:
+                                new_val = str(base_stats.get(key, 0))
+                            if lbl.cget("text") != new_val:
+                                lbl.configure(text=new_val)
+                    # Update combat stats
+                    combat_stats_data = stats.get('combat_stats', {})
+                    for key in ('Total Attacks', 'Monsters Slain', 'Damage Dealt',
+                                'Damage Taken', 'Critical Hits', 'Perfect Dodges',
+                                'Spells Cast', 'Healing Done'):
+                        lbl = self._stats_labels.get(f'combat_{key}')
+                        if lbl:
+                            new_val = str(combat_stats_data.get(key, 0))
                             if lbl.cget("text") != new_val:
                                 lbl.configure(text=new_val)
                     # Update animation label
