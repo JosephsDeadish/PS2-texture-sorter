@@ -835,6 +835,7 @@ class GameTextureSorter(ctk.CTk):
         self.tab_browser = self.tabview.add("📁 File Browser")
         self.tab_profiles = self.tabview.add("🎮 Game Profiles")
         self.tab_notepad = self.tabview.add("📝 Notepad")
+        self.tab_upscaler = self.tabview.add("🔍 Image Upscaler")
         self.tab_about = self.tabview.add("ℹ️ About")
         
         # Features tabview (nested)
@@ -876,6 +877,7 @@ class GameTextureSorter(ctk.CTk):
             self.create_browser_tab()
             self.create_profiles_tab()
             self.create_notepad_tab()
+            self.create_upscaler_tab()
             self.create_about_tab()
             self.create_shop_tab()
             self.create_rewards_tab()
@@ -1939,6 +1941,501 @@ class GameTextureSorter(ctk.CTk):
         self.convert_log_text.insert("end", f"{message}\n")
         self.convert_log_text.see("end")
     
+    def create_upscaler_tab(self):
+        """Create image upscaling tool tab"""
+        # Title
+        ctk.CTkLabel(self.tab_upscaler, text="🔍 Image Upscaler 🔍",
+                     font=("Arial Bold", 18)).pack(pady=10)
+        ctk.CTkLabel(self.tab_upscaler,
+                     text="Batch upscale textures with high-quality filters",
+                     font=("Arial", 12)).pack(pady=5)
+
+        # START button at top
+        top_btn_frame = ctk.CTkFrame(self.tab_upscaler)
+        top_btn_frame.pack(fill="x", padx=30, pady=(0, 10))
+        self.upscale_start_btn = ctk.CTkButton(
+            top_btn_frame, text="🔍 UPSCALE 🔍",
+            command=self._run_upscale,
+            width=250, height=60,
+            font=("Arial Bold", 18),
+            fg_color="#2B7A0B", hover_color="#368B14")
+        self.upscale_start_btn.pack(pady=5)
+
+        # Scrollable content
+        scroll = ctk.CTkScrollableFrame(self.tab_upscaler)
+        scroll.pack(fill="both", expand=True, padx=30, pady=(0, 20))
+
+        # --- Input section ---
+        input_frame = ctk.CTkFrame(scroll)
+        input_frame.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(input_frame, text="Input Folder / ZIP:",
+                     font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        self.upscale_input_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.upscale_input_var,
+                     width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        upscale_input_btn = ctk.CTkButton(input_frame, text="📂 Browse Folder", width=120,
+                     command=lambda: self.browse_directory(self.upscale_input_var))
+        upscale_input_btn.grid(row=0, column=2, padx=5, pady=5)
+        upscale_input_zip_btn = ctk.CTkButton(input_frame, text="📦 Browse ZIP", width=100,
+                     command=self._browse_upscale_zip)
+        upscale_input_zip_btn.grid(row=0, column=3, padx=5, pady=5)
+        input_frame.columnconfigure(1, weight=1)
+
+        # --- Output section ---
+        output_frame = ctk.CTkFrame(scroll)
+        output_frame.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(output_frame, text="Output Folder:",
+                     font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        self.upscale_output_var = ctk.StringVar()
+        ctk.CTkEntry(output_frame, textvariable=self.upscale_output_var,
+                     width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        upscale_output_btn = ctk.CTkButton(output_frame, text="📂 Browse", width=100,
+                     command=lambda: self.browse_directory(self.upscale_output_var))
+        upscale_output_btn.grid(row=0, column=2, padx=10, pady=5)
+        output_frame.columnconfigure(1, weight=1)
+
+        # --- Options section ---
+        opts_frame = ctk.CTkFrame(scroll)
+        opts_frame.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(opts_frame, text="Upscale Options:",
+                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        opts = ctk.CTkFrame(opts_frame)
+        opts.pack(fill="x", padx=10, pady=5)
+
+        # Scale factor
+        ctk.CTkLabel(opts, text="Scale Factor:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        self.upscale_factor_var = ctk.StringVar(value="2x")
+        upscale_factor_menu = ctk.CTkOptionMenu(
+            opts, variable=self.upscale_factor_var,
+            values=["2x", "4x", "8x"],
+            command=self._update_upscale_preview)
+        upscale_factor_menu.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+
+        # Upscale style/method
+        ctk.CTkLabel(opts, text="Style:").grid(row=0, column=2, padx=10, pady=5, sticky="w")
+        self.upscale_style_var = ctk.StringVar(value="🔷 Lanczos (Sharpest)")
+        upscale_style_menu = ctk.CTkOptionMenu(
+            opts, variable=self.upscale_style_var,
+            values=[
+                "🔷 Lanczos (Sharpest)",
+                "🟢 Bicubic (Smooth)",
+                "🟡 Bilinear (Fast)",
+                "🔶 Hamming",
+                "🟣 Box (Pixel Art)",
+                "🔴 Real-ESRGAN (AI)"
+            ],
+            command=self._update_upscale_preview)
+        upscale_style_menu.grid(row=0, column=3, padx=10, pady=5, sticky="w")
+
+        # Export format
+        ctk.CTkLabel(opts, text="Export As:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.upscale_format_var = ctk.StringVar(value="PNG")
+        upscale_format_menu = ctk.CTkOptionMenu(
+            opts, variable=self.upscale_format_var,
+            values=["PNG", "BMP", "TGA", "JPEG", "WEBP"])
+        upscale_format_menu.grid(row=1, column=1, padx=10, pady=5, sticky="w")
+
+        # Checkboxes row
+        check_frame = ctk.CTkFrame(opts_frame)
+        check_frame.pack(fill="x", padx=10, pady=5)
+        self.upscale_alpha_var = ctk.BooleanVar(value=True)
+        upscale_alpha_cb = ctk.CTkCheckBox(check_frame, text="🔲 Preserve Alpha (keep RGBA)",
+                       variable=self.upscale_alpha_var)
+        upscale_alpha_cb.pack(side="left", padx=10)
+        self.upscale_recursive_var = ctk.BooleanVar(value=True)
+        upscale_recursive_cb = ctk.CTkCheckBox(check_frame, text="📁 Include Subdirectories",
+                       variable=self.upscale_recursive_var)
+        upscale_recursive_cb.pack(side="left", padx=10)
+        self.upscale_zip_output_var = ctk.BooleanVar(value=False)
+        upscale_zip_cb = ctk.CTkCheckBox(check_frame, text="📦 Save output as ZIP",
+                       variable=self.upscale_zip_output_var)
+        upscale_zip_cb.pack(side="left", padx=10)
+        self.upscale_send_organizer_var = ctk.BooleanVar(value=False)
+        upscale_send_org_cb = ctk.CTkCheckBox(check_frame, text="🐼 Send to Organizer when done",
+                       variable=self.upscale_send_organizer_var)
+        upscale_send_org_cb.pack(side="left", padx=10)
+
+        # --- Preview section ---
+        preview_frame = ctk.CTkFrame(scroll)
+        preview_frame.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(preview_frame, text="Preview:",
+                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        self.upscale_preview_container = ctk.CTkFrame(preview_frame, height=220)
+        self.upscale_preview_container.pack(fill="x", padx=10, pady=5)
+        self.upscale_preview_container.pack_propagate(False)
+        # Before / After side by side
+        self.upscale_preview_before_label = ctk.CTkLabel(
+            self.upscale_preview_container, text="Before\n(select an image)", width=200, height=200)
+        self.upscale_preview_before_label.pack(side="left", padx=10, pady=10, expand=True)
+        self.upscale_preview_after_label = ctk.CTkLabel(
+            self.upscale_preview_container, text="After\n(preview appears here)", width=200, height=200)
+        self.upscale_preview_after_label.pack(side="left", padx=10, pady=10, expand=True)
+
+        # Individual file preview / browse
+        preview_btn_frame = ctk.CTkFrame(preview_frame)
+        preview_btn_frame.pack(fill="x", padx=10, pady=5)
+        upscale_preview_btn = ctk.CTkButton(preview_btn_frame, text="🖼️ Preview Single File",
+                     width=180, command=self._preview_upscale_file)
+        upscale_preview_btn.pack(side="left", padx=10)
+        ctk.CTkLabel(preview_btn_frame, text="Select a single image to see before/after preview",
+                     font=("Arial", 10), text_color="gray").pack(side="left", padx=10)
+
+        # Feedback section
+        feedback_frame = ctk.CTkFrame(scroll)
+        feedback_frame.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(feedback_frame, text="Feedback:",
+                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        fb_row = ctk.CTkFrame(feedback_frame)
+        fb_row.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(fb_row, text="Rate last upscale result:").pack(side="left", padx=10)
+        upscale_fb_good_btn = ctk.CTkButton(fb_row, text="👍 Good", width=80,
+                     fg_color="#2B7A0B", command=lambda: self._upscale_feedback("good"))
+        upscale_fb_good_btn.pack(side="left", padx=5)
+        upscale_fb_bad_btn = ctk.CTkButton(fb_row, text="👎 Bad", width=80,
+                     fg_color="#B22222", command=lambda: self._upscale_feedback("bad"))
+        upscale_fb_bad_btn.pack(side="left", padx=5)
+        self.upscale_feedback_label = ctk.CTkLabel(fb_row, text="", font=("Arial", 10))
+        self.upscale_feedback_label.pack(side="left", padx=10)
+
+        # --- Log output ---
+        log_frame = ctk.CTkFrame(scroll)
+        log_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        ctk.CTkLabel(log_frame, text="Log:",
+                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        self.upscale_log_text = ctk.CTkTextbox(log_frame, height=200)
+        self.upscale_log_text.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # --- Progress bar ---
+        self.upscale_progress_var = ctk.DoubleVar(value=0.0)
+        self.upscale_progress_bar = ctk.CTkProgressBar(self.tab_upscaler)
+        self.upscale_progress_bar.pack(fill="x", padx=30, pady=(0, 10))
+        self.upscale_progress_bar.set(0)
+
+        # Apply tooltips
+        self._apply_upscaler_tooltips(
+            upscale_input_btn, upscale_input_zip_btn, upscale_output_btn,
+            upscale_factor_menu, upscale_style_menu, upscale_format_menu,
+            upscale_alpha_cb, upscale_recursive_cb, upscale_zip_cb,
+            upscale_send_org_cb, upscale_preview_btn,
+            upscale_fb_good_btn, upscale_fb_bad_btn)
+
+    def _apply_upscaler_tooltips(self, input_btn, zip_btn, output_btn,
+                                  factor_menu, style_menu, format_menu,
+                                  alpha_cb, recursive_cb, zip_cb,
+                                  send_org_cb, preview_btn,
+                                  fb_good_btn, fb_bad_btn):
+        """Apply tooltips to upscaler tab widgets"""
+        if not WidgetTooltip:
+            return
+        tt = self._get_tooltip_text
+        tm = self.tooltip_manager
+        self._tooltips.append(WidgetTooltip(self.upscale_start_btn,
+            tt('upscale_button') or "Start batch upscaling all images in the selected folder",
+            widget_id='upscale_button', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(input_btn,
+            tt('upscale_input') or "Select a folder containing images to upscale",
+            widget_id='upscale_input', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(zip_btn,
+            tt('upscale_zip_input') or "Select a ZIP archive containing images to upscale\nImages will be extracted and processed",
+            widget_id='upscale_zip_input', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(output_btn,
+            tt('upscale_output') or "Choose where to save the upscaled images",
+            widget_id='upscale_output', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(factor_menu,
+            tt('upscale_factor') or "Choose upscale multiplier:\n• 2x – Double the resolution\n• 4x – Quadruple the resolution\n• 8x – 8 times the resolution (slow)",
+            widget_id='upscale_factor', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(style_menu,
+            tt('upscale_style') or "Resample filter for upscaling:\n• 🔷 Lanczos – Sharpest results, best for most textures\n• 🟢 Bicubic – Smooth, good all-rounder\n• 🟡 Bilinear – Fastest, slightly soft\n• 🔶 Hamming – Good balance of speed and quality\n• 🟣 Box – Nearest-neighbor style, good for pixel art\n• 🔴 Real-ESRGAN – AI upscaling, highest quality but slow",
+            widget_id='upscale_style', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(format_menu,
+            tt('upscale_format') or "Output image format:\n• PNG – Lossless, supports alpha\n• BMP – Uncompressed\n• TGA – Common for game textures\n• JPEG – Lossy, no alpha\n• WEBP – Modern, small file size",
+            widget_id='upscale_format', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(alpha_cb,
+            tt('upscale_alpha') or "Keep alpha channel (transparency) intact during upscaling\nAlways maintains RGBA mode",
+            widget_id='upscale_alpha', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(recursive_cb,
+            tt('upscale_recursive') or "Process images in subdirectories as well",
+            widget_id='upscale_recursive', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(zip_cb,
+            tt('upscale_zip_output') or "Save all upscaled images into a ZIP archive",
+            widget_id='upscale_zip_output', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(send_org_cb,
+            tt('upscale_send_organizer') or "After upscaling, send the output folder to the Sort Textures tab for AI-powered organization",
+            widget_id='upscale_send_organizer', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(preview_btn,
+            tt('upscale_preview') or "Select a single image file to see a before/after preview\nwith the current upscale settings applied",
+            widget_id='upscale_preview', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(fb_good_btn,
+            tt('upscale_fb_good') or "Rate this upscale result as good quality",
+            widget_id='upscale_fb_good', tooltip_manager=tm))
+        self._tooltips.append(WidgetTooltip(fb_bad_btn,
+            tt('upscale_fb_bad') or "Rate this upscale result as poor quality\nConsider trying a different style or scale factor",
+            widget_id='upscale_fb_bad', tooltip_manager=tm))
+
+    def _browse_upscale_zip(self):
+        """Browse for a ZIP file as upscaler input."""
+        result = filedialog.askopenfilename(
+            title="Select ZIP Archive",
+            filetypes=[("ZIP archives", "*.zip"), ("All files", "*.*")])
+        if result:
+            self.upscale_input_var.set(result)
+
+    def _upscale_log(self, message):
+        """Thread-safe log helper for upscaler."""
+        self.after(0, lambda m=message: self._upscale_log_impl(m))
+
+    def _upscale_log_impl(self, message):
+        self.upscale_log_text.insert("end", f"{message}\n")
+        self.upscale_log_text.see("end")
+
+    def _get_pil_resample(self):
+        """Return the PIL resample filter matching the current style selection."""
+        style = self.upscale_style_var.get()
+        if "Lanczos" in style:
+            return Image.LANCZOS
+        elif "Bicubic" in style:
+            return Image.BICUBIC
+        elif "Bilinear" in style:
+            return Image.BILINEAR
+        elif "Hamming" in style:
+            return Image.HAMMING
+        elif "Box" in style:
+            return Image.BOX
+        return Image.LANCZOS  # default
+
+    def _get_upscale_factor(self):
+        """Return the numeric scale factor."""
+        text = self.upscale_factor_var.get()
+        return int(text.replace("x", ""))
+
+    def _preview_upscale_file(self):
+        """Let user pick a single file and show before/after preview."""
+        filepath = filedialog.askopenfilename(
+            title="Select Image to Preview",
+            filetypes=[
+                ("Image files", "*.png *.bmp *.tga *.jpg *.jpeg *.webp"),
+                ("All files", "*.*")])
+        if not filepath:
+            return
+        try:
+            img = Image.open(filepath)
+            self._show_upscale_preview(img)
+        except Exception as e:
+            if GUI_AVAILABLE:
+                messagebox.showerror("Preview Error", f"Could not open image:\n{e}")
+
+    def _show_upscale_preview(self, pil_img):
+        """Display before/after preview for the given PIL Image."""
+        import customtkinter as ctk_mod
+        # Before thumbnail
+        before = pil_img.copy()
+        before.thumbnail((200, 200), Image.LANCZOS)
+        try:
+            before_ctk = ctk_mod.CTkImage(light_image=before, size=before.size)
+            self.upscale_preview_before_label.configure(image=before_ctk, text="")
+            self.upscale_preview_before_label._preview_img = before_ctk
+        except Exception:
+            self.upscale_preview_before_label.configure(text=f"Before\n{pil_img.size[0]}×{pil_img.size[1]}")
+
+        # After thumbnail
+        factor = self._get_upscale_factor()
+        style = self.upscale_style_var.get()
+        if "ESRGAN" in style:
+            # For AI styles just show label — too slow for live preview
+            new_w = pil_img.size[0] * factor
+            new_h = pil_img.size[1] * factor
+            self.upscale_preview_after_label.configure(
+                image=None,
+                text=f"After (AI preview)\n{new_w}×{new_h}\n(Real-ESRGAN)")
+        else:
+            preserve_alpha = self.upscale_alpha_var.get()
+            upscaled = self._upscale_pil_image(pil_img, factor, preserve_alpha)
+            after = upscaled.copy()
+            after.thumbnail((200, 200), Image.LANCZOS)
+            try:
+                after_ctk = ctk_mod.CTkImage(light_image=after, size=after.size)
+                self.upscale_preview_after_label.configure(image=after_ctk, text="")
+                self.upscale_preview_after_label._preview_img = after_ctk
+            except Exception:
+                self.upscale_preview_after_label.configure(
+                    text=f"After\n{upscaled.size[0]}×{upscaled.size[1]}")
+
+    def _update_upscale_preview(self, *_args):
+        """Called when scale/style changes — re-preview if we have an image."""
+        # Only re-preview if we already have a before image showing
+        pass
+
+    def _upscale_pil_image(self, img, factor, preserve_alpha=True):
+        """Upscale a single PIL Image using the current style."""
+        new_size = (img.size[0] * factor, img.size[1] * factor)
+        resample = self._get_pil_resample()
+
+        if preserve_alpha and img.mode == "RGBA":
+            # Upscale RGB and Alpha separately to avoid edge artifacts
+            rgb = img.convert("RGB").resize(new_size, resample)
+            alpha = img.getchannel("A").resize(new_size, resample)
+            result = rgb.copy()
+            result.putalpha(alpha)
+            return result
+        elif preserve_alpha and img.mode != "RGBA":
+            img = img.convert("RGBA")
+            return img.resize(new_size, resample)
+        else:
+            return img.resize(new_size, resample)
+
+    def _upscale_feedback(self, rating):
+        """Record user feedback on upscale quality."""
+        style = self.upscale_style_var.get()
+        factor = self.upscale_factor_var.get()
+        self.upscale_feedback_label.configure(
+            text=f"{'👍' if rating == 'good' else '👎'} Feedback recorded for {style} @ {factor}")
+        self._upscale_log(f"Feedback: {rating} for style={style}, factor={factor}")
+
+    def _run_upscale(self):
+        """Run batch upscaling in a background thread."""
+        input_path = self.upscale_input_var.get().strip()
+        output_path = self.upscale_output_var.get().strip()
+        if not input_path:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("No Input", "Please select an input folder or ZIP.")
+            return
+        if not output_path:
+            if GUI_AVAILABLE:
+                messagebox.showwarning("No Output", "Please select an output folder.")
+            return
+
+        self.upscale_start_btn.configure(state="disabled")
+        self.upscale_log_text.delete("1.0", "end")
+        self.upscale_progress_bar.set(0)
+
+        factor = self._get_upscale_factor()
+        preserve_alpha = self.upscale_alpha_var.get()
+        recursive = self.upscale_recursive_var.get()
+        zip_output = self.upscale_zip_output_var.get()
+        send_to_organizer = self.upscale_send_organizer_var.get()
+        export_fmt = self.upscale_format_var.get().lower()
+        style = self.upscale_style_var.get()
+        is_esrgan = "ESRGAN" in style
+
+        def worker():
+            import tempfile
+            import zipfile
+            import shutil
+
+            tmp_extract_dir = None
+            try:
+                src_path = Path(input_path)
+                dst_path = Path(output_path)
+                dst_path.mkdir(parents=True, exist_ok=True)
+
+                # Handle ZIP input
+                if src_path.suffix.lower() == '.zip':
+                    tmp_extract_dir = tempfile.mkdtemp(prefix="upscaler_")
+                    self._upscale_log(f"Extracting ZIP: {src_path.name}")
+                    with zipfile.ZipFile(str(src_path), 'r') as zf:
+                        zf.extractall(tmp_extract_dir)
+                    src_path = Path(tmp_extract_dir)
+
+                # Collect image files
+                exts = {'.png', '.bmp', '.tga', '.jpg', '.jpeg', '.webp'}
+                if recursive:
+                    files = [p for p in src_path.rglob('*') if p.suffix.lower() in exts]
+                else:
+                    files = [p for p in src_path.iterdir() if p.is_file() and p.suffix.lower() in exts]
+
+                if not files:
+                    self._upscale_log("No image files found.")
+                    return
+
+                self._upscale_log(f"Found {len(files)} image(s). Scale: {factor}x, Style: {style}")
+                processed = 0
+                errors = 0
+
+                if is_esrgan:
+                    import numpy as np
+                    from src.preprocessing.upscaler import TextureUpscaler
+
+                for i, fpath in enumerate(files, 1):
+                    try:
+                        img = Image.open(str(fpath))
+
+                        if is_esrgan:
+                            # Use the existing TextureUpscaler for ESRGAN
+                            arr = np.array(img.convert("RGB"))
+                            tu = TextureUpscaler()
+                            result_arr = tu.upscale(arr, scale_factor=factor, method='realesrgan')
+                            result = Image.fromarray(result_arr)
+                            if preserve_alpha and img.mode == "RGBA":
+                                alpha = img.getchannel("A").resize(result.size, Image.LANCZOS)
+                                result = result.convert("RGBA")
+                                result.putalpha(alpha)
+                        else:
+                            result = self._upscale_pil_image(img, factor, preserve_alpha)
+
+                        # Build output path preserving relative structure
+                        try:
+                            rel = fpath.relative_to(src_path)
+                        except ValueError:
+                            rel = Path(fpath.name)
+                        out_file = dst_path / rel.with_suffix(f".{export_fmt}")
+                        out_file.parent.mkdir(parents=True, exist_ok=True)
+
+                        # Save
+                        save_kwargs = {}
+                        if export_fmt == "jpeg":
+                            save_kwargs["quality"] = 95
+                            if result.mode == "RGBA":
+                                result = result.convert("RGB")
+                        elif export_fmt == "webp":
+                            save_kwargs["quality"] = 95
+                        result.save(str(out_file), **save_kwargs)
+                        processed += 1
+                        self._upscale_log(f"  ✅ [{i}/{len(files)}] {fpath.name}")
+                    except Exception as e:
+                        errors += 1
+                        self._upscale_log(f"  ❌ [{i}/{len(files)}] {fpath.name}: {e}")
+
+                    # Update progress
+                    progress = i / len(files)
+                    self.after(0, lambda p=progress: self.upscale_progress_bar.set(p))
+
+                self._upscale_log(f"\nDone! Processed: {processed}, Errors: {errors}")
+
+                # ZIP output
+                if zip_output:
+                    zip_path = dst_path.parent / f"{dst_path.name}_upscaled.zip"
+                    self._upscale_log(f"Creating ZIP: {zip_path.name}")
+                    with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zf:
+                        for f in dst_path.rglob('*'):
+                            if f.is_file():
+                                zf.write(str(f), str(f.relative_to(dst_path)))
+                    self._upscale_log(f"  ✅ ZIP created: {zip_path}")
+
+                # Send to organizer
+                if send_to_organizer and hasattr(self, 'input_var'):
+                    self.after(0, lambda: self._send_upscaled_to_organizer(str(dst_path)))
+
+            except Exception as e:
+                self._upscale_log(f"❌ Error: {e}")
+            finally:
+                if tmp_extract_dir and os.path.isdir(tmp_extract_dir):
+                    shutil.rmtree(tmp_extract_dir, ignore_errors=True)
+                self.after(0, lambda: self.upscale_start_btn.configure(state="normal"))
+
+        import threading
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _send_upscaled_to_organizer(self, output_dir):
+        """Set the Sort Textures input to the upscaled output folder."""
+        self.input_var.set(output_dir)
+        self._upscale_log(f"📂 Output sent to Sort Textures tab: {output_dir}")
+        # Switch to sort tab
+        try:
+            self.category_tabview.set("🔧 Tools")
+            self.tabview.set("🐼 Sort Textures")
+        except Exception:
+            pass
+
     def create_alpha_fixer_tab(self):
         """Create alpha correction tool tab for fixing texture alpha channels"""
         # Title
