@@ -95,19 +95,34 @@ Build a standalone executable using build scripts:
 
 **Windows Batch:**
 ```cmd
-build.bat
+build.bat folder    # One-folder build (FASTER startup, recommended)
+build.bat           # Single-EXE build (portable)
 ```
 
 **PowerShell:**
 ```powershell
-.\build.ps1
+.\build.ps1 folder  # One-folder build (FASTER startup, recommended)
+.\build.ps1         # Single-EXE build (portable)
 ```
+
+**Two build modes available:**
+
+1. **One-Folder Mode** (`build.bat folder`) - **RECOMMENDED**
+   - Much faster startup (no extraction to temp)
+   - Better overall performance
+   - External assets for easy modification
+   - Output: `dist/GameTextureSorter/` folder with EXE + resources
+
+2. **Single-EXE Mode** (`build.bat`) - For portability
+   - Fully portable single file
+   - Slower startup (extracts on each launch)
+   - Output: `dist/GameTextureSorter.exe`
 
 The build scripts automatically:
 - Set up virtual environment
 - Install dependencies
-- Build single EXE with PyInstaller
-- Create `dist/GameTextureSorter.exe`
+- Build with PyInstaller
+- Create output in `dist/` folder
 
 See [BUILD.md](BUILD.md) for detailed build instructions and troubleshooting.
 

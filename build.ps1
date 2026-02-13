@@ -3,9 +3,24 @@
 # Game Texture Sorter - Automated Windows Build Script (PowerShell)
 # Author: Dead On The Inside / JosephsDeadish
 #
-# This PowerShell script automatically builds the single-EXE application.
+# This PowerShell script automatically builds the application.
 # It provides better error handling and progress reporting than the batch file.
+#
+# Usage:
+#   .\build.ps1          - Build single-EXE (portable)
+#   .\build.ps1 folder   - Build one-folder with external assets (faster startup)
 ################################################################################
+
+param(
+    [Parameter(Position=0)]
+    [ValidateSet("single", "folder", "")]
+    [string]$BuildMode = "single"
+)
+
+# If no parameter or empty, default to single
+if ($BuildMode -eq "") {
+    $BuildMode = "single"
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -14,6 +29,8 @@ Write-Host "====================================================================
 Write-Host "  Game Texture Sorter - Automated Build Script (PowerShell)" -ForegroundColor Cyan
 Write-Host "  Author: Dead On The Inside / JosephsDeadish" -ForegroundColor Cyan
 Write-Host "========================================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Build mode: $BuildMode" -ForegroundColor White
 Write-Host ""
 
 # Check Python installation
@@ -125,11 +142,20 @@ Write-Host ""
 
 # Build with PyInstaller
 Write-Host "========================================================================" -ForegroundColor Cyan
-Write-Host "  Building Single EXE with PyInstaller..." -ForegroundColor Cyan
+if ($BuildMode -eq "folder") {
+    Write-Host "  Building One-Folder with PyInstaller..." -ForegroundColor Cyan
+} else {
+    Write-Host "  Building Single EXE with PyInstaller..." -ForegroundColor Cyan
+}
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-pyinstaller build_spec.spec --clean --noconfirm
+# Run PyInstaller with appropriate spec file
+if ($BuildMode -eq "folder") {
+    pyinstaller build_spec_onefolder.spec --clean --noconfirm
+} else {
+    pyinstaller build_spec.spec --clean --noconfirm
+}
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
@@ -145,25 +171,80 @@ Write-Host "  ✓ BUILD SUCCESSFUL!" -ForegroundColor Green
 Write-Host "========================================================================" -ForegroundColor Green
 Write-Host ""
 
-# Check if EXE was created
-$exePath = "dist\GameTextureSorter.exe"
-if (Test-Path $exePath) {
-    $exeSize = (Get-Item $exePath).Length
-    $exeSizeMB = [math]::Round($exeSize / 1MB, 2)
-    
-    Write-Host "The executable has been created:" -ForegroundColor White
-    Write-Host "  Location: $exePath" -ForegroundColor Cyan
-    Write-Host "  Size: $exeSizeMB MB" -ForegroundColor Cyan
-    Write-Host ""
-    Write-Host "You can now:" -ForegroundColor White
-    Write-Host "  1. Run the EXE: .\$exePath" -ForegroundColor Gray
-    Write-Host "  2. Copy it anywhere (fully portable)" -ForegroundColor Gray
-    Write-Host "  3. Sign it with a code certificate (see CODE_SIGNING.md)" -ForegroundColor Gray
-    Write-Host "  4. Distribute to users" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "The EXE is completely standalone - no installation required! 🐼" -ForegroundColor Green
+# Check if build was successful and provide appropriate message
+if ($BuildMode -eq "folder") {
+    # For folder builds, create the app_data directory structure
+    $folderPath = "dist\GameTextureSorter"
+    if (Test-Path $folderPath) {
+        Write-Host "Creating app_data directory structure..." -ForegroundColor Yellow
+        $appDataDirs = @(
+            "$folderPath\app_data",
+            "$folderPath\app_data\cache",
+            "$folderPath\app_data\logs",
+            "$folderPath\app_data\themes",
+            "$folderPath\app_data\models"
+        )
+        foreach ($dir in $appDataDirs) {
+            if (-not (Test-Path $dir)) {
+                New-Item -ItemType Directory -Path $dir -Force | Out-Null
+                Write-Host "✓ Created $dir" -ForegroundColor Gray
+            }
+        }
+        Write-Host ""
+        
+        $exePath = "$folderPath\GameTextureSorter.exe"
+        if (Test-Path $exePath) {
+            $exeSize = (Get-Item $exePath).Length
+            $exeSizeMB = [math]::Round($exeSize / 1MB, 2)
+            
+            Write-Host "The application has been created in the one-folder format:" -ForegroundColor White
+            Write-Host "  Location: dist\GameTextureSorter\" -ForegroundColor Cyan
+            Write-Host "  Main EXE: GameTextureSorter.exe ($exeSizeMB MB)" -ForegroundColor Cyan
+            Write-Host ""
+            Write-Host "Folder structure:" -ForegroundColor White
+            Write-Host "  dist\GameTextureSorter\" -ForegroundColor Gray
+            Write-Host "    ├── GameTextureSorter.exe    (Main executable)" -ForegroundColor Gray
+            Write-Host "    ├── _internal\               (Python runtime + libraries)" -ForegroundColor Gray
+            Write-Host "    ├── resources\               (Icons, sounds, cursors)" -ForegroundColor Gray
+            Write-Host "    └── app_data\                (Config, cache, themes, models)" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "Benefits of one-folder build:" -ForegroundColor Green
+            Write-Host "  ✓ Much faster startup (no extraction to temp)" -ForegroundColor Green
+            Write-Host "  ✓ Better performance overall" -ForegroundColor Green
+            Write-Host "  ✓ Easier to modify themes and assets" -ForegroundColor Green
+            Write-Host "  ✓ Config and cache stored locally" -ForegroundColor Green
+            Write-Host ""
+            Write-Host "To distribute: Copy the entire 'GameTextureSorter' folder" -ForegroundColor Yellow
+        } else {
+            Write-Host "✗ WARNING: EXE file not found in folder" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "✗ WARNING: Folder build not found at expected location" -ForegroundColor Yellow
+    }
 } else {
-    Write-Host "✗ WARNING: EXE file not found at expected location" -ForegroundColor Yellow
+    # Single-EXE build
+    $exePath = "dist\GameTextureSorter.exe"
+    if (Test-Path $exePath) {
+        $exeSize = (Get-Item $exePath).Length
+        $exeSizeMB = [math]::Round($exeSize / 1MB, 2)
+        
+        Write-Host "The executable has been created:" -ForegroundColor White
+        Write-Host "  Location: $exePath" -ForegroundColor Cyan
+        Write-Host "  Size: $exeSizeMB MB" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "You can now:" -ForegroundColor White
+        Write-Host "  1. Run the EXE: .\$exePath" -ForegroundColor Gray
+        Write-Host "  2. Copy it anywhere (fully portable)" -ForegroundColor Gray
+        Write-Host "  3. Sign it with a code certificate (see CODE_SIGNING.md)" -ForegroundColor Gray
+        Write-Host "  4. Distribute to users" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "The EXE is completely standalone - no installation required! 🐼" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "💡 TIP: For faster startup, use 'build.ps1 folder' to create" -ForegroundColor Yellow
+        Write-Host "   a one-folder build with external assets!" -ForegroundColor Yellow
+    } else {
+        Write-Host "✗ WARNING: EXE file not found at expected location" -ForegroundColor Yellow
+    }
 }
 
 Write-Host "========================================================================" -ForegroundColor Cyan

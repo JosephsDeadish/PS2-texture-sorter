@@ -1,19 +1,41 @@
 # Building Game Texture Sorter
 
-This guide explains how to build the Game Texture Sorter as a single Windows EXE file.
+This guide explains how to build the Game Texture Sorter for Windows.
+
+## Build Modes
+
+There are **two build modes** available:
+
+### Single-EXE Mode (Default)
+- **Command**: `build.bat` or `.\build.ps1`
+- **Output**: One portable EXE file (~50-100 MB)
+- **Pros**: Fully portable, single file, easy to distribute
+- **Cons**: Slower startup (extracts to temp on each launch)
+- **Best for**: Distribution to end users, USB drive usage
+
+### One-Folder Mode (Faster Performance)
+- **Command**: `build.bat folder`
+- **Output**: Folder with EXE + external assets
+- **Pros**: **Much faster startup**, easier asset modification, better performance
+- **Cons**: Multiple files to distribute
+- **Best for**: Development, testing, users who want fast startup
+
+**Recommended**: Use **one-folder mode** (`build.bat folder`) for better performance!
 
 ## Quick Start - Automated Build
 
 The easiest way to build is using the automated build scripts:
 
-### Option 1: Windows Batch File (Recommended for most users)
+### Option 1: Windows Batch File (Recommended)
 ```cmd
-build.bat
+build.bat folder    # One-folder build (FASTER startup, recommended)
+build.bat           # Single-EXE build (portable)
 ```
 
-### Option 2: PowerShell Script (Better error handling and progress reporting)
+### Option 2: PowerShell Script (Better error handling)
 ```powershell
-.\build.ps1
+.\build.ps1 folder  # One-folder build (FASTER startup, recommended)
+.\build.ps1         # Single-EXE build (portable)
 ```
 
 Both scripts will:
@@ -21,8 +43,8 @@ Both scripts will:
 2. Create/activate a virtual environment
 3. Install all dependencies
 4. Clean previous builds
-5. Run PyInstaller to create the single EXE
-6. Report success and provide the EXE location
+5. Run PyInstaller to create the output
+6. Report success and provide the location
 
 **The build process is fully automated - just run the script!**
 
@@ -58,15 +80,26 @@ pip install -r requirements.txt
 ```
 
 ### 5. Build with PyInstaller
+
+For **single-EXE** build:
 ```cmd
 pyinstaller build_spec.spec --clean --noconfirm
 ```
 
-### 6. Find Your EXE
-The executable will be in: `dist\GameTextureSorter.exe`
+For **one-folder** build (faster startup):
+```cmd
+pyinstaller build_spec_onefolder.spec --clean --noconfirm
+```
+
+### 6. Find Your Build
+
+**Single-EXE**: The executable will be in: `dist\GameTextureSorter.exe`
+
+**One-Folder**: The application will be in: `dist\GameTextureSorter\`
 
 ## Build Output
 
+### Single-EXE Build (`build.bat`)
 After a successful build, you'll find:
 
 ```
@@ -76,17 +109,42 @@ dist/
 build/                       <- Temporary build files (can be deleted)
 ```
 
-## EXE Properties
-
-The built EXE will have:
+**Properties**:
 - **File Name**: GameTextureSorter.exe
+- **Size**: ~50-100 MB
+- **Startup**: Slower (extracts to temp on each launch)
+- **Portability**: ✓ Single file, fully portable
+- **Dependencies**: ✓ None - completely standalone
+
+### One-Folder Build (`build.bat folder`)
+After a successful build, you'll find:
+
+```
+dist/
+└── GameTextureSorter/
+    ├── GameTextureSorter.exe     <- Main executable (~10-20 MB)
+    ├── _internal/                <- Python runtime + libraries
+    ├── resources/                <- Icons, sounds, cursors
+    └── app_data/                 <- Config, cache, themes, models
+        ├── cache/
+        ├── logs/
+        ├── themes/
+        └── models/
+```
+
+**Properties**:
+- **Folder Size**: ~100-150 MB total
+- **Startup**: **Much faster** (no extraction needed)
+- **Portability**: ✓ Portable folder (copy entire folder)
+- **Assets**: ✓ Easily accessible and modifiable
+- **Performance**: ✓ Better overall performance
+
+### Common Properties (Both Builds)
 - **Version**: 1.0.0
 - **Author**: Dead On The Inside / JosephsDeadish
 - **Description**: Game Texture Sorter - Automatic texture classification
-- **Size**: ~50-100 MB (depending on included resources)
 - **Icon**: Panda icon (if available)
-- **No external dependencies** - completely standalone
-- **Portable** - can run from any location (USB drive compatible)
+- **No external dependencies** - no installation required
 
 ## Troubleshooting
 
