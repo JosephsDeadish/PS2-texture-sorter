@@ -2754,10 +2754,59 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         '🔩': '#808080', '🌱': '#228B22', '🧸': '#DEB887', '⛈️': '#4682B4',
         '🌟': '#FFD700', '🌌': '#191970', '⌚': '#C0C0C0', '🤘': '#8B0000',
     }
+    
+    # Item-specific color overrides (takes priority over emoji colors)
+    _ITEM_COLORS = {
+        # Shirts
+        'tshirt': '#4169E1',  # Royal blue t-shirt
+        'red_tee': '#DC143C',  # Crimson red
+        'blue_tee': '#1E90FF',  # Dodger blue
+        'green_tee': '#32CD32',  # Lime green
+        'yellow_polo': '#FFD700',  # Gold yellow
+        'striped_shirt': '#4682B4',  # Steel blue with stripes
+        'tank_top': '#F5F5F5',  # White smoke
+        # Jackets
+        'hoodie': '#708090',  # Slate gray hoodie
+        'raincoat': '#FFD700',  # Yellow raincoat
+        'leather_jacket': '#2F4F4F',  # Dark slate gray
+        'denim_jacket': '#1E90FF',  # Blue denim
+        'bomber_jacket': '#2E8B57',  # Sea green
+        'puffer_jacket': '#FF4500',  # Orange red
+        'letterman_jacket': '#8B0000',  # Dark red
+        'windbreaker': '#00FF7F',  # Spring green
+        # Pants
+        'overalls': '#4169E1',  # Royal blue denim
+        'jeans': '#191970',  # Midnight blue
+        'cargo_pants': '#6B8E23',  # Olive drab
+        'sweatpants': '#808080',  # Gray
+        'dress_pants': '#1a1a1a',  # Black
+        'shorts': '#87CEEB',  # Sky blue
+        # Dresses and full-body outfits
+        'dress': '#FF69B4',  # Hot pink dress
+        'kimono': '#DC143C',  # Crimson kimono
+        'suit': '#1a1a1a',  # Black business suit
+        # Themed costumes
+        'superhero': '#DC143C',  # Red superhero
+        'ninja': '#333333',  # Dark gray ninja
+        'wizard': '#4B0082',  # Indigo wizard
+        'pirate': '#8B4513',  # Saddle brown pirate
+        'astronaut': '#F5F5F5',  # White spacesuit
+        'chef': '#FFFFFF',  # White chef coat
+        'detective': '#8B7355',  # Burlywood detective coat
+        'spacesuit': '#C0C0C0',  # Silver space suit
+        'toga': '#F5F5F5',  # White toga
+        'lab_coat': '#FFFFFF',  # White lab coat
+        'superhero_cape': '#DC143C',  # Red cape
+    }
 
     @staticmethod
-    def _color_for_emoji(emoji: str, fallback: str = '#888888') -> str:
-        """Return a color corresponding to the given emoji icon."""
+    def _color_for_emoji(emoji: str, fallback: str = '#888888', item_id: str = None) -> str:
+        """Return a color corresponding to the given emoji icon or item ID.
+        
+        Priority: item_id > emoji > fallback
+        """
+        if item_id and item_id in PandaWidget._ITEM_COLORS:
+            return PandaWidget._ITEM_COLORS[item_id]
         return PandaWidget._EMOJI_COLORS.get(emoji, fallback)
 
     def _compute_limb_offsets(self, anim: str, frame_idx: int) -> tuple:
@@ -3095,7 +3144,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
 
             # --- Helper: draw upper-body clothing ---
             def _draw_upper_clothing(clothing_item, ctype):
-                color = self._color_for_emoji(clothing_item.emoji, '#4169E1')
+                color = self._color_for_emoji(clothing_item.emoji, '#4169E1', clothing_item.id)
                 shadow = self._shade_color(color, -30)
                 highlight = self._shade_color(color, 40)
 
@@ -3322,7 +3371,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             if pants_id:
                 pants_item = self.panda_closet.get_item(pants_id)
                 if pants_item:
-                    p_color = self._color_for_emoji(pants_item.emoji, '#4169E1')
+                    p_color = self._color_for_emoji(pants_item.emoji, '#4169E1', pants_item.id)
                     p_shadow = self._shade_color(p_color, -30)
                     p_highlight = self._shade_color(p_color, 40)
                     _draw_pants_piece(p_color, p_shadow, p_highlight)
@@ -3333,7 +3382,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     ctype = clothing_item.clothing_type or 'shirt'
                     if ctype == 'pants':
                         # Legacy: if pants ended up in clothing slot, draw them
-                        color = self._color_for_emoji(clothing_item.emoji, '#4169E1')
+                        color = self._color_for_emoji(clothing_item.emoji, '#4169E1', clothing_item.id)
                         shadow = self._shade_color(color, -30)
                         highlight = self._shade_color(color, 40)
                         _draw_pants_piece(color, shadow, highlight)
