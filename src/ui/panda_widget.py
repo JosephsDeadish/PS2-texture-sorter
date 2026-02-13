@@ -1856,8 +1856,10 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         cx_draw = cx + int(body_sway)
         
         # During toss physics or dragging, use _facing_direction to pick the correct view
-        if ((anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing) or
-            (anim == 'dragging' and self.is_dragging)):
+        # Save original dragging state before anim is remapped for view
+        _is_being_dragged = (anim == 'dragging' and self.is_dragging)
+        if ((_is_being_dragged) or
+            (anim in ('tossed', 'wall_hit', 'rolling', 'spinning') and self._is_tossing)):
             facing = getattr(self, '_facing_direction', 'front')
             if facing == 'left':
                 anim = 'walking_left'
@@ -2130,219 +2132,6 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               font=("Arial Bold", int(10 * sx)),
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
-        elif anim in ('walking_up_left', 'walking_up_right',
-                       'walking_down_left', 'walking_down_right'):
-            # --- DIAGONAL VIEW: 3/4 perspective panda ---
-            is_right = anim in ('walking_up_right', 'walking_down_right')
-            is_back = anim in ('walking_up_left', 'walking_up_right')
-            diag_dir = 1 if is_right else -1
-            # Body width compression for 3/4 turn (between full front and side)
-            persp_w = 0.8  # 80% width for 3/4 view
-            body_offset = int(8 * sx * diag_dir)  # Slight body shift
-            
-            leg_top = int(145 * sy + by)
-            leg_len = int(30 * sy)
-            
-            # Near leg (closer to viewer, bigger stride)
-            near_leg_x = cx_draw + body_offset + int(20 * sx * diag_dir)
-            near_leg_swing = leg_swing
-            c.create_oval(
-                near_leg_x - int(12 * sx), leg_top + near_leg_swing,
-                near_leg_x + int(12 * sx), leg_top + leg_len + near_leg_swing,
-                fill=black, outline=black, tags="leg"
-            )
-            c.create_oval(
-                near_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + near_leg_swing,
-                near_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + near_leg_swing,
-                fill=white, outline=black, width=1, tags="foot"
-            )
-            # Far leg (behind, slightly smaller)
-            far_leg_x = cx_draw + body_offset - int(15 * sx * diag_dir)
-            far_leg_swing = -leg_swing
-            c.create_oval(
-                far_leg_x - int(11 * sx), leg_top + far_leg_swing,
-                far_leg_x + int(11 * sx), leg_top + leg_len - int(2 * sy) + far_leg_swing,
-                fill=black, outline=black, tags="leg"
-            )
-            c.create_oval(
-                far_leg_x - int(9 * sx), leg_top + leg_len - int(10 * sy) + far_leg_swing,
-                far_leg_x + int(9 * sx), leg_top + leg_len + int(2 * sy) + far_leg_swing,
-                fill=white, outline=black, width=1, tags="foot"
-            )
-            
-            # Body (slightly narrower for perspective)
-            body_top = int(75 * sy + by)
-            body_bot = int(160 * sy + by)
-            body_rx = int(42 * sx * persp_w * breath_scale)
-            body_cx = cx_draw + body_offset
-            c.create_oval(
-                body_cx - body_rx, body_top,
-                body_cx + body_rx, body_bot,
-                fill=white, outline=black, width=2, tags="body"
-            )
-            
-            # Belly patch (visible from front-diagonal, hidden from back-diagonal)
-            if not is_back:
-                belly_rx = int(24 * sx * persp_w)
-                belly_ry = int(22 * sy)
-                belly_cy = int(128 * sy + by)
-                belly_cx = body_cx + int(4 * sx * diag_dir)
-                c.create_oval(
-                    belly_cx - belly_rx, belly_cy - belly_ry,
-                    belly_cx + belly_rx, belly_cy + belly_ry,
-                    fill="#F5F5F5", outline="", tags="belly"
-                )
-            
-            # Arms
-            arm_top = int(95 * sy + by)
-            arm_len = int(35 * sy)
-            # Near arm (closer side, larger)
-            near_arm_x = body_cx + int(40 * sx * diag_dir * persp_w)
-            na_swing = arm_swing
-            c.create_oval(
-                near_arm_x - int(13 * sx), arm_top + na_swing,
-                near_arm_x + int(13 * sx), arm_top + arm_len + na_swing,
-                fill=black, outline=black, tags="arm"
-            )
-            # Far arm (further side, smaller)
-            far_arm_x = body_cx - int(35 * sx * diag_dir * persp_w)
-            fa_swing = -arm_swing
-            c.create_oval(
-                far_arm_x - int(11 * sx), arm_top + fa_swing,
-                far_arm_x + int(11 * sx), arm_top + arm_len - int(3 * sy) + fa_swing,
-                fill=black, outline=black, tags="arm"
-            )
-            
-            # Head (slightly offset for 3/4 view)
-            head_cy = int(52 * sy + by)
-            head_rx = int(36 * sx * persp_w)
-            head_ry = int(32 * sy)
-            head_cx = body_cx + int(3 * sx * diag_dir)
-            c.create_oval(
-                head_cx - head_rx, head_cy - head_ry,
-                head_cx + head_rx, head_cy + head_ry,
-                fill=white, outline=black, width=2, tags="head"
-            )
-            
-            # Ears
-            ear_y = head_cy - head_ry + int(5 * sy)
-            ear_w = int(22 * sx * persp_w)
-            # Near ear (bigger)
-            near_ear_x = head_cx + int(head_rx * diag_dir)
-            c.create_oval(
-                near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
-                near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
-                fill=black, outline=black, tags="ear"
-            )
-            # Far ear (smaller, partially hidden)
-            far_ear_x = head_cx - int(head_rx * diag_dir)
-            far_ear_w = int(16 * sx * persp_w)
-            c.create_oval(
-                far_ear_x - int(far_ear_w * 0.5), ear_y - int(12 * sy),
-                far_ear_x + int(far_ear_w * 0.5), ear_y + int(6 * sy),
-                fill=black, outline=black, tags="ear"
-            )
-            
-            # Face features (only for front-diagonal views)
-            if not is_back:
-                # Eye patches (shifted for perspective)
-                patch_rx = int(16 * sx * persp_w)
-                patch_ry = int(14 * sy)
-                # Near eye patch
-                near_patch_cx = head_cx + int(14 * sx * diag_dir)
-                c.create_oval(
-                    near_patch_cx - patch_rx, head_cy - patch_ry,
-                    near_patch_cx + patch_rx, head_cy + patch_ry,
-                    fill=black, outline=black, tags="eye_patch"
-                )
-                # Far eye patch (partially hidden)
-                far_patch_cx = head_cx - int(10 * sx * diag_dir)
-                far_patch_rx = int(12 * sx * persp_w)
-                c.create_oval(
-                    far_patch_cx - far_patch_rx, head_cy - patch_ry + int(2 * sy),
-                    far_patch_cx + far_patch_rx, head_cy + patch_ry - int(2 * sy),
-                    fill=black, outline=black, tags="eye_patch"
-                )
-                
-                # Eyes
-                eye_r = int(4 * sx)
-                # Near eye (fully visible)
-                near_eye_cx = near_patch_cx
-                near_eye_cy = head_cy
-                c.create_oval(
-                    near_eye_cx - eye_r, near_eye_cy - eye_r,
-                    near_eye_cx + eye_r, near_eye_cy + eye_r,
-                    fill=white, outline=black, width=1, tags="eye"
-                )
-                pupil_r = int(2 * sx)
-                c.create_oval(
-                    near_eye_cx - pupil_r + int(diag_dir * sx),
-                    near_eye_cy - pupil_r,
-                    near_eye_cx + pupil_r + int(diag_dir * sx),
-                    near_eye_cy + pupil_r,
-                    fill=black, outline="", tags="pupil"
-                )
-                # Far eye (smaller, at edge)
-                far_eye_cx = far_patch_cx
-                far_eye_cy = head_cy + int(1 * sy)
-                far_eye_r = int(3 * sx)
-                c.create_oval(
-                    far_eye_cx - far_eye_r, far_eye_cy - far_eye_r,
-                    far_eye_cx + far_eye_r, far_eye_cy + far_eye_r,
-                    fill=white, outline=black, width=1, tags="eye"
-                )
-                far_pupil_r = int(1.5 * sx)
-                c.create_oval(
-                    int(far_eye_cx - far_pupil_r + diag_dir * sx),
-                    int(far_eye_cy - far_pupil_r),
-                    int(far_eye_cx + far_pupil_r + diag_dir * sx),
-                    int(far_eye_cy + far_pupil_r),
-                    fill=black, outline="", tags="pupil"
-                )
-                
-                # Nose (offset toward facing side)
-                nose_cx = head_cx + int(6 * sx * diag_dir)
-                nose_cy = head_cy + int(10 * sy)
-                nose_r = int(4 * sx)
-                c.create_oval(
-                    nose_cx - nose_r, nose_cy - int(3 * sy),
-                    nose_cx + nose_r, nose_cy + int(3 * sy),
-                    fill=nose_color, outline=black, width=1, tags="nose"
-                )
-                
-                # Mouth (small smile offset)
-                mouth_cx = head_cx + int(5 * sx * diag_dir)
-                mouth_cy = head_cy + int(16 * sy)
-                mouth_w = int(8 * sx)
-                c.create_arc(
-                    mouth_cx - mouth_w, mouth_cy - int(4 * sy),
-                    mouth_cx + mouth_w, mouth_cy + int(4 * sy),
-                    start=200, extent=140, style='arc',
-                    outline=black, width=max(1, int(1.5 * sx)), tags="mouth"
-                )
-            else:
-                # Back-diagonal: show back of head markings
-                back_patch_rx = int(18 * sx * persp_w)
-                back_patch_ry = int(12 * sy)
-                c.create_oval(
-                    head_cx - back_patch_rx, head_cy - back_patch_ry + int(4 * sy),
-                    head_cx + back_patch_rx, head_cy + back_patch_ry - int(4 * sy),
-                    fill="#F5F5F5", outline="", tags="back_head"
-                )
-            
-            # Draw equipped items on panda body
-            self._draw_equipped_items(c, body_cx, by, sx, sy)
-            
-            # Animation extras
-            self._draw_animation_extras(c, body_cx, by, anim, frame_idx, sx, sy)
-            
-            # Name tag
-            if self.panda and self.panda.name:
-                name_y = int(h - 12 * sy)
-                c.create_text(cx_draw, name_y, text=self.panda.name,
-                              font=("Arial Bold", int(10 * sx)),
-                              fill="#666666", width=int(w * 0.9), tags="name_tag")
-        
         elif anim in ('walking_up_left', 'walking_up_right', 
                       'walking_down_left', 'walking_down_right'):
             # --- DIAGONAL VIEW: 3/4 perspective combining front/back with side ---
@@ -2359,14 +2148,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             leg_len = int(30 * sy)
             
             # Apply individual limb dangle physics during drag
-            left_leg_dangle = int(self._dangle_left_leg) if anim == 'dragging' else 0
-            right_leg_dangle = int(self._dangle_right_leg) if anim == 'dragging' else 0
-            left_arm_dangle = int(self._dangle_left_arm) if anim == 'dragging' else 0
-            right_arm_dangle = int(self._dangle_right_arm) if anim == 'dragging' else 0
-            left_leg_dangle_h = int(self._dangle_left_leg_h) if anim == 'dragging' else 0
-            right_leg_dangle_h = int(self._dangle_right_leg_h) if anim == 'dragging' else 0
-            left_arm_dangle_h = int(self._dangle_left_arm_h) if anim == 'dragging' else 0
-            right_arm_dangle_h = int(self._dangle_right_arm_h) if anim == 'dragging' else 0
+            left_leg_dangle = int(self._dangle_left_leg) if _is_being_dragged else 0
+            right_leg_dangle = int(self._dangle_right_leg) if _is_being_dragged else 0
+            left_arm_dangle = int(self._dangle_left_arm) if _is_being_dragged else 0
+            right_arm_dangle = int(self._dangle_right_arm) if _is_being_dragged else 0
+            left_leg_dangle_h = int(self._dangle_left_leg_h) if _is_being_dragged else 0
+            right_leg_dangle_h = int(self._dangle_right_leg_h) if _is_being_dragged else 0
+            left_arm_dangle_h = int(self._dangle_left_arm_h) if _is_being_dragged else 0
+            right_arm_dangle_h = int(self._dangle_right_arm_h) if _is_being_dragged else 0
             
             # Legs with perspective - one more forward, one more back
             if is_back_facing:
@@ -2544,8 +2333,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Apply individual limb dangle physics during drag
             # Left leg (vertical + horizontal dangle)
-            left_leg_dangle = int(self._dangle_left_leg) if anim == 'dragging' else 0
-            left_leg_dangle_h = int(self._dangle_left_leg_h) if anim == 'dragging' else 0
+            left_leg_dangle = int(self._dangle_left_leg) if _is_being_dragged else 0
+            left_leg_dangle_h = int(self._dangle_left_leg_h) if _is_being_dragged else 0
             left_leg_x = cx_draw - int(25 * sx) + left_leg_dangle_h
             left_leg_swing = leg_swing + left_leg_dangle
             c.create_oval(
@@ -2561,8 +2350,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             
             # Right leg (vertical + horizontal dangle)
-            right_leg_dangle = int(self._dangle_right_leg) if anim == 'dragging' else 0
-            right_leg_dangle_h = int(self._dangle_right_leg_h) if anim == 'dragging' else 0
+            right_leg_dangle = int(self._dangle_right_leg) if _is_being_dragged else 0
+            right_leg_dangle_h = int(self._dangle_right_leg_h) if _is_being_dragged else 0
             right_leg_x = cx_draw + int(25 * sx) + right_leg_dangle_h
             right_leg_swing = -leg_swing + right_leg_dangle
             c.create_oval(
@@ -2604,8 +2393,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             
             # Apply individual limb dangle physics during drag
             # Left arm (vertical + horizontal dangle)
-            left_arm_dangle = int(self._dangle_left_arm) if anim == 'dragging' else 0
-            left_arm_dangle_h = int(self._dangle_left_arm_h) if anim == 'dragging' else 0
+            left_arm_dangle = int(self._dangle_left_arm) if _is_being_dragged else 0
+            left_arm_dangle_h = int(self._dangle_left_arm_h) if _is_being_dragged else 0
             la_swing = arm_swing + left_arm_dangle
             c.create_oval(
                 cx_draw - int(55 * sx) + left_arm_dangle_h, arm_top + la_swing,
@@ -2614,8 +2403,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             )
             
             # Right arm (vertical + horizontal dangle)
-            right_arm_dangle = int(self._dangle_right_arm) if anim == 'dragging' else 0
-            right_arm_dangle_h = int(self._dangle_right_arm_h) if anim == 'dragging' else 0
+            right_arm_dangle = int(self._dangle_right_arm) if _is_being_dragged else 0
+            right_arm_dangle_h = int(self._dangle_right_arm_h) if _is_being_dragged else 0
             ra_swing = -arm_swing + right_arm_dangle
             c.create_oval(
                 cx_draw + int(30 * sx) + right_arm_dangle_h, arm_top + ra_swing,
@@ -2639,8 +2428,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             ear_h = int(24 * sy)
             
             # Individual ear stretch/dangle during drag
-            left_ear_stretch_px = int(self._dangle_left_ear * sy) if anim == 'dragging' else int(self._ear_stretch * sy)
-            right_ear_stretch_px = int(self._dangle_right_ear * sy) if anim == 'dragging' else int(self._ear_stretch * sy)
+            left_ear_stretch_px = int(self._dangle_left_ear * sy) if _is_being_dragged else int(self._ear_stretch * sy)
+            right_ear_stretch_px = int(self._dangle_right_ear * sy) if _is_being_dragged else int(self._ear_stretch * sy)
             
             # Left ear
             c.create_oval(cx_draw - head_rx - int(2 * sx) + ear_wiggle, ear_y - int(16 * sy) - left_ear_stretch_px,
@@ -2699,7 +2488,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                               fill="#666666", width=int(w * 0.9), tags="name_tag")
         
         # --- Upside-down flip when grabbed by foot and dragged upward ---
-        if self._is_upside_down and anim == 'dragging' and self.is_dragging:
+        if self._is_upside_down and _is_being_dragged:
             # Flip all canvas items vertically around the canvas center
             c.scale("all", w / 2, h / 2, 1.0, -1.0)
     
@@ -3729,10 +3518,17 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                             (cx, int(_leg_swing), _left_leg_dangle_h),     # front foot
                         ]
                     elif is_diag:
-                        # Diagonal view: slightly compressed shoe spacing
+                        # Diagonal view: match leg positions from _draw_panda diagonal view
+                        is_back_diag = anim in ('walking_up_left', 'walking_up_right')
+                        if is_back_diag:
+                            diag_left_swing = int(_leg_swing) + _left_leg_dangle
+                            diag_right_swing = int(-_leg_swing) + _right_leg_dangle
+                        else:
+                            diag_left_swing = int(-_leg_swing) + _left_leg_dangle
+                            diag_right_swing = int(_leg_swing) + _right_leg_dangle
                         shoe_pairs = [
-                            (cx - int(20 * persp_sx), left_shoe_swing, _left_leg_dangle_h),
-                            (cx + int(20 * persp_sx), right_shoe_swing, _right_leg_dangle_h),
+                            (cx - int(22 * persp_sx), diag_left_swing, _left_leg_dangle_h),
+                            (cx + int(22 * persp_sx), diag_right_swing, _right_leg_dangle_h),
                         ]
                     else:
                         shoe_pairs = [
@@ -5006,6 +4802,26 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._prev_drag_y = event.y_root
         self._prev_drag_time = now
         
+        # Update facing direction based on drag velocity
+        vx = self._toss_velocity_x
+        vy = self._toss_velocity_y
+        avx = abs(vx)
+        avy = abs(vy)
+        if avx > 1 or avy > 1:  # Only update when there's meaningful movement
+            if avx > 0 and avy > 0 and min(avx, avy) / max(avx, avy) > self.DIAGONAL_MOVEMENT_THRESHOLD:
+                if vy < 0 and vx < 0:
+                    self._facing_direction = 'back_left'
+                elif vy < 0 and vx > 0:
+                    self._facing_direction = 'back_right'
+                elif vy > 0 and vx < 0:
+                    self._facing_direction = 'front_left'
+                else:
+                    self._facing_direction = 'front_right'
+            elif avx > avy:
+                self._facing_direction = 'right' if vx > 0 else 'left'
+            else:
+                self._facing_direction = 'down' if vy > 0 else 'up'
+        
         # Detect drag patterns
         self._detect_drag_patterns()
         
@@ -5448,6 +5264,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         """Handle left click on panda with body part detection."""
         try:
             if self.panda:
+                # If auto-walking, stop the walk but preserve facing direction
+                was_auto_walking = self._is_auto_walking
+                if was_auto_walking:
+                    self._is_auto_walking = False
+                
                 # Detect which body part was clicked
                 body_part = None
                 if event and hasattr(self.panda, 'get_body_part_at_position'):
@@ -5464,6 +5285,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     # Trigger belly jiggle physics
                     self._belly_jiggle_vel += random.choice([-1, 1]) * self.JIGGLE_VELOCITY_POKE
                     self.play_animation_once('belly_jiggle')
+                elif body_part in ('left_eye', 'right_eye') and hasattr(self.panda, 'on_body_part_click'):
+                    # Eye poke: squint/blink reaction
+                    response = self.panda.on_body_part_click(body_part)
+                    self.info_label.configure(text=response)
+                    self.play_animation_once('shaking')
                 elif body_part and hasattr(self.panda, 'on_body_part_click'):
                     response = self.panda.on_body_part_click(body_part)
                     self.info_label.configure(text=response)
@@ -5871,6 +5697,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     def _on_hover(self, event=None):
         """Handle hover over panda."""
         if not self.is_dragging and self.panda:
+            # Don't interrupt auto-walk animation, just show thought bubble
             thought = self.panda.on_hover()
             self.info_label.configure(text=thought)
     
