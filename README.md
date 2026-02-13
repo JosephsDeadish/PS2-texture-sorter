@@ -111,6 +111,38 @@ The build scripts automatically:
 
 See [BUILD.md](BUILD.md) for detailed build instructions and troubleshooting.
 
+#### Building with SVG Support
+
+SVG support is optional and requires Cairo DLLs. Two build options are available:
+
+**Standard Build (no SVG):**
+```bash
+pyinstaller build_spec.spec
+```
+
+**Build with SVG Support:**
+```bash
+python scripts/build_with_svg.py
+```
+
+The automated script will:
+- Detect Cairo DLLs on your system
+- Install required Python packages (cairosvg, cairocffi)
+- Build the executable with SVG support enabled
+- Verify the build output
+
+**Why two build options?**
+- Cairo DLLs are not available on CI and add ~15-20 MB to exe size
+- Most users don't need SVG support (SVG textures are rare in PS2 dumps)
+- Standard build is CI-compatible and smaller
+- SVG build provides full format support for users who need it
+
+See [docs/SVG_BUILD_GUIDE.md](docs/SVG_BUILD_GUIDE.md) for detailed instructions including:
+- Installing Cairo DLLs (Windows, Linux, macOS)
+- Manual build process
+- Troubleshooting
+- Verification steps
+
 
 ## 🎯 Usage
 

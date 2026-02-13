@@ -372,6 +372,99 @@ pip install pytesseract
 
 ---
 
+## SVG Support: Executables vs Running from Source
+
+SVG (Scalable Vector Graphics) support requires the Cairo graphics library, which is handled differently depending on how you run the application.
+
+### Running from Source (Full SVG Support)
+
+When running from Python source, SVG support is easy to enable:
+
+**Windows:**
+1. Install GTK3 Runtime: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
+2. Install Python packages:
+   ```bash
+   pip install cairosvg cairocffi
+   ```
+3. Run: `python main.py`
+
+**Linux:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install libcairo2-dev pkg-config python3-dev
+pip install cairosvg cairocffi
+
+# Fedora
+sudo dnf install cairo-devel pkg-config python3-devel
+pip install cairosvg cairocffi
+```
+
+**macOS:**
+```bash
+brew install cairo pkg-config
+pip install cairosvg cairocffi
+```
+
+### Pre-built Executables (SVG Optional)
+
+The pre-built Windows executable comes in two variants:
+
+**Standard Build:**
+- No SVG support (smaller size, CI-compatible)
+- File: `GameTextureSorter.exe`
+- Size: ~50-100 MB
+- Best for most users (SVG textures are rare in PS2 dumps)
+
+**SVG-Enabled Build:**
+- Full SVG support with Cairo DLLs bundled
+- File: `GameTextureSorter-SVG.exe` (if available in releases)
+- Size: ~65-120 MB
+- For users who work with SVG texture files
+
+### Building Your Own Executable with SVG
+
+If you need SVG support in a custom build:
+
+```bash
+# Automated build (recommended)
+python scripts/build_with_svg.py
+
+# Manual build
+pip install cairosvg cairocffi
+pyinstaller build_spec_with_svg.spec
+```
+
+See [docs/SVG_BUILD_GUIDE.md](docs/SVG_BUILD_GUIDE.md) for complete instructions including:
+- Installing Cairo DLLs on Windows
+- DLL detection and bundling
+- Troubleshooting build issues
+- Verification steps
+
+### Why SVG Support is Optional
+
+**The challenge:**
+- Cairo requires 13+ native DLLs on Windows
+- These DLLs add ~15-20 MB to executable size
+- Cairo DLLs are not available on GitHub Actions CI by default
+- SVG texture files are rare in PS2 game dumps
+
+**The solution:**
+- Standard builds exclude SVG for CI compatibility and smaller size
+- Users who need SVG can either:
+  - Run from Python source (easiest)
+  - Build with SVG support using the automated script
+  - Download an SVG-enabled build (if provided in releases)
+
+**Graceful handling:**
+- The application works perfectly without SVG support
+- If you try to load an SVG file without Cairo DLLs, you'll see:
+  ```
+  ⚠ cairosvg not available. Cannot convert SVG files.
+  ```
+- All other image formats (PNG, DDS, JPEG, WEBP, TGA, etc.) work normally
+
+---
+
 ## Troubleshooting
 
 ### Common Issues

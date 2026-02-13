@@ -1,21 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller Spec File for Game Texture Sorter
+PyInstaller Spec File for Game Texture Sorter WITH SVG SUPPORT
 Author: Dead On The Inside / JosephsDeadish
 
 This spec file creates a single-EXE application for Windows
-with all resources embedded and proper metadata.
+with SVG support by bundling Cairo DLLs and dependencies.
 
-NOTE: This build DOES NOT include SVG support (for CI compatibility)
-      Cairo DLLs are not available on Windows CI and cause build failures.
-      
-      For SVG support, use: pyinstaller build_spec_with_svg.spec
-      Or run the automated build: python scripts/build_with_svg.py
-      
-      See docs/SVG_BUILD_GUIDE.md for detailed instructions.
+For standard builds without SVG, use: build_spec.spec
 """
 
 import sys
+import os
 from pathlib import Path
 
 block_cipher = None
@@ -43,11 +38,126 @@ if not ICON_PATH.exists():
 if ICON_PATH:
     ICON_PATH = str(ICON_PATH.absolute())
 
+# ============================================================================
+# SVG SUPPORT: Cairo DLL Detection and Bundling
+# ============================================================================
+
+print("\n" + "="*70)
+print("CAIRO DLL DETECTION FOR SVG SUPPORT")
+print("="*70)
+
+# List of required Cairo DLLs
+REQUIRED_CAIRO_DLLS = [
+    'libcairo-2.dll',
+    'libcairo-gobject-2.dll',
+    'libpng16.dll',
+    'zlib1.dll',
+    'libfreetype-6.dll',
+    'libfontconfig-1.dll',
+    'libexpat-1.dll',
+    'libbz2-1.dll',
+    'libharfbuzz-0.dll',
+    'libglib-2.0-0.dll',
+    'libintl-8.dll',
+    'libiconv-2.dll',
+    'libpixman-1-0.dll',
+]
+
+# Alternative DLL names (some systems use different versions)
+ALTERNATIVE_DLLS = {
+    'libffi-8.dll': 'libffi-7.dll',
+}
+
+# DLL detection paths (in order of priority)
+CAIRO_SEARCH_PATHS = [
+    r'C:\Program Files\GTK3-Runtime Win64\bin',
+    r'C:\msys64\mingw64\bin',
+    os.environ.get('CAIRO_DLL_PATH', ''),
+    str(SCRIPT_DIR / 'cairo_dlls'),
+]
+
+# Clean up empty paths
+CAIRO_SEARCH_PATHS = [p for p in CAIRO_SEARCH_PATHS if p and Path(p).exists()]
+
+def find_cairo_dlls():
+    """
+    Search for Cairo DLLs in common installation paths.
+    Returns dict mapping DLL names to their full paths.
+    """
+    found_dlls = {}
+    missing_dlls = []
+    
+    print(f"\nSearching for Cairo DLLs in:")
+    for path in CAIRO_SEARCH_PATHS:
+        print(f"  - {path}")
+    
+    if not CAIRO_SEARCH_PATHS:
+        print("\n⚠ WARNING: No Cairo DLL search paths found!")
+        print("  SVG support will NOT be available in the built executable.")
+        print("  See docs/SVG_BUILD_GUIDE.md for installation instructions.")
+        return found_dlls, REQUIRED_CAIRO_DLLS
+    
+    # Search for each required DLL
+    for dll_name in REQUIRED_CAIRO_DLLS:
+        found = False
+        for search_path in CAIRO_SEARCH_PATHS:
+            dll_path = Path(search_path) / dll_name
+            if dll_path.exists():
+                found_dlls[dll_name] = str(dll_path)
+                found = True
+                break
+        
+        if not found:
+            missing_dlls.append(dll_name)
+    
+    # Try alternative DLL names for missing ones
+    for primary_dll, alternative_dll in ALTERNATIVE_DLLS.items():
+        if primary_dll not in found_dlls:
+            for search_path in CAIRO_SEARCH_PATHS:
+                dll_path = Path(search_path) / alternative_dll
+                if dll_path.exists():
+                    found_dlls[primary_dll] = str(dll_path)
+                    if primary_dll in missing_dlls:
+                        missing_dlls.remove(primary_dll)
+                    break
+    
+    return found_dlls, missing_dlls
+
+# Detect Cairo DLLs
+cairo_dlls_dict, missing_cairo_dlls = find_cairo_dlls()
+
+# Build binaries list for PyInstaller
+cairo_binaries = []
+if cairo_dlls_dict:
+    print(f"\n✓ Found {len(cairo_dlls_dict)} Cairo DLLs:")
+    for dll_name, dll_path in cairo_dlls_dict.items():
+        print(f"  ✓ {dll_name}")
+        # Add to binaries list (source, destination)
+        cairo_binaries.append((dll_path, '.'))
+
+if missing_cairo_dlls:
+    print(f"\n⚠ Missing {len(missing_cairo_dlls)} Cairo DLLs:")
+    for dll_name in missing_cairo_dlls:
+        print(f"  ✗ {dll_name}")
+    print("\n⚠ SVG support will be LIMITED or NON-FUNCTIONAL!")
+    print("  To enable full SVG support:")
+    print("  1. Install GTK3 runtime or MSYS2 with mingw-w64-x86_64-gtk3")
+    print("  2. Or run: python scripts/setup_cairo_dlls.py")
+    print("  3. See docs/SVG_BUILD_GUIDE.md for detailed instructions")
+else:
+    print("\n✓ All required Cairo DLLs found! SVG support will be available.")
+
+print("="*70 + "\n")
+
+# ============================================================================
+# PyInstaller Configuration
+# ============================================================================
+
 # Collect all Python files
 a = Analysis(
     ['main.py'],
     pathex=[str(SCRIPT_DIR)],
-    binaries=[],
+    binaries=cairo_binaries,  # Include Cairo DLLs
     datas=[
         # Include assets (icon files)
         (str(ASSETS_DIR / 'icon.ico'), 'assets'),
@@ -96,8 +206,15 @@ a = Analysis(
         'pynput',
         'pynput.keyboard',
         'pynput.mouse',
+        # SVG Support - NOW INCLUDED!
+        'cairosvg',
+        'cairocffi',
+        'cairocffi._ffi',
+        'cairocffi.constants',
+        'cairocffi.surfaces',
+        'cairocffi.patterns',
+        'cairocffi.fonts',
         # Optional: Include if installed
-        # Note: PyInstaller will skip if not available
         'onnxruntime',
         'requests',
     ],
@@ -114,7 +231,6 @@ a = Analysis(
         'IPython',
         
         # PyTorch: Exclude unused/problematic submodules to suppress build warnings
-        # Note: Main torch module is included if available, but these internals cause issues
         'torch.testing',
         'torch.testing._internal',
         'torch.testing._internal.opinfo',
@@ -127,11 +243,6 @@ a = Analysis(
         'torch.distributed._shard.checkpoint',
         'torch._inductor',
         'torch._inductor.compile_fx',
-        
-        # Cairo SVG: cairosvg/cairocffi require native Cairo DLL not available on Windows CI
-        # SVG support is optional - the application handles missing cairosvg gracefully
-        'cairosvg',
-        'cairocffi',
         
         # Platform-specific modules
         'darkdetect._mac_detect',  # macOS-only, not needed on Windows
