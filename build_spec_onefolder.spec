@@ -1,18 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller Spec File for Game Texture Sorter
+PyInstaller Spec File for Game Texture Sorter (One-Folder Build)
 Author: Dead On The Inside / JosephsDeadish
 
-This spec file creates a single-EXE application for Windows
-with all resources embedded and proper metadata.
+This spec file creates a one-folder application for Windows with all
+resources extracted to separate folders for faster startup performance.
 
-NOTE: This build DOES NOT include SVG support (for CI compatibility)
-      Cairo DLLs are not available on Windows CI and cause build failures.
-      
-      For SVG support, use: pyinstaller build_spec_with_svg.spec
-      Or run the automated build: python scripts/build_with_svg.py
-      
-      See docs/SVG_BUILD_GUIDE.md for detailed instructions.
+Benefits of one-folder build:
+- Faster startup time (no extraction on every launch)
+- Easier access to assets and configuration
+- Better performance with large resource files
+- Users can modify themes, sounds, and other assets
+
+Usage: pyinstaller build_spec_onefolder.spec --clean --noconfirm
+       Or: build.bat folder
 """
 
 import sys
@@ -166,17 +167,13 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,  # KEY DIFFERENCE: Don't bundle binaries in EXE
     name=EXE_NAME,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,  # Compress EXE
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=False,  # No console window (GUI application)
     disable_windowed_traceback=False,
     target_arch=None,
@@ -184,7 +181,19 @@ exe = EXE(
     entitlements_file=None,
     # Windows-specific options
     version='file_version_info.txt',  # Version info file
-    icon=str(ICON_PATH) if ICON_PATH else None,  # Application icon (use default if not found)
+    icon=str(ICON_PATH) if ICON_PATH else None,  # Application icon
     uac_admin=False,  # Don't require admin
     uac_uiaccess=False,
+)
+
+# Create the folder collection (COLLECT) for one-folder distribution
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name=EXE_NAME,
 )

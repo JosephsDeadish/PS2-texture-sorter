@@ -4,7 +4,7 @@
 **Version:** 1.0.0  
 **License:** TBD
 
-A professional, single-executable Windows application for automatically sorting game texture dumps with advanced AI classification, massive-scale support (200,000+ textures), and a modern panda-themed UI.
+A professional Windows application for automatically sorting game texture dumps with advanced AI classification, massive-scale support (200,000+ textures), and a modern panda-themed UI. Distributed as a one-folder package for fast startup and easy customization.
 
 ## 🌟 Features
 
@@ -65,10 +65,10 @@ A professional, single-executable Windows application for automatically sorting 
 
 ## 📥 Quick Start
 
-### For Users (Pre-built EXE)
+### For Users (Pre-built Application)
 
-1. **Download** the latest `GameTextureSorter.exe` from the releases page
-2. **Run** the EXE - No installation required!
+1. **Download** the latest `GameTextureSorter` folder from the releases page
+2. **Run** GameTextureSorter.exe from the folder - No installation required!
 3. **Start Sorting** - Select your texture folder and let the magic happen 🐼
 
 ### For Developers (Python Installation)
@@ -95,19 +95,25 @@ Build a standalone executable using build scripts:
 
 **Windows Batch:**
 ```cmd
-build.bat
+build.bat           # One-folder build
 ```
 
 **PowerShell:**
 ```powershell
-.\build.ps1
+.\build.ps1         # One-folder build
 ```
+
+**One-Folder Build** ⭐
+- Fast startup (1-3 seconds, no extraction to temp)
+- Best overall performance
+- External assets for easy modification
+- Output: `dist/GameTextureSorter/` folder with EXE + resources
 
 The build scripts automatically:
 - Set up virtual environment
 - Install dependencies
-- Build single EXE with PyInstaller
-- Create `dist/GameTextureSorter.exe`
+- Build with PyInstaller
+- Create output in `dist/` folder
 
 See [BUILD.md](BUILD.md) for detailed build instructions and troubleshooting.
 

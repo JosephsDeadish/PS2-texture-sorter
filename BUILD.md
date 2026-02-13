@@ -1,19 +1,32 @@
 # Building Game Texture Sorter
 
-This guide explains how to build the Game Texture Sorter as a single Windows EXE file.
+This guide explains how to build the Game Texture Sorter for Windows.
+
+## Build Mode
+
+There is **ONE build mode** available:
+
+### One-Folder Mode ⭐
+- **Command**: `build.bat` or `.\build.ps1`
+- **Output**: Folder with EXE + external assets
+- **Pros**: **Much faster startup (1-3 seconds)**, easier asset modification, better performance
+- **Cons**: Multiple files to distribute (but as a single folder)
+- **Best for**: All use cases - general use, development, testing, distribution
+
+**Note**: Single-EXE mode has been removed because the one-folder mode provides significantly better startup performance and user experience.
 
 ## Quick Start - Automated Build
 
 The easiest way to build is using the automated build scripts:
 
-### Option 1: Windows Batch File (Recommended for most users)
+### Option 1: Windows Batch File (Recommended)
 ```cmd
-build.bat
+build.bat           # One-folder build
 ```
 
-### Option 2: PowerShell Script (Better error handling and progress reporting)
+### Option 2: PowerShell Script (Better error handling)
 ```powershell
-.\build.ps1
+.\build.ps1         # One-folder build
 ```
 
 Both scripts will:
@@ -21,8 +34,8 @@ Both scripts will:
 2. Create/activate a virtual environment
 3. Install all dependencies
 4. Clean previous builds
-5. Run PyInstaller to create the single EXE
-6. Report success and provide the EXE location
+5. Run PyInstaller to create the output
+6. Report success and provide the location
 
 **The build process is fully automated - just run the script!**
 
@@ -58,35 +71,47 @@ pip install -r requirements.txt
 ```
 
 ### 5. Build with PyInstaller
+
+For **one-folder** build:
 ```cmd
-pyinstaller build_spec.spec --clean --noconfirm
+pyinstaller build_spec_onefolder.spec --clean --noconfirm
 ```
 
-### 6. Find Your EXE
-The executable will be in: `dist\GameTextureSorter.exe`
+### 6. Find Your Build
+
+The application will be in: `dist\GameTextureSorter\`
 
 ## Build Output
 
+### One-Folder Build
 After a successful build, you'll find:
 
 ```
 dist/
-└── GameTextureSorter.exe    <- The standalone executable (50-100 MB)
-
-build/                       <- Temporary build files (can be deleted)
+└── GameTextureSorter/
+    ├── GameTextureSorter.exe     <- Main executable (~10-20 MB)
+    ├── _internal/                <- Python runtime + libraries
+    ├── resources/                <- Icons, sounds, cursors
+    └── app_data/                 <- Config, cache, themes, models
+        ├── cache/
+        ├── logs/
+        ├── themes/
+        └── models/
 ```
 
-## EXE Properties
+**Properties**:
+- **Folder Size**: ~100-150 MB total
+- **Startup**: **Fast** (1-3 seconds, no extraction needed)
+- **Portability**: ✓ Portable folder (copy entire folder)
+- **Assets**: ✓ Easily accessible and modifiable
+- **Performance**: ✓ Best overall performance
 
-The built EXE will have:
-- **File Name**: GameTextureSorter.exe
+**Common Properties**:
 - **Version**: 1.0.0
 - **Author**: Dead On The Inside / JosephsDeadish
 - **Description**: Game Texture Sorter - Automatic texture classification
-- **Size**: ~50-100 MB (depending on included resources)
 - **Icon**: Panda icon (if available)
-- **No external dependencies** - completely standalone
-- **Portable** - can run from any location (USB drive compatible)
+- **No external dependencies** - no installation required
 
 ## Troubleshooting
 
