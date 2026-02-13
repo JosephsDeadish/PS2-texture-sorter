@@ -2593,11 +2593,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Smoothly animate _drag_body_angle toward target
             angle_speed = 0.15  # radians per frame
             diff = self._drag_body_angle_target - self._drag_body_angle
-            # Normalize diff to [-pi, pi]
-            while diff > math.pi:
-                diff -= 2 * math.pi
-            while diff < -math.pi:
-                diff += 2 * math.pi
+            # Normalize diff to [-pi, pi] using atan2
+            diff = math.atan2(math.sin(diff), math.cos(diff))
             if abs(diff) < angle_speed:
                 self._drag_body_angle = self._drag_body_angle_target
             else:
@@ -3139,9 +3136,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 leg_bottom = int(172 * sy + by)
 
                 if is_side:
-                    # Side view: overlapping front/back leg pants
-                    front_swing = int(_leg_swing)
-                    back_swing = int(-_leg_swing)
+                    # Side view: overlapping front/back leg pants with dangle
+                    front_swing = int(_leg_swing) + _right_leg_dangle
+                    back_swing = int(-_leg_swing) + _left_leg_dangle
+                    front_dh = _right_leg_dangle_h
+                    back_dh = _left_leg_dangle_h
                     leg_cx = cx  # legs are centred in side view
 
                     # Waistband wrapping around torso
@@ -3153,23 +3152,23 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         tags="equipped_clothing")
                     # Back pant leg (behind body)
                     c.create_polygon(
-                        leg_cx - int(14 * persp_sx), hip_y,
-                        leg_cx + int(10 * persp_sx), hip_y,
-                        leg_cx + int(8 * persp_sx), leg_bottom + back_swing,
-                        leg_cx - int(12 * persp_sx), leg_bottom + back_swing,
+                        leg_cx - int(14 * persp_sx) + back_dh, hip_y,
+                        leg_cx + int(10 * persp_sx) + back_dh, hip_y,
+                        leg_cx + int(8 * persp_sx) + back_dh, leg_bottom + back_swing,
+                        leg_cx - int(12 * persp_sx) + back_dh, leg_bottom + back_swing,
                         fill=shadow, outline=shadow, width=1,
                         smooth=False, tags="equipped_clothing")
                     # Front pant leg (in front)
                     c.create_polygon(
-                        leg_cx - int(12 * persp_sx), hip_y,
-                        leg_cx + int(12 * persp_sx), hip_y,
-                        leg_cx + int(10 * persp_sx), leg_bottom + front_swing,
-                        leg_cx - int(10 * persp_sx), leg_bottom + front_swing,
+                        leg_cx - int(12 * persp_sx) + front_dh, hip_y,
+                        leg_cx + int(12 * persp_sx) + front_dh, hip_y,
+                        leg_cx + int(10 * persp_sx) + front_dh, leg_bottom + front_swing,
+                        leg_cx - int(10 * persp_sx) + front_dh, leg_bottom + front_swing,
                         fill=color, outline=shadow, width=1,
                         smooth=False, tags="equipped_clothing")
                     # Seam highlight on front leg
                     c.create_line(
-                        leg_cx, hip_y, leg_cx, leg_bottom + front_swing,
+                        leg_cx + front_dh, hip_y, leg_cx + front_dh, leg_bottom + front_swing,
                         fill=highlight, width=1, tags="equipped_clothing")
                 elif is_back:
                     # Back view: same as front but no fly seam
@@ -3308,10 +3307,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     arm_top = bt + int(4 * sy)
                     arm_len = int(40 * sy)
                     if is_side:
-                        # Side view: two sleeves offset toward/away from viewer
-                        for offset_dir, swing in [(-side_dir, -_arm_swing), (side_dir, _arm_swing)]:
-                            arm_cx = cx + offset_dir * int(8 * persp_sx)
-                            arm_end_y = arm_top + arm_len + int(swing)
+                        # Side view: two sleeves offset toward/away from viewer, with dangle
+                        for offset_dir, swing, dangle_v, dangle_h in [
+                            (-side_dir, -_arm_swing, _left_arm_dangle, _left_arm_dangle_h),
+                            (side_dir, _arm_swing, _right_arm_dangle, _right_arm_dangle_h)
+                        ]:
+                            arm_cx = cx + offset_dir * int(8 * persp_sx) + dangle_h
+                            arm_end_y = arm_top + arm_len + int(swing) + dangle_v
                             c.create_polygon(
                                 arm_cx - int(10 * persp_sx), arm_top,
                                 arm_cx + int(10 * persp_sx), arm_top,
@@ -3391,13 +3393,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         start=200, extent=140, style="arc",
                         outline=shadow, width=2, tags="equipped_clothing")
                     if is_side:
-                        # Side view legs: centred front/back
-                        for leg_sw in [left_swing, right_swing]:
+                        # Side view legs: centred front/back with dangle
+                        for leg_sw, leg_dh in [
+                            (left_swing + _left_leg_dangle, _left_leg_dangle_h),
+                            (right_swing + _right_leg_dangle, _right_leg_dangle_h)
+                        ]:
                             c.create_polygon(
-                                cx - int(14 * persp_sx), bb,
-                                cx + int(14 * persp_sx), bb,
-                                cx + int(12 * persp_sx), leg_bottom + leg_sw,
-                                cx - int(12 * persp_sx), leg_bottom + leg_sw,
+                                cx - int(14 * persp_sx) + leg_dh, bb,
+                                cx + int(14 * persp_sx) + leg_dh, bb,
+                                cx + int(12 * persp_sx) + leg_dh, leg_bottom + leg_sw,
+                                cx - int(12 * persp_sx) + leg_dh, leg_bottom + leg_sw,
                                 fill=color, outline=shadow, width=1,
                                 tags="equipped_clothing")
                     else:
@@ -3415,9 +3420,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     arm_top = bt + int(4 * sy)
                     arm_len = int(35 * sy)
                     if is_side:
-                        for offset_dir, swing in [(-side_dir, -_arm_swing), (side_dir, _arm_swing)]:
-                            arm_cx = cx + offset_dir * int(8 * persp_sx)
-                            arm_end_y = arm_top + arm_len + int(swing)
+                        for offset_dir, swing, dangle_v, dangle_h in [
+                            (-side_dir, -_arm_swing, _left_arm_dangle, _left_arm_dangle_h),
+                            (side_dir, _arm_swing, _right_arm_dangle, _right_arm_dangle_h)
+                        ]:
+                            arm_cx = cx + offset_dir * int(8 * persp_sx) + dangle_h
+                            arm_end_y = arm_top + arm_len + int(swing) + dangle_v
                             c.create_oval(
                                 arm_cx - int(10 * persp_sx), arm_top,
                                 arm_cx + int(10 * persp_sx), arm_end_y,
@@ -3470,9 +3478,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                             fill=highlight, width=1, tags="equipped_clothing")
                     # Sleeve caps synced with arm swing + dangle
                     if is_side:
-                        for offset_dir, swing in [(-side_dir, -_arm_swing), (side_dir, _arm_swing)]:
-                            sleeve_cx = cx + offset_dir * int(8 * persp_sx)
-                            sleeve_offset = int(swing * 0.4)
+                        for offset_dir, swing, dangle_v, dangle_h in [
+                            (-side_dir, -_arm_swing, _left_arm_dangle, _left_arm_dangle_h),
+                            (side_dir, _arm_swing, _right_arm_dangle, _right_arm_dangle_h)
+                        ]:
+                            sleeve_cx = cx + offset_dir * int(8 * persp_sx) + int(dangle_h * 0.4)
+                            sleeve_offset = int(swing * 0.4) + int(dangle_v * 0.4)
                             c.create_oval(
                                 sleeve_cx - int(10 * persp_sx), bt + int(2 * sy) + sleeve_offset,
                                 sleeve_cx + int(10 * persp_sx), bt + int(18 * sy) + sleeve_offset,
@@ -3656,8 +3667,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     if is_side:
                         # Side view: both shoes near centre, front/back offset
                         shoe_pairs = [
-                            (cx, int(-_leg_swing), _right_leg_dangle_h),   # back foot
-                            (cx, int(_leg_swing), _left_leg_dangle_h),     # front foot
+                            (cx, int(-_leg_swing) + _left_leg_dangle, _right_leg_dangle_h),   # back foot
+                            (cx, int(_leg_swing) + _right_leg_dangle, _left_leg_dangle_h),     # front foot
                         ]
                     elif is_diag:
                         # Diagonal view: match leg positions from _draw_panda diagonal view
@@ -4972,6 +4983,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Legs: full rotation range (can flip upside down).
         # Arms/ears: partial tilt (body sways from the grabbed limb).
         grabbed = self._drag_grab_part
+        drag_speed = (vx**2 + vy**2) ** 0.5
         if grabbed in ('left_leg', 'right_leg'):
             # If dragged upward (negative velocity), flip upside down
             if self._toss_velocity_y < -self.UPSIDE_DOWN_VELOCITY_THRESHOLD:
@@ -4980,27 +4992,18 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self._is_upside_down = False
             
             # Full rotation: body hangs from the foot in the drag direction
-            drag_speed = (vx**2 + vy**2) ** 0.5
             if drag_speed > 1.5:
-                self._drag_body_angle_target = math.atan2(-vy, -vx) + math.pi / 2
-                # Normalize to [-pi, pi]
-                while self._drag_body_angle_target > math.pi:
-                    self._drag_body_angle_target -= 2 * math.pi
-                while self._drag_body_angle_target < -math.pi:
-                    self._drag_body_angle_target += 2 * math.pi
+                angle = math.atan2(-vy, -vx) + math.pi / 2
+                self._drag_body_angle_target = math.atan2(math.sin(angle), math.cos(angle))
             else:
                 self._drag_body_angle_target = 0.0
         elif grabbed in ('left_arm', 'right_arm', 'left_ear', 'right_ear'):
             # Partial tilt: body sways in drag direction, max ~45 degrees
-            drag_speed = (vx**2 + vy**2) ** 0.5
             if drag_speed > 1.5:
-                raw_angle = math.atan2(-vy, -vx) + math.pi / 2
-                while raw_angle > math.pi:
-                    raw_angle -= 2 * math.pi
-                while raw_angle < -math.pi:
-                    raw_angle += 2 * math.pi
+                angle = math.atan2(-vy, -vx) + math.pi / 2
+                normalized = math.atan2(math.sin(angle), math.cos(angle))
                 # Limit to ~45 degrees (pi/4)
-                self._drag_body_angle_target = max(-math.pi / 4, min(math.pi / 4, raw_angle))
+                self._drag_body_angle_target = max(-math.pi / 4, min(math.pi / 4, normalized))
             else:
                 self._drag_body_angle_target = 0.0
             self._is_upside_down = False

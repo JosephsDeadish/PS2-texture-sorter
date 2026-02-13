@@ -410,6 +410,31 @@ def test_item_walk_offset_constants():
         print("⚠ Skipping item walk offset test (GUI not available)")
 
 
+def test_side_view_clothing_includes_dangle():
+    """Test that side view clothing includes dangle offsets for all limbs."""
+    try:
+        from src.ui.panda_widget import PandaWidget
+        import inspect
+        source = inspect.getsource(PandaWidget._draw_equipped_items)
+        # All side view sections should include dangle variables
+        # Find each 'is_side:' block and verify it contains dangle references
+        parts = source.split('is_side')
+        # There should be multiple is_side sections (pants, shirts, jacket, full_body, shoes)
+        dangle_in_side = 0
+        for i, part in enumerate(parts):
+            if i == 0:
+                continue  # skip before first is_side
+            # Check next ~600 chars for dangle usage
+            chunk = part[:600]
+            if '_dangle' in chunk or 'dangle_v' in chunk or 'dangle_h' in chunk:
+                dangle_in_side += 1
+        assert dangle_in_side >= 4, \
+            f"At least 4 side-view sections should include dangle offsets, found {dangle_in_side}"
+        print(f"✓ {dangle_in_side} side-view clothing sections include dangle offsets")
+    except ImportError:
+        print("⚠ Skipping side view dangle test (GUI not available)")
+
+
 if __name__ == "__main__":
     print("\nTesting Barrel Roll, Upside-Down & Shoe Tracking...")
     print("-" * 55)
@@ -436,6 +461,7 @@ if __name__ == "__main__":
         test_drag_body_angle_tracking,
         test_min_visible_scale_constant,
         test_item_walk_offset_constants,
+        test_side_view_clothing_includes_dangle,
     ]
 
     failed = False
