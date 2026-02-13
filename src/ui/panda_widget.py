@@ -183,8 +183,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     MIN_VISIBLE_SCALE = 0.15
     
     # Number of frames for the backflip animation cycle — more frames means
-    # more distinct angles and smoother rotation (120 ≈ 3° per frame)
-    BACKFLIP_FRAMES = 120
+    # more distinct angles and smoother rotation (180 ≈ 2° per frame)
+    BACKFLIP_FRAMES = 180
     
     # Offset in pixels for where food/toy items appear relative to the panda
     # when given from the menu (the panda walks this distance to pick them up)
@@ -192,7 +192,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     ITEM_WALK_OFFSET_Y = 30
     
     # Recovery time after falling on face or tipping over (ms)
-    FALL_RECOVERY_TIME_MS = 3000
+    FALL_RECOVERY_TIME_MS = 5000
     
     # Diagonal movement threshold: use diagonal walking when secondary axis
     # is at least this fraction of the primary axis (0.4 = 40%)
@@ -1236,42 +1236,42 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = math.sin(land * math.pi * 2) * 10 * (1 - land)
                 body_bob = 8 * math.sin(land * math.pi) * (1 - land * 0.6)
         elif anim == 'backflip':
-            # 120-frame backflip with true body rotation at every angle.
+            # 180-frame backflip with true body rotation at every angle.
             # Each frame is a new perspective so the flip looks smooth.
             flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
-            if flip_phase < 0.12:
+            if flip_phase < 0.10:
                 # Crouch with arms back — preparing to jump
-                ramp = flip_phase / 0.12
-                leg_swing = ramp * 6
-                arm_swing = ramp * 8
-                body_bob = ramp * 14
-            elif flip_phase < 0.20:
+                ramp = flip_phase / 0.10
+                leg_swing = ramp * 8
+                arm_swing = ramp * 10
+                body_bob = ramp * 16
+            elif flip_phase < 0.18:
                 # Launch upward — spring off the ground
-                launch = (flip_phase - 0.12) / 0.08
-                leg_swing = 6 - launch * 16
-                arm_swing = 8 - launch * 30
-                body_bob = 14 - launch * 40
-            elif flip_phase < 0.80:
-                # Full backward rotation in air — 120 new perspectives
+                launch = (flip_phase - 0.10) / 0.08
+                leg_swing = 8 - launch * 18
+                arm_swing = 10 - launch * 32
+                body_bob = 16 - launch * 44
+            elif flip_phase < 0.75:
+                # Full backward rotation in air — smooth rotation
                 # The rotation angle advances smoothly each frame
-                flip_t = (flip_phase - 0.20) / 0.60
+                flip_t = (flip_phase - 0.18) / 0.57
                 flip_angle = flip_t * 2 * math.pi
                 # Limbs tuck during rotation then extend
                 tuck = math.sin(flip_t * math.pi)  # 0→1→0 tuck curve
-                leg_swing = math.sin(flip_angle) * (20 + 15 * (1 - tuck))
-                arm_swing = math.cos(flip_angle) * (20 + 15 * (1 - tuck))
-                body_bob = -26 + math.sin(flip_angle) * 10
-            elif flip_phase < 0.90:
+                leg_swing = math.sin(flip_angle) * (22 + 15 * (1 - tuck))
+                arm_swing = math.cos(flip_angle) * (22 + 15 * (1 - tuck))
+                body_bob = -28 + math.sin(flip_angle) * 12
+            elif flip_phase < 0.85:
                 # Landing — legs extend to absorb impact
-                land = (flip_phase - 0.80) / 0.10
-                leg_swing = 20 * (1 - land) * math.sin(land * math.pi * 0.5)
-                arm_swing = 20 * (1 - land) * math.cos(land * math.pi * 0.5)
-                body_bob = -26 + land * 30
+                land = (flip_phase - 0.75) / 0.10
+                leg_swing = 22 * (1 - land) * math.sin(land * math.pi * 0.5)
+                arm_swing = 22 * (1 - land) * math.cos(land * math.pi * 0.5)
+                body_bob = -28 + land * 32
             else:
                 # Bounce settle — small recovery wobble
-                settle = (flip_phase - 0.90) / 0.10
-                leg_swing = math.sin(settle * math.pi * 2) * 4 * (1 - settle)
-                arm_swing = math.sin(settle * math.pi * 3) * 6 * (1 - settle)
+                settle = (flip_phase - 0.85) / 0.15
+                leg_swing = math.sin(settle * math.pi * 2) * 5 * (1 - settle)
+                arm_swing = math.sin(settle * math.pi * 3) * 7 * (1 - settle)
                 body_bob = 4 * math.sin(settle * math.pi) * (1 - settle * 0.7)
         elif anim == 'barrel_roll':
             # Barrel roll: full sideways rotation with tucked limbs
@@ -1297,14 +1297,15 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 arm_swing = math.sin(settle * math.pi * 2) * 8 * (1 - settle)
                 body_bob = 4 * math.sin(settle * math.pi) * (1 - settle * 0.7)
         elif anim == 'lay_on_back':
-            # Lying on back: body low, arms spread wide, legs splayed up
-            leg_swing = -8 + math.sin(phase * 0.4) * 2  # Legs up and slightly wiggling
-            arm_swing = 18 + math.sin(phase * 0.3) * 2  # Arms spread wide outward
-            body_bob = 50  # Very low position (on ground)
+            # Lying on back: gradual settle, body low, arms spread wide, legs splayed up
+            settle = min(1.0, frame_idx / 48.0)  # settle over ~48 frames
+            leg_swing = settle * (-12) + math.sin(phase * 0.4) * 2  # Legs up and slightly wiggling
+            arm_swing = settle * 22 + math.sin(phase * 0.3) * 2  # Arms spread wide outward
+            body_bob = settle * 52 + math.sin(phase * 0.25) * 1.5  # Very low position (on ground)
         elif anim == 'lay_on_side':
             # Lying on side: body positioned as if lying down, not compressed
-            # This creates a proper side-lying pose
-            settle = min(1.0, frame_idx / 24.0)  # settle over ~24 frames
+            # This creates a proper side-lying pose with gradual transition
+            settle = min(1.0, frame_idx / 48.0)  # settle over ~48 frames for smooth transition
             leg_swing = settle * 8 + math.sin(phase * 0.3) * 1  # Legs together, slightly bent
             arm_swing = settle * (-8) + math.sin(phase * 0.2) * 1  # One arm tucked, one extended
             body_bob = settle * 45 + math.sin(phase * 0.3) * 1.5  # Low to ground but not extreme
@@ -1336,16 +1337,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_bob = knee_lift + math.sin(phase * 2) * 1.5
         elif anim == 'fall_on_face':
             # Fallen on face: body low, limbs splayed, with gradual tilt forward
-            settle = min(1.0, frame_idx / 24.0)
-            leg_swing = settle * 15
-            arm_swing = settle * 20
+            settle = min(1.0, frame_idx / 36.0)
+            leg_swing = settle * 18 + math.sin(phase * 0.3) * 2 * (1 - settle * 0.7)
+            arm_swing = settle * 22 + math.sin(phase * 0.4) * 2 * (1 - settle * 0.5)
             body_bob = settle * 55 + math.sin(phase * 0.2) * 1
         elif anim == 'tip_over_side':
             # Tipped over on side: gradual fall with rotation
-            settle = min(1.0, frame_idx / 24.0)
-            leg_swing = settle * 8
-            arm_swing = settle * (-10)
-            body_bob = settle * 48 + math.sin(phase * 0.2) * 1
+            settle = min(1.0, frame_idx / 36.0)
+            leg_swing = settle * 10 + math.sin(phase * 0.3) * 1.5 * (1 - settle * 0.5)
+            arm_swing = settle * (-12) + math.sin(phase * 0.25) * 1.5 * (1 - settle * 0.5)
+            body_bob = settle * 50 + math.sin(phase * 0.2) * 1
         else:
             # Default walking for fed, etc.
             leg_swing = math.sin(phase) * 8
@@ -1363,7 +1364,7 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             breath_scale = 1.0 + math.sin(phase * 0.5) * 0.015
         elif anim == 'lay_on_side':
             # Heavy horizontal squeeze — body is rotated nearly 90° onto its side
-            settle = min(1.0, frame_idx / 24.0)
+            settle = min(1.0, frame_idx / 48.0)
             breath_scale = 1.0 - settle * 0.50 + math.sin(phase * 0.3) * 0.015
         elif anim in ('sleeping', 'laying_down', 'laying_back', 'laying_side', 'sitting'):
             breath_scale = 1.0 + math.sin(phase * 0.3) * 0.025
@@ -1385,15 +1386,15 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             roll_angle = roll_cycle * 2 * math.pi
             breath_scale = 0.5 + 0.5 * abs(math.cos(roll_angle))
         elif anim == 'backflip':
-            # Body perspective changes during 120-frame backward rotation
+            # Body perspective changes during 180-frame backward rotation
             flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
-            if flip_phase < 0.20:
+            if flip_phase < 0.18:
                 breath_scale = 1.0
-            elif flip_phase < 0.80:
-                flip_t = (flip_phase - 0.20) / 0.60
+            elif flip_phase < 0.75:
+                flip_t = (flip_phase - 0.18) / 0.57
                 flip_angle = flip_t * 2 * math.pi
                 # Narrow when viewed from side, full when facing viewer
-                breath_scale = 0.55 + 0.45 * abs(math.cos(flip_angle))
+                breath_scale = max(self.MIN_VISIBLE_SCALE, 0.55 + 0.45 * abs(math.cos(flip_angle)))
             else:
                 breath_scale = 1.0
         
@@ -1624,30 +1625,30 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             body_sway = math.sin(phase * 0.3) * 2
         elif anim == 'lay_on_side':
             # Moderate sway to show lying on side without extreme tilt
-            settle = min(1.0, frame_idx / 24.0)
+            settle = min(1.0, frame_idx / 48.0)
             body_sway = settle * 25 + math.sin(phase * 0.2) * 0.5  # Reduced from 45 to 25
         elif anim == 'celebrating':
             body_sway = math.sin(phase * 2) * 5
         elif anim == 'backflip':
-            # Backward rotation body sway — 120-frame cycle
+            # Backward rotation body sway — 180-frame cycle
             flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
-            if flip_phase < 0.12:
+            if flip_phase < 0.10:
                 body_sway = 0
-            elif flip_phase < 0.20:
+            elif flip_phase < 0.18:
                 # Lean back as panda launches
-                launch = (flip_phase - 0.12) / 0.08
+                launch = (flip_phase - 0.10) / 0.08
                 body_sway = -launch * 10
-            elif flip_phase < 0.80:
+            elif flip_phase < 0.75:
                 # Full backward rotation — body tilts through each angle
-                flip_t = (flip_phase - 0.20) / 0.60
+                flip_t = (flip_phase - 0.18) / 0.57
                 flip_angle = flip_t * 2 * math.pi
                 body_sway = math.sin(flip_angle) * 18
-            elif flip_phase < 0.90:
+            elif flip_phase < 0.85:
                 # Landing sway correction
-                land = (flip_phase - 0.80) / 0.10
+                land = (flip_phase - 0.75) / 0.10
                 body_sway = 18 * (1 - land) * math.sin(land * math.pi * 0.5)
             else:
-                settle = (flip_phase - 0.90) / 0.10
+                settle = (flip_phase - 0.85) / 0.15
                 body_sway = math.sin(settle * math.pi) * 3 * (1 - settle)
         elif anim == 'barrel_roll':
             # Rolling sideways sway
@@ -2200,46 +2201,34 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             else:
                 eye_style = 'half_closed'
         elif anim == 'backflip':
-            # Tripled: wide → surprised → closed → surprised → happy (108 frames)
-            flip_phase = (frame_idx % 108) / 108.0
-            if flip_phase < 0.03:
+            # Eye animation for 180-frame backflip cycle
+            flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
+            if flip_phase < 0.05:
                 eye_style = 'normal'
-            elif flip_phase < 0.06:
-                eye_style = 'wide'
             elif flip_phase < 0.10:
                 eye_style = 'wide'
-            elif flip_phase < 0.13:
+            elif flip_phase < 0.15:
                 eye_style = 'surprised'
-            elif flip_phase < 0.20:
+            elif flip_phase < 0.18:
                 eye_style = 'wide'
-            elif flip_phase < 0.23:
-                eye_style = 'surprised'
-            elif flip_phase < 0.27:
-                eye_style = 'wide'
-            elif flip_phase < 0.30:
-                eye_style = 'mostly_open'
-            elif flip_phase < 0.33:
-                eye_style = 'half_closed'
             elif flip_phase < 0.35:
-                eye_style = 'almost_closed'
-            elif flip_phase < 0.65:
                 eye_style = 'closed'
-            elif flip_phase < 0.68:
+            elif flip_phase < 0.55:
+                eye_style = 'closed'
+            elif flip_phase < 0.65:
                 eye_style = 'almost_closed'
             elif flip_phase < 0.70:
                 eye_style = 'half_closed'
-            elif flip_phase < 0.73:
+            elif flip_phase < 0.75:
                 eye_style = 'mostly_open'
-            elif flip_phase < 0.76:
-                eye_style = 'wide'
             elif flip_phase < 0.80:
-                eye_style = 'surprised'
+                eye_style = 'wide'
             elif flip_phase < 0.85:
+                eye_style = 'surprised'
+            elif flip_phase < 0.90:
                 eye_style = 'wide'
-            elif flip_phase < 0.88:
+            elif flip_phase < 0.95:
                 eye_style = 'happy'
-            elif flip_phase < 0.93:
-                eye_style = 'wide'
             else:
                 eye_style = 'happy'
         elif anim == 'barrel_roll':
@@ -3392,19 +3381,19 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         if anim in ('lay_on_side', 'tip_over_side', 'fall_on_face',
                    'sleeping', 'laying_down') or self._is_being_dragged_on_ground:
             if anim == 'lay_on_side':
-                settle = min(1.0, frame_idx / 24.0)
+                settle = min(1.0, frame_idx / 48.0)
                 tilt_angle = settle * 90  # Tilt 90 degrees to the side
             elif anim == 'tip_over_side':
-                settle = 1.0
-                tilt_angle = 90  # Immediate 90-degree tilt
+                settle = min(1.0, frame_idx / 36.0)
+                tilt_angle = settle * 90  # Gradual 90-degree tilt
             elif anim in ('sleeping', 'laying_down'):
                 # Gradually rotate onto side over ~30 frames — feet move to
                 # the right, head to the left, like actually laying down
                 settle = min(1.0, frame_idx / 30.0)
                 tilt_angle = settle * 80  # Nearly on side, slightly propped up
             elif anim == 'fall_on_face':
-                settle = min(1.0, frame_idx / 24.0)
-                tilt_angle = settle * 45  # Partial forward tilt
+                settle = min(1.0, frame_idx / 36.0)
+                tilt_angle = settle * 50  # Gradual forward tilt
             elif self._is_being_dragged_on_ground:
                 settle = 1.0
                 drag_angle_deg = math.degrees(self._drag_ground_angle)
@@ -3504,14 +3493,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         c.coords(item, *new_coords)
 
         # --- Backflip: rotate the entire body backward through a full 360° ---
-        # 120-frame cycle with true rotation-matrix transform so each frame
+        # 180-frame cycle with true rotation-matrix transform so each frame
         # shows the panda at a new angle — feet go up, body goes sideways,
         # upside-down, then comes back around. Same technique as dragged-on-ground.
         if anim == 'backflip':
             flip_phase = (frame_idx % self.BACKFLIP_FRAMES) / float(self.BACKFLIP_FRAMES)
-            if 0.20 < flip_phase < 0.80:
+            if 0.18 < flip_phase < 0.75:
                 # Each frame during the rotation shows a new body angle
-                flip_t = (flip_phase - 0.20) / 0.60
+                flip_t = (flip_phase - 0.18) / 0.57
                 # Negative angle = backward rotation (head tips back first)
                 flip_angle = -flip_t * 2 * math.pi
                 pivot_x = w / 2
@@ -3536,7 +3525,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         c.coords(item, *new_coords)
 
         # --- Body rotation when grabbed and dragged ---
-        # Legs: body hangs and swings fully (can flip upside down).
+        # Legs: body hangs from the grabbed foot — uses rotation-matrix so
+        #       the full body (head included) stays visible at all angles.
+        #       The grabbed foot stays near the mouse and the body hangs away.
         # Arms/ears: body tilts partially in the drag direction.
         # Smoothly interpolated per frame.
         _grabbed_rotates = ('left_leg', 'right_leg',
@@ -3568,15 +3559,39 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     pivot_x = w / 2 + int(25 * sx)
                 else:
                     pivot_x = w / 2
-                # cos(angle) = vertical scale (1=upright, -1=upside down)
-                # sin(angle) = horizontal tilt
-                v_scale = math.cos(angle)
-                h_tilt = math.sin(angle)
-                foreshorten = 1.0 - 0.25 * abs(h_tilt)
-                c.scale("all", pivot_x, pivot_y, foreshorten, v_scale)
-                # Shift horizontally to simulate sideways hanging
-                shift_px = int(h_tilt * 60 * sx)
-                c.move("all", shift_px, 0)
+
+                if is_leg_grab:
+                    # Use rotation-matrix transform for leg grabs — this keeps
+                    # the full body visible at every angle (no scale-based
+                    # clipping at 90° or 180°). The grabbed foot acts as the
+                    # pivot and the body hangs/swings away from the drag point.
+                    cos_angle = math.cos(angle)
+                    sin_angle = math.sin(angle)
+
+                    all_items = c.find_all()
+                    for item in all_items:
+                        coords = c.coords(item)
+                        if len(coords) >= 4:
+                            new_coords = []
+                            for i in range(0, len(coords), 2):
+                                x, y = coords[i], coords[i+1]
+                                x_rel = x - pivot_x
+                                y_rel = y - pivot_y
+                                x_rot = x_rel * cos_angle - y_rel * sin_angle
+                                y_rot = x_rel * sin_angle + y_rel * cos_angle
+                                new_coords.append(x_rot + pivot_x)
+                                new_coords.append(y_rot + pivot_y)
+                            c.coords(item, *new_coords)
+                else:
+                    # Arms/ears: partial tilt using scale (limited to ±45°,
+                    # so scale never goes below cos(45°) ≈ 0.71 — no clipping)
+                    v_scale = math.cos(angle)
+                    h_tilt = math.sin(angle)
+                    foreshorten = 1.0 - 0.25 * abs(h_tilt)
+                    c.scale("all", pivot_x, pivot_y, foreshorten, v_scale)
+                    # Shift horizontally to simulate sideways hanging
+                    shift_px = int(h_tilt * 60 * sx)
+                    c.move("all", shift_px, 0)
 
             self._flip_progress = abs(self._drag_body_angle) / math.pi
         else:
@@ -6266,12 +6281,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         grabbed = self._drag_grab_part
         drag_speed = (vx**2 + vy**2) ** 0.5
         if grabbed in ('left_leg', 'right_leg'):
-            # When dragged by foot, activate "dragging on ground" mode
-            # The panda should look like it's being pulled along the ground on its side
-            if drag_speed > 3.0:  # Sufficient movement to drag on ground
+            # When dragged by foot, the body should hang down from the foot
+            # like being dangled by the leg.  The foot stays under the mouse
+            # pointer and gravity pulls the body downward (away from the
+            # drag point).  Horizontal drag velocity adds a small pendulum
+            # sway so the body swings opposite to the drag direction.
+            if drag_speed > 3.0:
                 self._is_being_dragged_on_ground = True
-                # Calculate angle based on drag direction
-                # Feet point toward drag direction, head points opposite
                 drag_angle = math.atan2(vy, vx)
                 self._drag_ground_angle = drag_angle
             else:
@@ -6283,13 +6299,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             elif self._toss_velocity_y > self.UPSIDE_DOWN_VELOCITY_THRESHOLD:
                 self._is_upside_down = False
             
-            # Full rotation: body hangs from the foot in the drag direction
-            # This creates smooth rotation as the foot is pulled in any direction
+            # Body hangs down from foot (pi = 180° = upside-down) with a
+            # small horizontal sway from drag velocity so the body swings
+            # away from the direction it is being dragged, like a pendulum.
+            # Clamp sway to ±60° around the hanging-down axis.
+            sway = 0.0
             if drag_speed > 1.5:
-                angle = math.atan2(-vy, -vx) + math.pi / 2
-                self._drag_body_angle_target = math.atan2(math.sin(angle), math.cos(angle))
-            else:
-                self._drag_body_angle_target = 0.0
+                sway = max(-math.pi / 3, min(math.pi / 3, -vx * 0.04))
+            self._drag_body_angle_target = math.pi + sway
         elif grabbed in ('left_arm', 'right_arm', 'left_ear', 'right_ear'):
             self._is_being_dragged_on_ground = False
             # Partial tilt: body sways in drag direction, max ~45 degrees
