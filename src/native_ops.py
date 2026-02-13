@@ -10,7 +10,7 @@ The ``texture_ops`` Rust extension (built with PyO3) accelerates:
 - Edge density measurement
 - Batch parallel processing of multiple images
 
-When the native module is unavailable the pure-Python fallbacks in this
+When the native module is unavailable, the pure-Python fallbacks in this
 file are used instead.  They produce identical results but are slower.
 """
 
