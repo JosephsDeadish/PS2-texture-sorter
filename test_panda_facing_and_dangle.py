@@ -404,6 +404,95 @@ def test_sorting_pause_toggles():
     print("✓ pause_sorting toggles _sorting_paused event")
 
 
+def test_diagonal_facing_enum():
+    """Test that PandaFacing enum includes diagonal directions."""
+    from src.features.panda_character import PandaFacing
+    
+    # Verify all diagonal directions exist
+    assert hasattr(PandaFacing, 'FRONT_LEFT'), "PandaFacing should have FRONT_LEFT"
+    assert hasattr(PandaFacing, 'FRONT_RIGHT'), "PandaFacing should have FRONT_RIGHT"
+    assert hasattr(PandaFacing, 'BACK_LEFT'), "PandaFacing should have BACK_LEFT"
+    assert hasattr(PandaFacing, 'BACK_RIGHT'), "PandaFacing should have BACK_RIGHT"
+    
+    assert PandaFacing.FRONT_LEFT.value == "front_left"
+    assert PandaFacing.FRONT_RIGHT.value == "front_right"
+    assert PandaFacing.BACK_LEFT.value == "back_left"
+    assert PandaFacing.BACK_RIGHT.value == "back_right"
+    
+    print("✓ Diagonal facing enum values exist and are correct")
+
+
+def test_diagonal_walking_animation_states():
+    """Test that diagonal walking animation states are registered."""
+    from src.features.panda_character import PandaCharacter
+    
+    diag_anims = ['walking_up_left', 'walking_up_right',
+                  'walking_down_left', 'walking_down_right']
+    for anim in diag_anims:
+        assert anim in PandaCharacter.ANIMATION_STATES, \
+            f"'{anim}' should be in ANIMATION_STATES"
+    
+    print("✓ Diagonal walking animation states are registered")
+
+
+def test_diagonal_facing_state_roundtrip():
+    """Test that diagonal facing can be set and retrieved."""
+    from src.features.panda_character import PandaCharacter, PandaFacing
+    panda = PandaCharacter()
+    
+    for facing in [PandaFacing.FRONT_LEFT, PandaFacing.FRONT_RIGHT,
+                   PandaFacing.BACK_LEFT, PandaFacing.BACK_RIGHT]:
+        panda.set_facing(facing)
+        assert panda.get_facing() == facing, \
+            f"After setting {facing}, get_facing returned {panda.get_facing()}"
+    
+    print("✓ Diagonal facing state roundtrip works correctly")
+
+
+def test_hand_detection_wider_boundaries():
+    """Test that arm/hand detection boundaries are wide enough for easy grabbing."""
+    from src.features.panda_character import PandaCharacter
+    panda = PandaCharacter()
+    
+    # Arms should be detectable at wider boundaries than before
+    # ARM_LEFT_BOUNDARY=0.35 means rel_x < 0.35 in body zone is left_arm
+    assert panda.get_body_part_at_position(0.4, 0.30) == 'left_arm', \
+        "rel_x=0.30 in body zone should detect as left_arm"
+    assert panda.get_body_part_at_position(0.4, 0.34) == 'left_arm', \
+        "rel_x=0.34 in body zone should detect as left_arm"
+    assert panda.get_body_part_at_position(0.4, 0.70) == 'right_arm', \
+        "rel_x=0.70 in body zone should detect as right_arm"
+    assert panda.get_body_part_at_position(0.4, 0.66) == 'right_arm', \
+        "rel_x=0.66 in body zone should detect as right_arm"
+    
+    # Center should still be body
+    assert panda.get_body_part_at_position(0.4, 0.5) == 'body', \
+        "rel_x=0.5 in body zone should detect as body"
+    
+    # Hand sub-regions: lower body at outermost edges
+    assert panda.get_body_part_at_position(0.45, 0.15) == 'left_arm', \
+        "Hand sub-region at far left should detect as left_arm"
+    assert panda.get_body_part_at_position(0.45, 0.85) == 'right_arm', \
+        "Hand sub-region at far right should detect as right_arm"
+    
+    print("✓ Hand/arm detection boundaries are wide enough for easy grabbing")
+
+
+def test_dangle_limb_multiplier_constant():
+    """Test that DANGLE_LIMB_MULTIPLIER exists with correct value."""
+    try:
+        from src.ui.panda_widget import PandaWidget
+        assert hasattr(PandaWidget, 'DANGLE_LIMB_MULTIPLIER'), \
+            "PandaWidget should have DANGLE_LIMB_MULTIPLIER"
+        assert PandaWidget.DANGLE_LIMB_MULTIPLIER >= 0.8, \
+            f"DANGLE_LIMB_MULTIPLIER should be >= 0.8 for strong dangle (got {PandaWidget.DANGLE_LIMB_MULTIPLIER})"
+        assert PandaWidget.DANGLE_LIMB_MULTIPLIER > PandaWidget.DANGLE_BODY_MULTIPLIER, \
+            "Limb multiplier should be greater than body multiplier"
+        print("✓ DANGLE_LIMB_MULTIPLIER has correct value for natural limb-held dangle")
+    except ImportError:
+        print("⚠ Skipping DANGLE_LIMB_MULTIPLIER test (GUI not available)")
+
+
 if __name__ == "__main__":
     print("\nTesting Panda Facing Direction, Dangle & Perspective...")
     print("-" * 50)
@@ -424,6 +513,11 @@ if __name__ == "__main__":
         test_drag_response_per_body_part,
         test_sorting_stop_sets_cancelled,
         test_sorting_pause_toggles,
+        test_diagonal_facing_enum,
+        test_diagonal_walking_animation_states,
+        test_diagonal_facing_state_roundtrip,
+        test_hand_detection_wider_boundaries,
+        test_dangle_limb_multiplier_constant,
     ]
     
     failed = False

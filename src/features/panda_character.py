@@ -21,6 +21,10 @@ class PandaFacing(Enum):
     BACK = "back"
     LEFT = "left"
     RIGHT = "right"
+    FRONT_LEFT = "front_left"
+    FRONT_RIGHT = "front_right"
+    BACK_LEFT = "back_left"
+    BACK_RIGHT = "back_right"
 
 
 class PandaGender(Enum):
@@ -82,6 +86,8 @@ class PandaCharacter:
         'belly_jiggle',
         # Directional walking animations
         'walking_left', 'walking_right', 'walking_up', 'walking_down',
+        # Diagonal walking animations
+        'walking_up_left', 'walking_up_right', 'walking_down_left', 'walking_down_right',
         # Fall / tip over animations
         'fall_on_face', 'tip_over_side',
         # Combat animations
@@ -1377,9 +1383,15 @@ class PandaCharacter:
     # Arm detection X boundaries (arms occupy the outer portions of the body width)
     # Left arm: canvas x from 55 to 80 → rel_x 0.25–0.36
     # Right arm: canvas x from 140 to 165 → rel_x 0.64–0.75
-    # Widen detection slightly inward so the full arm oval is grabbable.
-    ARM_LEFT_BOUNDARY = 0.30   # Left 30% is left arm zone
-    ARM_RIGHT_BOUNDARY = 0.70  # Right 30% is right arm zone
+    # Widen detection inward so the full arm oval is grabbable.
+    ARM_LEFT_BOUNDARY = 0.35   # Left 35% is left arm zone
+    ARM_RIGHT_BOUNDARY = 0.65  # Right 35% is right arm zone
+    
+    # Hand detection: hands are at the bottom of the arm region (lower body area)
+    # and at the outermost edge of the arm zone
+    HAND_BOUNDARY_TOP = 0.42   # Hands start in the lower body region
+    HAND_LEFT_BOUNDARY = 0.22  # Left hand extends further out than arm
+    HAND_RIGHT_BOUNDARY = 0.78 # Right hand extends further out than arm
     
     # Ear detection X boundaries (ears are on sides of head)
     # Ears extend ~22px past head radius of 36 → from ~72 to ~148 out of 220
@@ -1438,8 +1450,14 @@ class PandaCharacter:
         if rel_y < self.HEAD_BOUNDARY:
             return 'head'
         
-        # Body region with individual arm detection
+        # Body region with individual arm/hand detection
         elif rel_y < self.BODY_BOUNDARY:
+            # Check for hand detection (lower body region, outermost edges)
+            if rel_y >= self.HAND_BOUNDARY_TOP:
+                if rel_x < self.HAND_LEFT_BOUNDARY:
+                    return 'left_arm'
+                elif rel_x > self.HAND_RIGHT_BOUNDARY:
+                    return 'right_arm'
             if rel_x < self.ARM_LEFT_BOUNDARY:
                 return 'left_arm'
             elif rel_x > self.ARM_RIGHT_BOUNDARY:
