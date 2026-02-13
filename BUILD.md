@@ -2,25 +2,18 @@
 
 This guide explains how to build the Game Texture Sorter for Windows.
 
-## Build Modes
+## Build Mode
 
-There are **two build modes** available:
+There is **ONE build mode** available:
 
-### One-Folder Mode (Default) ⭐
+### One-Folder Mode ⭐
 - **Command**: `build.bat` or `.\build.ps1`
 - **Output**: Folder with EXE + external assets
-- **Pros**: **Much faster startup**, easier asset modification, better performance
+- **Pros**: **Much faster startup (1-3 seconds)**, easier asset modification, better performance
 - **Cons**: Multiple files to distribute (but as a single folder)
-- **Best for**: General use, development, testing, users who want fast startup
+- **Best for**: All use cases - general use, development, testing, distribution
 
-### Single-EXE Mode (Optional)
-- **Command**: `build.bat single` or `.\build.ps1 single`
-- **Output**: One portable EXE file (~50-100 MB)
-- **Pros**: Fully portable, single file, easy to distribute
-- **Cons**: Slower startup (extracts to temp on each launch)
-- **Best for**: Maximum portability when needed
-
-**Default behavior**: The one-folder mode is now the default for better performance!
+**Note**: Single-EXE mode has been removed because the one-folder mode provides significantly better startup performance and user experience.
 
 ## Quick Start - Automated Build
 
@@ -28,14 +21,12 @@ The easiest way to build is using the automated build scripts:
 
 ### Option 1: Windows Batch File (Recommended)
 ```cmd
-build.bat           # One-folder build (DEFAULT, faster startup)
-build.bat single    # Single-EXE build (optional, portable)
+build.bat           # One-folder build
 ```
 
 ### Option 2: PowerShell Script (Better error handling)
 ```powershell
-.\build.ps1         # One-folder build (DEFAULT, faster startup)
-.\build.ps1 single  # Single-EXE build (optional, portable)
+.\build.ps1         # One-folder build
 ```
 
 Both scripts will:
@@ -81,42 +72,18 @@ pip install -r requirements.txt
 
 ### 5. Build with PyInstaller
 
-For **one-folder** build (DEFAULT, faster startup):
+For **one-folder** build:
 ```cmd
 pyinstaller build_spec_onefolder.spec --clean --noconfirm
 ```
 
-For **single-EXE** build (optional, portable):
-```cmd
-pyinstaller build_spec.spec --clean --noconfirm
-```
-
 ### 6. Find Your Build
 
-**One-Folder** (default): The application will be in: `dist\GameTextureSorter\`
-
-**Single-EXE** (optional): The executable will be in: `dist\GameTextureSorter.exe`
+The application will be in: `dist\GameTextureSorter\`
 
 ## Build Output
 
-### Single-EXE Build (`build.bat`)
-After a successful build, you'll find:
-
-```
-dist/
-└── GameTextureSorter.exe    <- The standalone executable (50-100 MB)
-
-build/                       <- Temporary build files (can be deleted)
-```
-
-**Properties**:
-- **File Name**: GameTextureSorter.exe
-- **Size**: ~50-100 MB
-- **Startup**: Slower (extracts to temp on each launch)
-- **Portability**: ✓ Single file, fully portable
-- **Dependencies**: ✓ None - completely standalone
-
-### One-Folder Build (`build.bat folder`)
+### One-Folder Build
 After a successful build, you'll find:
 
 ```
@@ -134,12 +101,12 @@ dist/
 
 **Properties**:
 - **Folder Size**: ~100-150 MB total
-- **Startup**: **Much faster** (no extraction needed)
+- **Startup**: **Fast** (1-3 seconds, no extraction needed)
 - **Portability**: ✓ Portable folder (copy entire folder)
 - **Assets**: ✓ Easily accessible and modifiable
-- **Performance**: ✓ Better overall performance
+- **Performance**: ✓ Best overall performance
 
-### Common Properties (Both Builds)
+**Common Properties**:
 - **Version**: 1.0.0
 - **Author**: Dead On The Inside / JosephsDeadish
 - **Description**: Game Texture Sorter - Automatic texture classification

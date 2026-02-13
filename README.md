@@ -4,7 +4,7 @@
 **Version:** 1.0.0  
 **License:** TBD
 
-A professional, single-executable Windows application for automatically sorting game texture dumps with advanced AI classification, massive-scale support (200,000+ textures), and a modern panda-themed UI.
+A professional Windows application for automatically sorting game texture dumps with advanced AI classification, massive-scale support (200,000+ textures), and a modern panda-themed UI. Distributed as a one-folder package for fast startup and easy customization.
 
 ## 🌟 Features
 
@@ -65,10 +65,10 @@ A professional, single-executable Windows application for automatically sorting 
 
 ## 📥 Quick Start
 
-### For Users (Pre-built EXE)
+### For Users (Pre-built Application)
 
-1. **Download** the latest `GameTextureSorter.exe` from the releases page
-2. **Run** the EXE - No installation required!
+1. **Download** the latest `GameTextureSorter` folder from the releases page
+2. **Run** GameTextureSorter.exe from the folder - No installation required!
 3. **Start Sorting** - Select your texture folder and let the magic happen 🐼
 
 ### For Developers (Python Installation)
@@ -95,28 +95,19 @@ Build a standalone executable using build scripts:
 
 **Windows Batch:**
 ```cmd
-build.bat           # One-folder build (DEFAULT, faster startup)
-build.bat single    # Single-EXE build (optional, portable)
+build.bat           # One-folder build
 ```
 
 **PowerShell:**
 ```powershell
-.\build.ps1         # One-folder build (DEFAULT, faster startup)
-.\build.ps1 single  # Single-EXE build (optional, portable)
+.\build.ps1         # One-folder build
 ```
 
-**Two build modes available:**
-
-1. **One-Folder Mode** (`build.bat`) - **DEFAULT** ⭐
-   - Much faster startup (no extraction to temp)
-   - Better overall performance
-   - External assets for easy modification
-   - Output: `dist/GameTextureSorter/` folder with EXE + resources
-
-2. **Single-EXE Mode** (`build.bat single`) - Optional for portability
-   - Fully portable single file
-   - Slower startup (extracts on each launch)
-   - Output: `dist/GameTextureSorter.exe`
+**One-Folder Build** ⭐
+- Fast startup (1-3 seconds, no extraction to temp)
+- Best overall performance
+- External assets for easy modification
+- Output: `dist/GameTextureSorter/` folder with EXE + resources
 
 The build scripts automatically:
 - Set up virtual environment
