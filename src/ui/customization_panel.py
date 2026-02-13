@@ -1640,16 +1640,14 @@ class SoundSettingsPanel(ctk.CTkFrame):
     
     def _get_panda_sound_choices(self, event_id):
         """Get available sound choices for a panda event."""
-        try:
-            from src.features.sound_manager import SoundManager, SoundEvent
-            event = SoundEvent(event_id)
-            choices = SoundManager.SOUND_CHOICES.get(event, [])
-            return [label for label, _filename in choices] if choices else ["Default"]
-        except Exception:
-            return ["Default"]
+        return self._get_sound_choices_for_event(event_id)
 
     def _get_system_sound_choices(self, event_id):
         """Get available sound choices for a system event."""
+        return self._get_sound_choices_for_event(event_id)
+
+    def _get_sound_choices_for_event(self, event_id):
+        """Get available sound choice labels for any event."""
         try:
             from src.features.sound_manager import SoundManager, SoundEvent
             event = SoundEvent(event_id)
@@ -1660,20 +1658,14 @@ class SoundSettingsPanel(ctk.CTkFrame):
 
     def _on_panda_sound_select(self, event_id, selected_label):
         """Handle panda sound selection change."""
-        try:
-            from src.features.sound_manager import SoundManager, SoundEvent
-            event = SoundEvent(event_id)
-            choices = SoundManager.SOUND_CHOICES.get(event, [])
-            for label, filename in choices:
-                if label == selected_label:
-                    if self.on_settings_change:
-                        self.on_settings_change('select_sound', {'event': event_id, 'sound': filename})
-                    break
-        except Exception as e:
-            logger.debug(f"Could not select panda sound: {e}")
+        self._on_sound_select(event_id, selected_label)
 
     def _on_system_sound_select(self, event_id, selected_label):
         """Handle system sound selection change."""
+        self._on_sound_select(event_id, selected_label)
+
+    def _on_sound_select(self, event_id, selected_label):
+        """Handle sound selection change for any event."""
         try:
             from src.features.sound_manager import SoundManager, SoundEvent
             event = SoundEvent(event_id)
@@ -1684,7 +1676,7 @@ class SoundSettingsPanel(ctk.CTkFrame):
                         self.on_settings_change('select_sound', {'event': event_id, 'sound': filename})
                     break
         except Exception as e:
-            logger.debug(f"Could not select system sound: {e}")
+            logger.debug(f"Could not select sound: {e}")
     
     def get_settings(self) -> Dict[str, Any]:
         return {

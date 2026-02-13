@@ -383,6 +383,9 @@ class SoundManager:
         self.muted = False
         self.sound_pack = sound_pack
         
+        # Instance-level copy so set_event_sound doesn't mutate class dict
+        self._wav_files = dict(self._WAV_FILES)
+        
         # Volume controls (0.0 to 1.0)
         self.master_volume = 1.0
         self.effects_volume = 1.0
@@ -470,7 +473,7 @@ class SoundManager:
             return
         
         # Try WAV file playback first
-        wav_file = sound.wav_file or self._WAV_FILES.get(sound.event, "")
+        wav_file = sound.wav_file or self._wav_files.get(sound.event, "")
         if wav_file and _USE_WAV_FILES:
             wav_path = _SOUNDS_DIR / wav_file
             if wav_path.exists():
@@ -878,8 +881,8 @@ class SoundManager:
         logger.info("Applied sound configuration")
     
     def set_event_sound(self, event: SoundEvent, wav_filename: str) -> None:
-        """Set a custom WAV file for a specific event across all packs."""
-        self._WAV_FILES[event] = wav_filename
+        """Set a custom WAV file for a specific event."""
+        self._wav_files[event] = wav_filename
         # Also update the Sound objects in current pack
         pack_sounds = self.SOUND_DEFINITIONS.get(self.sound_pack, {})
         if event in pack_sounds:
@@ -888,7 +891,7 @@ class SoundManager:
 
     def get_event_sound(self, event: SoundEvent) -> str:
         """Get the current WAV filename for an event."""
-        return self._WAV_FILES.get(event, "")
+        return self._wav_files.get(event, "")
 
     def get_sound_choices(self, event: SoundEvent) -> list:
         """Get available sound choices for an event."""

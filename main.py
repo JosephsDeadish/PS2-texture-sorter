@@ -2333,6 +2333,11 @@ class GameTextureSorter(ctk.CTk):
                     tmp_extract_dir = tempfile.mkdtemp(prefix="upscaler_")
                     self._upscale_log(f"Extracting ZIP: {src_path.name}")
                     with zipfile.ZipFile(str(src_path), 'r') as zf:
+                        # Validate paths to prevent zip-slip
+                        for member in zf.namelist():
+                            member_path = os.path.realpath(os.path.join(tmp_extract_dir, member))
+                            if not member_path.startswith(os.path.realpath(tmp_extract_dir)):
+                                raise ValueError(f"Unsafe path in ZIP: {member}")
                         zf.extractall(tmp_extract_dir)
                     src_path = Path(tmp_extract_dir)
 
