@@ -213,6 +213,13 @@ except ImportError:
     ALPHA_CORRECTION_AVAILABLE = False
     print("Warning: Alpha correction not available.")
 
+try:
+    from src.utils.drag_drop_handler import drag_drop_handler, TKDND_AVAILABLE
+    DRAG_DROP_AVAILABLE = TKDND_AVAILABLE
+except ImportError:
+    DRAG_DROP_AVAILABLE = False
+    print("Warning: Drag-drop handler not available.")
+
 # Constants for batch upscaling
 BYTES_PER_MB = 1024 * 1024
 PAUSE_CHECK_INTERVAL = 0.1  # seconds
@@ -2066,8 +2073,11 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(input_frame, text="Input Folder / ZIP:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.upscale_input_var = ctk.StringVar()
-        ctk.CTkEntry(input_frame, textvariable=self.upscale_input_var,
-                     width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        upscale_input_entry = ctk.CTkEntry(input_frame, textvariable=self.upscale_input_var,
+                     width=500)
+        upscale_input_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        # Enable drag-drop on input field
+        self._enable_drag_drop(upscale_input_entry, self.upscale_input_var, accept_folders=True, accept_files=True)
         upscale_input_btn = ctk.CTkButton(input_frame, text="📂 Browse Folder", width=120,
                      command=lambda: self.browse_directory(self.upscale_input_var))
         upscale_input_btn.grid(row=0, column=2, padx=5, pady=5)
@@ -2106,8 +2116,11 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(output_frame, text="Output Folder:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.upscale_output_var = ctk.StringVar()
-        ctk.CTkEntry(output_frame, textvariable=self.upscale_output_var,
-                     width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        upscale_output_entry = ctk.CTkEntry(output_frame, textvariable=self.upscale_output_var,
+                     width=500)
+        upscale_output_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        # Enable drag-drop on output field
+        self._enable_drag_drop(upscale_output_entry, self.upscale_output_var, accept_folders=True, accept_files=False)
         upscale_output_btn = ctk.CTkButton(output_frame, text="📂 Browse", width=100,
                      command=lambda: self.browse_directory(self.upscale_output_var))
         upscale_output_btn.grid(row=0, column=2, padx=10, pady=5)
@@ -3165,8 +3178,11 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(input_frame, text="Input Folder:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.alpha_fix_input_var = ctk.StringVar()
-        ctk.CTkEntry(input_frame, textvariable=self.alpha_fix_input_var,
-                     width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        alpha_input_entry = ctk.CTkEntry(input_frame, textvariable=self.alpha_fix_input_var,
+                     width=500)
+        alpha_input_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        # Enable drag-drop on input field
+        self._enable_drag_drop(alpha_input_entry, self.alpha_fix_input_var, accept_folders=True, accept_files=False)
         alpha_input_btn = ctk.CTkButton(input_frame, text="📂 Browse", width=100,
                      command=lambda: self.browse_directory(self.alpha_fix_input_var))
         alpha_input_btn.grid(row=0, column=2, padx=10, pady=5)
@@ -3178,8 +3194,11 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(output_frame, text="Output Folder:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.alpha_fix_output_var = ctk.StringVar()
-        ctk.CTkEntry(output_frame, textvariable=self.alpha_fix_output_var,
-                     width=500).grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        alpha_output_entry = ctk.CTkEntry(output_frame, textvariable=self.alpha_fix_output_var,
+                     width=500)
+        alpha_output_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        # Enable drag-drop on output field
+        self._enable_drag_drop(alpha_output_entry, self.alpha_fix_output_var, accept_folders=True, accept_files=False)
         alpha_output_btn = ctk.CTkButton(output_frame, text="📂 Browse", width=100,
                      command=lambda: self.browse_directory(self.alpha_fix_output_var))
         alpha_output_btn.grid(row=0, column=2, padx=10, pady=5)
@@ -10019,6 +10038,34 @@ Built with:
             directory = filedialog.askdirectory(title="Select Directory")
             if directory:
                 target_var.set(directory)
+    
+    def _enable_drag_drop(self, widget, target_var, accept_folders=True, accept_files=True):
+        """
+        Enable drag-and-drop on a widget.
+        
+        Args:
+            widget: Widget to enable drag-drop on
+            target_var: StringVar to set with dropped path
+            accept_folders: Whether to accept folder drops
+            accept_files: Whether to accept file drops
+        """
+        if not DRAG_DROP_AVAILABLE:
+            logger.debug("Drag-drop not available")
+            return
+        
+        def on_drop(paths):
+            """Handle dropped files/folders."""
+            if paths:
+                # Use first path if multiple dropped
+                path = paths[0]
+                target_var.set(path)
+                logger.info(f"Dropped path set: {path}")
+        
+        try:
+            drag_drop_handler.enable_drop(widget, on_drop, accept_folders, accept_files)
+            logger.debug(f"Drag-drop enabled on widget")
+        except Exception as e:
+            logger.warning(f"Failed to enable drag-drop: {e}")
     
     def start_sorting(self):
         """Start texture sorting operation"""
