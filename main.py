@@ -113,6 +113,20 @@ except ImportError:
     print("Warning: Image repair panel not available.")
 
 try:
+    from src.ui.performance_dashboard import PerformanceDashboard
+    PERFORMANCE_DASHBOARD_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_DASHBOARD_AVAILABLE = False
+    print("Warning: Performance dashboard not available.")
+
+try:
+    from src.features.auto_backup import AutoBackupSystem, BackupConfig
+    AUTO_BACKUP_AVAILABLE = True
+except ImportError:
+    AUTO_BACKUP_AVAILABLE = False
+    print("Warning: Auto backup system not available.")
+
+try:
     from src.features.panda_character import PandaCharacter, PandaGender
     PANDA_CHARACTER_AVAILABLE = True
 except ImportError:
@@ -498,6 +512,23 @@ class GameTextureSorter(ctk.CTk):
         self.file_handler = FileHandler(create_backup=config.get('file_handling', 'create_backup', default=True))
         self.database = None  # Will be initialized when needed
         
+        # Initialize auto backup system
+        self.backup_system = None
+        if AUTO_BACKUP_AVAILABLE:
+            try:
+                app_dir = get_app_dir()
+                backup_config = BackupConfig(
+                    enabled=config.get('backup', 'enabled', default=True),
+                    interval_seconds=config.get('backup', 'interval_seconds', default=300),
+                    max_backups=config.get('backup', 'max_backups', default=10),
+                )
+                self.backup_system = AutoBackupSystem(app_dir, backup_config)
+                self.backup_system.start()
+                logger.info("Auto Backup System initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Auto Backup System: {e}")
+                self.backup_system = None
+        
         # Initialize AI incremental learner for feedback-based learning
         self.learner = None
         try:
@@ -692,6 +723,14 @@ class GameTextureSorter(ctk.CTk):
                 from src.ui.goodbye_splash import INITIAL_PROGRESS
                 splash = show_goodbye_splash(self)
                 splash.update_status("Saving configuration...", INITIAL_PROGRESS)
+            
+            # Stop auto backup system
+            if self.backup_system:
+                try:
+                    self.backup_system.stop()
+                    logger.info("Auto backup system stopped")
+                except Exception as e:
+                    logger.warning(f"Error stopping backup system: {e}")
             
             # Close tutorial if active
             if self.tutorial_manager and self.tutorial_manager.tutorial_active:
@@ -935,6 +974,8 @@ class GameTextureSorter(ctk.CTk):
         self.tab_batch_rename = self.tabview.add("📝 Batch Rename")
         self.tab_color_correction = self.tabview.add("🎨 Color Correction")
         self.tab_image_repair = self.tabview.add("🔧 Image Repair")
+        if PERFORMANCE_DASHBOARD_AVAILABLE:
+            self.tab_performance = self.tabview.add("📊 Performance")
         self.tab_about = self.tabview.add("ℹ️ About")
         
         # Features tabview (nested) - use scrollable if available
@@ -1001,6 +1042,7 @@ class GameTextureSorter(ctk.CTk):
             self.create_batch_rename_tab,
             self.create_color_correction_tab,
             self.create_image_repair_tab,
+            self.create_performance_tab,
         ])
         
         # Add remaining tabs
@@ -7999,6 +8041,29 @@ class GameTextureSorter(ctk.CTk):
             ctk.CTkLabel(
                 self.tab_image_repair,
                 text=f"Error loading Image Repair:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_performance_tab(self):
+        """Create performance dashboard tab for monitoring"""
+        try:
+            if PERFORMANCE_DASHBOARD_AVAILABLE:
+                panel = PerformanceDashboard(self.tab_performance)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Performance Dashboard tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_performance,
+                    text="Performance Dashboard not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating performance dashboard tab: {e}")
+            ctk.CTkLabel(
+                self.tab_performance,
+                text=f"Error loading Performance Dashboard:\n{str(e)}",
                 font=("Arial", 12),
                 text_color="red"
             ).pack(pady=20)
