@@ -1718,14 +1718,14 @@ _PANDA_TOOLTIPS = {
     },
     'tooltip_mode_vulgar': {
         'normal': [
-            "Vulgar Panda mode: sarcastic, funny, and explicit tooltips",
+            "Unhinged Panda mode: sarcastic, funny, and explicit tooltips",
             "Adult-only tooltip mode with colorful language",
             "Humorous and irreverent tooltip style with profanity",
             "The unfiltered, no-holds-barred tooltip experience",
         ],
         'vulgar': [
             "You're already here, you beautiful degenerate. Welcome home. This is your natural habitat. Embrace it.",
-            "Vulgar mode. The ONLY mode. Why would you pick anything else? Everything else is a lie. This is truth.",
+            "Unhinged mode. The ONLY mode. Why would you pick anything else? Everything else is a lie. This is truth.",
             "This mode. The best mode. Fuck the other options. They're weak. This is strong. Choose strength.",
             "Welcome to the party, asshole. Best tooltips in the game. The others can't compete. We're the champions.",
             "The correct choice. Everything else is a waste of screen space. And time. And potential. You chose well."
@@ -3550,7 +3550,7 @@ class TooltipMode(Enum):
     """Tooltip verbosity modes"""
     NORMAL = "normal"
     DUMBED_DOWN = "dumbed-down"
-    VULGAR_PANDA = "vulgar_panda"
+    UNHINGED_PANDA = "vulgar_panda"  # Legacy value for backwards compatibility
 
 
 @dataclass
@@ -4055,7 +4055,7 @@ class TooltipVerbosityManager:
         self.tooltips = {
             TooltipMode.NORMAL: self._get_normal_tooltips(),
             TooltipMode.DUMBED_DOWN: self._get_dumbed_down_tooltips(),
-            TooltipMode.VULGAR_PANDA: self._get_vulgar_panda_tooltips()
+            TooltipMode.UNHINGED_PANDA: self._get_unhinged_panda_tooltips()
         }
     
     def _load_mode(self) -> TooltipMode:
@@ -4064,7 +4064,7 @@ class TooltipVerbosityManager:
         try:
             return TooltipMode(mode_str)
         except ValueError:
-            return TooltipMode.VULGAR_PANDA
+            return TooltipMode.UNHINGED_PANDA
     
     def set_mode(self, mode: TooltipMode):
         """Change tooltip verbosity mode"""
@@ -5098,10 +5098,10 @@ class TooltipVerbosityManager:
                 "Choose simplified tooltips with extra guidance",
             ],
             'tooltip_mode_vulgar': [
-                "Switch to Vulgar Panda mode for sarcastic tooltips",
+                "Switch to Unhinged Panda mode for sarcastic tooltips",
                 "Enable humorous, explicit tooltip language",
                 "Select the irreverent adult-only tooltip style",
-                "Activate Vulgar Panda mode for colorful commentary",
+                "Activate Unhinged Panda mode for colorful commentary",
                 "Choose the unfiltered, no-holds-barred tooltip experience",
             ],
             'shop_balance': [
@@ -5522,8 +5522,8 @@ class TooltipVerbosityManager:
             ],
             'tooltip_mode': [
                 "Choose how tooltips are shown: Normal gives standard info, "
-                "Dumbed Down gives extra detail, Vulgar adds humor.",
-                "Control tooltip style: Normal, Beginner-friendly, or Vulgar "
+                "Dumbed Down gives extra detail, Unhinged adds humor.",
+                "Control tooltip style: Normal, Beginner-friendly, or Unhinged "
                 "with sarcastic commentary!",
                 "This controls the style of the little pop-up hints that appear "
                 "when you hover over buttons. Pick the one you like!",
@@ -5561,7 +5561,7 @@ class TooltipVerbosityManager:
             'sound_pack': [
                 "Choose a sound pack to change what all the sounds in the app "
                 "sound like. Default is standard, Minimal is subtle, and "
-                "Vulgar is... well, fun.",
+                "Unhinged is... well, fun.",
                 "Sound packs change the overall style of every sound effect. "
                 "Try different ones to find your favorite!",
             ],
@@ -5935,7 +5935,7 @@ class TooltipVerbosityManager:
             ],
             'tooltip_mode_vulgar': [
                 "This sets tooltips to vulgar mode — the descriptions are funny and use adult language, but still helpful.",
-                "Vulgar Panda mode makes tooltips funny and sarcastic with some bad words. Still tells you what things do!",
+                "Unhinged Panda mode makes tooltips funny and sarcastic with some bad words. Still tells you what things do!",
             ],
             'shop_balance': [
                 "This shows how many Bamboo Bucks you have. That's the currency you use to buy things in the shop.",
@@ -5971,7 +5971,7 @@ class TooltipVerbosityManager:
             ],
         }
     
-    def _get_vulgar_panda_tooltips(self) -> Dict[str, Any]:
+    def _get_unhinged_panda_tooltips(self) -> Dict[str, Any]:
         """Fun/sarcastic tooltips (vulgar mode)"""
         base_tooltips = {
             'sort_button': [
@@ -6298,7 +6298,7 @@ class TooltipVerbosityManager:
                 "Control the sass level. You've been warned.",
                 "Switch tooltip modes. You're in vulgar mode. Obviously.",
                 "Tooltip flavor picker. You chose chaos. Good for you.",
-                "Normal is boring. Dumbed down is hand-holding. Vulgar is *chef's kiss*.",
+                "Normal is boring. Dumbed down is hand-holding. Unhinged is *chef's kiss*.",
                 "Change how mouthy the tooltips are. You picked the spicy option.",
             ],
             'theme_selector': [
@@ -6888,7 +6888,7 @@ class TooltipVerbosityManager:
             ],
             'tooltip_mode_vulgar': [
                 "THIS MODE. THE BEST MODE. You're goddamn right.",
-                "Vulgar Panda mode. Where the magic and the profanity happen.",
+                "Unhinged Panda mode. Where the magic and the profanity happen.",
                 "Welcome to the good shit. Why would you ever use another mode?",
                 "The superior tooltip mode. Fight me if you disagree, coward.",
                 "You want this one. Trust me. The other modes are for wimps.",
@@ -7324,7 +7324,7 @@ Q: Can I toss the panda?
 A: Yes! Drag the panda and release with some speed. It will bounce off walls and the floor with physics, playing different animations as it goes.
 
 Q: How do I change tooltip modes?
-A: Go to Settings -> UI & Appearance and change the tooltip mode. Changes take effect immediately - no restart needed. Choose Normal, Beginner, or Vulgar.
+A: Go to Settings -> UI & Appearance and change the tooltip mode. Changes take effect immediately - no restart needed. Choose Normal, Beginner, or Unhinged.
 
 Q: How do keyboard shortcuts work?
 A: Press F1 for help, Ctrl+P to start processing, Ctrl+S to save, and more. Check the About tab for a complete list of shortcuts.
