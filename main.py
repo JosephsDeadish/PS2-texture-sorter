@@ -868,7 +868,11 @@ class GameTextureSorter(ctk.CTk):
         self.after(50, self._create_deferred_tabs)
     
     def _create_deferred_tabs(self):
-        """Create remaining tabs after the window is already visible, avoiding slow startup."""
+        """Create remaining tabs after the window is already visible, avoiding slow startup.
+        
+        Tabs are created in small batches across multiple frames to keep the UI
+        responsive during startup instead of freezing while all tabs build at once.
+        """
         if self._deferred_tabs_created:
             return
         self._deferred_tabs_created = True
@@ -896,25 +900,39 @@ class GameTextureSorter(ctk.CTk):
             self.create_battle_arena_tab,
             self.create_travel_hub_tab,
         ]
-        for _tab_creator in _all_tab_creators:
+        self._deferred_tab_queue = _all_tab_creators
+        self._deferred_batch_size = 3  # Create 3 tabs per frame
+        self.after(10, self._create_next_tab_batch)
+
+    def _create_next_tab_batch(self):
+        """Create the next batch of deferred tabs, then schedule the rest."""
+        queue = self._deferred_tab_queue
+        batch_size = self._deferred_batch_size
+        batch = queue[:batch_size]
+        self._deferred_tab_queue = queue[batch_size:]
+
+        for _tab_creator in batch:
             try:
                 _tab_creator()
             except Exception as tab_err:
                 logger.error(f"Error creating tab {_tab_creator.__name__}: {tab_err}", exc_info=True)
-        
-        try:
-            # Throttle scroll events on all scrollable frames to reduce lag/tearing
-            self._throttle_scroll_frames()
-            
-            # Add pop-out buttons to dockable tabs
-            self._add_popout_buttons()
-        except Exception as e:
-            logger.error(f"Error in post-tab setup: {e}", exc_info=True)
+
+        if self._deferred_tab_queue:
+            # More tabs to create — yield to the event loop first
+            self.after(10, self._create_next_tab_batch)
+        else:
+            # All tabs created — run post-setup
+            try:
+                self._throttle_scroll_frames()
+                self._add_popout_buttons()
+            except Exception as e:
+                logger.error(f"Error in post-tab setup: {e}", exc_info=True)
     
     def _throttle_scroll_frames(self):
         """Patch CTkScrollableFrame widgets to throttle scroll events and reduce lag."""
         self._scroll_throttle_time = 0
-        
+        self._scroll_pending = {}  # Track pending scroll jobs per canvas
+
         def _find_scrollable_frames(widget):
             """Recursively find all CTkScrollableFrame instances."""
             frames = []
@@ -926,13 +944,40 @@ class GameTextureSorter(ctk.CTk):
             except Exception:
                 pass
             return frames
-        
+
+        def _debounced_scroll(canvas, direction):
+            """Debounce mousewheel events to reduce redraw frequency."""
+            cid = id(canvas)
+            # Cancel any pending scroll for this canvas
+            if cid in self._scroll_pending:
+                try:
+                    self.after_cancel(self._scroll_pending[cid])
+                except Exception:
+                    pass
+            # Schedule the scroll after a short delay (16ms ≈ 60fps cap)
+            self._scroll_pending[cid] = self.after(
+                16, lambda: canvas.yview_scroll(direction, "units"))
+
         for sf in _find_scrollable_frames(self):
             try:
-                # Access the internal canvas and reduce scroll increment
                 if hasattr(sf, '_parent_canvas'):
                     canvas = sf._parent_canvas
-                    canvas.configure(yscrollincrement=4)
+                    # Larger scroll increment for smoother feel
+                    canvas.configure(yscrollincrement=8)
+                    # Bind debounced mousewheel handler
+                    def _on_mousewheel(event, c=canvas):
+                        direction = -1 if event.delta > 0 else 1
+                        _debounced_scroll(c, direction)
+                        return "break"  # Prevent default scroll handler
+                    def _on_mousewheel_linux_up(event, c=canvas):
+                        _debounced_scroll(c, -1)
+                        return "break"
+                    def _on_mousewheel_linux_down(event, c=canvas):
+                        _debounced_scroll(c, 1)
+                        return "break"
+                    canvas.bind("<MouseWheel>", _on_mousewheel, add=False)
+                    canvas.bind("<Button-4>", _on_mousewheel_linux_up, add=False)
+                    canvas.bind("<Button-5>", _on_mousewheel_linux_down, add=False)
             except Exception:
                 pass
     
@@ -8357,7 +8402,7 @@ Built with:
             import tkinter as tk
             
             # Create toplevel window
-            dungeon_window = ctk.CTkToplevel(self.root)
+            dungeon_window = ctk.CTkToplevel(self)
             dungeon_window.title("🏰 Dungeon Explorer")
             dungeon_window.geometry("1000x700")
             
