@@ -39,6 +39,62 @@ A professional Windows application for automatically sorting game texture dumps 
   - Color-based selection with tolerance control
   - Real-time mask overlay preview
   - AI-powered content-aware fill
+- **📝 Batch Rename Tool** - Professional file renaming with multiple patterns
+  - 7 rename patterns: Date, Resolution, Sequential, Custom Templates, Privacy Mode
+  - Custom template system with variables ({name}, {index}, {date}, {res})
+  - Metadata injection (copyright, author, description) for PNG/JPEG
+  - Preview before rename with collision detection
+  - Undo support (10 levels) for safety
+  - Batch processing with progress tracking
+- **🎨 Color Correction Tool** - Professional color grading and enhancement
+  - Auto white balance (gray world algorithm)
+  - Exposure correction (-3 to +3 EV stops)
+  - Vibrance enhancement (selective saturation boost)
+  - Clarity enhancement (local contrast/mid-tone sharpness)
+  - LUT support (.cube files with adjustable strength 0-100%)
+  - Live preview with before/after comparison
+  - Batch processing with preset saving
+- **🔧 Image Repair Tool** - Fix and recover corrupted images
+  - PNG repair (chunk validation, CRC verification, header repair)
+  - JPEG repair (marker validation, SOI/EOI recovery)
+  - Diagnostic engine (corruption type detection and analysis)
+  - Partial recovery (extract readable portions from damaged files)
+  - Batch repair with progress tracking
+  - Detailed diagnostic reports
+
+### Advanced Features
+- **📊 Performance Dashboard** - Real-time system monitoring
+  - Processing speed metrics (files/sec, MB/sec)
+  - Memory usage tracking (current/peak/available)
+  - Queue status display (pending/processing/completed)
+  - CPU/GPU usage monitoring
+  - Thread count control (1-16 workers)
+  - Estimated completion time calculation
+- **💾 Auto Backup System** - Automatic crash recovery
+  - Periodic auto-save every 5 minutes
+  - Crash detection on startup with recovery dialog
+  - State preservation (settings, projects, queues, recent files)
+  - Configurable retention policy (keep last 10 backups)
+  - Manual backup creation option
+- **🔍 Quality Checker** - Image quality analysis
+  - Resolution detection and warnings
+  - DPI calculation for current size
+  - Compression artifact detection
+  - Upscaling safety warnings
+  - Batch quality reports
+- **📏 Batch Normalizer** - Standardize image formats
+  - Auto-resize to target dimensions
+  - Pad to square with transparency
+  - Center subject intelligently
+  - Format standardization (PNG/JPEG/WebP)
+  - Rename according to patterns
+- **✏️ Line Art Converter** - Create stencils and line art
+  - Convert to pure black linework
+  - Adjustable threshold slider
+  - Remove midtones automatically
+  - 1-bit stencil conversion
+  - Expand/contract lines (morphological operations)
+  - Clean speckles and noise
 
 ### User Interface
 - **🐼 Interactive Panda Character** - Animated companion with 13 mood states, leveling system, and personality
@@ -53,6 +109,7 @@ A professional Windows application for automatically sorting game texture dumps 
 - **❓ Context-Sensitive Help** - Press F1 for help anywhere in the app
 - **🖼️ File Browser Thumbnails** - Preview textures directly in the file browser with toggle control
 - **📌 Undockable Tabs** - Pop out any tab into its own window for multi-monitor setups
+- **🎨 130+ Animated SVG Icons** - Professional animated icons throughout the UI with smooth easing
 
 ### Panda Companion
 - **🐼 Animated Canvas Rendering** - Smooth, animated panda drawn with 48 frames per animation cycle
