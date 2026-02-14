@@ -1336,11 +1336,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_swing = math.sin(phase + math.pi) * 9 + math.sin(phase * 2 + math.pi) * 2.5
             body_bob = knee_lift + math.sin(phase * 2) * 1.5
         elif anim == 'fall_on_face':
-            # Fallen on face: body low, limbs splayed, with gradual tilt forward
+            # Fallen on side: settle onto side like tip_over_side, then flail arms
             settle = min(1.0, frame_idx / 36.0)
-            leg_swing = settle * 18 + math.sin(phase * 0.3) * 2 * (1 - settle * 0.7)
-            arm_swing = settle * 22 + math.sin(phase * 0.4) * 2 * (1 - settle * 0.5)
-            body_bob = settle * 55 + math.sin(phase * 0.2) * 1
+            leg_swing = settle * 10 + math.sin(phase * 0.3) * 1.5 * (1 - settle * 0.5)
+            # After settling, flail arms using left/right walking-style motion
+            flail = max(0.0, (settle - 0.5) * 2.0)  # starts at 50% settle
+            arm_swing = settle * (-12) + flail * math.sin(phase * 3) * 15
+            body_bob = settle * 50 + math.sin(phase * 0.2) * 1
         elif anim == 'tip_over_side':
             # Tipped over on side: gradual fall with rotation
             settle = min(1.0, frame_idx / 36.0)
@@ -1375,8 +1377,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             # Slightly wider when walking away (back perspective)
             breath_scale = 1.05 + math.sin(phase * 0.5) * 0.015
         elif anim == 'fall_on_face':
-            # Squished down flat on face
-            breath_scale = 1.3 + math.sin(phase * 0.2) * 0.02
+            # Squeezed horizontally while on side (same as tip_over_side)
+            breath_scale = 0.65 + math.sin(phase * 0.3) * 0.02
         elif anim == 'tip_over_side':
             # Squeezed horizontally while on side
             breath_scale = 0.65 + math.sin(phase * 0.3) * 0.02
@@ -1658,8 +1660,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         elif anim == 'shaking':
             body_sway = math.sin(phase * 12) * 8 * self._shake_decay
         elif anim == 'fall_on_face':
-            # Face down - body tilts forward heavily
-            body_sway = 0
+            # On side - same tilt as tip_over_side
+            body_sway = 28
         elif anim == 'tip_over_side':
             # Tipped over on side - large sideways tilt
             body_sway = 28
@@ -2536,6 +2538,16 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             ear_wiggle = math.sin(phase * 5) * 4 * sx
         elif anim == 'carrying':
             ear_wiggle = math.sin(phase * 1.5) * 2 * sx  # Gentle movement while carrying
+        elif anim in ('walking_left', 'walking_right', 'walking_up', 'walking_down',
+                      'walking_up_left', 'walking_up_right',
+                      'walking_down_left', 'walking_down_right'):
+            # Ear bounce while walking — synced with stride
+            ear_wiggle = math.sin(phase * 2) * 3 * sx + math.sin(phase * 1.3) * 1.5 * sx
+        elif anim == 'fall_on_face':
+            # Ear wiggle while flailing on side
+            settle = min(1.0, frame_idx / 36.0)
+            flail = max(0.0, (settle - 0.5) * 2.0)
+            ear_wiggle = flail * math.sin(phase * 3) * 4 * sx
         
         # --- Draw body based on facing direction ---
         # Apply body sway to center position for turning/direction effect
@@ -3382,7 +3394,14 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # panda's feet actually move to the side instead of staying underneath.
         if anim in ('lay_on_side', 'tip_over_side', 'fall_on_face',
                    'sleeping', 'laying_down') or self._is_being_dragged_on_ground:
-            if anim == 'lay_on_side':
+            if self._is_being_dragged_on_ground:
+                # Dragged on ground by foot — combine the 90° lay-on-side
+                # tilt with the drag direction angle into a single rotation
+                # to avoid double-rotation artifacts.
+                settle = 1.0
+                combined_angle = math.pi / 2 + self._drag_ground_angle
+                tilt_angle = math.degrees(combined_angle)
+            elif anim == 'lay_on_side':
                 settle = min(1.0, frame_idx / 48.0)
                 tilt_angle = settle * 90  # Tilt 90 degrees to the side
             elif anim == 'tip_over_side':
@@ -3394,12 +3413,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 settle = min(1.0, frame_idx / 30.0)
                 tilt_angle = settle * 80  # Nearly on side, slightly propped up
             elif anim == 'fall_on_face':
+                # Fall on side (same method as tip_over_side / dragged-by-foot)
                 settle = min(1.0, frame_idx / 36.0)
-                tilt_angle = settle * 50  # Gradual forward tilt
-            elif self._is_being_dragged_on_ground:
-                settle = 1.0
-                drag_angle_deg = math.degrees(self._drag_ground_angle)
-                tilt_angle = 90
+                tilt_angle = settle * 90  # Full 90° tilt onto side
             else:
                 settle = 0
                 tilt_angle = 0
@@ -3431,25 +3447,6 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                             new_coords.append(x_rot + pivot_x)
                             new_coords.append(y_rot + pivot_y)
                         c.coords(item, *new_coords)
-                
-                # Additional drag-direction rotation for ground-dragged mode
-                if self._is_being_dragged_on_ground:
-                    cos_drag = math.cos(self._drag_ground_angle)
-                    sin_drag = math.sin(self._drag_ground_angle)
-                    all_items = c.find_all()
-                    for item in all_items:
-                        coords = c.coords(item)
-                        if len(coords) >= 4:
-                            new_coords = []
-                            for i in range(0, len(coords), 2):
-                                x, y = coords[i], coords[i+1]
-                                x_rel = x - pivot_x
-                                y_rel = y - pivot_y
-                                x_rot = x_rel * cos_drag - y_rel * sin_drag
-                                y_rot = x_rel * sin_drag + y_rel * cos_drag
-                                new_coords.append(x_rot + pivot_x)
-                                new_coords.append(y_rot + pivot_y)
-                            c.coords(item, *new_coords)
 
         # --- Barrel roll: rotate the entire body sideways through a full 360° ---
         if anim == 'barrel_roll':

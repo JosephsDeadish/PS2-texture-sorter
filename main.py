@@ -1664,7 +1664,7 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(self.tab_convert, text="🔄 File Format Conversion 🔄", 
                      font=("Arial Bold", 18)).pack(pady=10)
         
-        ctk.CTkLabel(self.tab_convert, text="Batch convert between DDS, PNG, and other formats",
+        ctk.CTkLabel(self.tab_convert, text="Batch convert between DDS, PNG, SVG, and other formats",
                      font=("Arial", 12)).pack(pady=5)
         
         # === START CONVERSION BUTTON AT TOP (BEFORE SCROLLABLE CONTENT) ===
@@ -1714,14 +1714,14 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(opts_grid, text="From:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.convert_from_var = ctk.StringVar(value="🎮 DDS")
         from_menu = ctk.CTkOptionMenu(opts_grid, variable=self.convert_from_var,
-                                       values=["🎮 DDS", "🖼️ PNG", "📷 JPG", "🗺️ BMP", "🎨 TGA"])
+                                       values=["🎮 DDS", "🖼️ PNG", "📷 JPG", "🗺️ BMP", "🎨 TGA", "📐 SVG"])
         from_menu.grid(row=0, column=1, padx=10, pady=5, sticky="w")
         
         # To format
         ctk.CTkLabel(opts_grid, text="To:").grid(row=0, column=2, padx=10, pady=5, sticky="w")
         self.convert_to_var = ctk.StringVar(value="🖼️ PNG")
         to_menu = ctk.CTkOptionMenu(opts_grid, variable=self.convert_to_var,
-                                     values=["🎮 DDS", "🖼️ PNG", "📷 JPG", "🗺️ BMP", "🎨 TGA"])
+                                     values=["🎮 DDS", "🖼️ PNG", "📷 JPG", "🗺️ BMP", "🎨 TGA", "📐 SVG"])
         to_menu.grid(row=0, column=3, padx=10, pady=5, sticky="w")
         
         # Options checkboxes
@@ -1886,6 +1886,16 @@ class GameTextureSorter(ctk.CTk):
                         self.file_handler.convert_dds_to_png(str(file_path), str(target_path))
                     elif from_format == '.png' and to_format == '.dds':
                         self.file_handler.convert_png_to_dds(str(file_path), str(target_path))
+                    elif from_format in ('.svg', '.svgz') and to_format in ('.png', '.jpg', '.jpeg', '.bmp', '.tga'):
+                        # SVG to raster conversion
+                        result = self.file_handler.convert_svg_to_png(file_path, target_path)
+                        if not result:
+                            raise RuntimeError("SVG conversion failed (cairosvg may not be available)")
+                    elif to_format == '.svg' and from_format not in ('.svg', '.svgz'):
+                        # Raster to SVG conversion
+                        result = self.file_handler.convert_raster_to_svg(file_path, target_path)
+                        if not result:
+                            raise RuntimeError("Raster-to-SVG conversion failed (native extension may not be available)")
                     else:
                         # Generic conversion via PIL
                         from PIL import Image
