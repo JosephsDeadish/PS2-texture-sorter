@@ -2414,11 +2414,10 @@ class GameTextureSorter(ctk.CTk):
         self._upscale_live_preview = LivePreviewWidget(preview_frame)
         self._upscale_live_preview.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Keep legacy attributes so existing tooltip / zoom methods don't crash
+        # Legacy widget references (not packed) — kept for _apply_upscaler_tooltips() signature
         self._upscale_zoom_var = ctk.DoubleVar(value=1.0)
         self._upscale_zoom_label = ctk.CTkLabel(preview_frame, text="100%")
-        # (not packed — zoom is handled by LivePreviewWidget buttons)
-        upscale_zoom_out_btn = ctk.CTkButton(preview_frame, text="−", width=0)
+        upscale_zoom_out_btn = ctk.CTkButton(preview_frame, text="\u2212", width=0)
         upscale_zoom_in_btn = ctk.CTkButton(preview_frame, text="+", width=0)
         upscale_zoom_fit_btn = ctk.CTkButton(preview_frame, text="Fit", width=0)
 

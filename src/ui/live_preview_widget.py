@@ -251,9 +251,10 @@ class LivePreviewWidget(ctk.CTkFrame):
         # Draw "Before" / "After" labels
         lbl_y = 12
         lbl_pad = 6
-        for text, x_pos, anchor in [("Before", lbl_pad, "la"),
-                                      ("After", w - lbl_pad, "ra")]:
-            draw.text((x_pos, lbl_y), text, fill=self.SLIDER_LABEL_FG)
+        for text, x_pos, anc in [("Before", lbl_pad, "la"),
+                                   ("After", w - lbl_pad, "ra")]:
+            draw.text((x_pos, lbl_y), text, fill=self.SLIDER_LABEL_FG,
+                      anchor=anc)
 
         # Apply pan offset and render on canvas
         ox = (cw - w) // 2 + int(self._pan_x)
