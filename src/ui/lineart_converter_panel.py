@@ -36,6 +36,92 @@ logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp'}
 
+# ── 10 most-common line-art presets (most popular first) ──────────────
+LINEART_PRESETS = {
+    "⭐ Clean Ink Lines": {
+        "desc": "Crisp black ink lines — the go-to for most art & game textures",
+        "mode": "pure_black", "threshold": 128, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 200, "contrast": 1.5, "sharpen": True,
+        "sharpen_amount": 1.2, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 2,
+    },
+    "✏️ Pencil Sketch": {
+        "desc": "Soft graphite pencil look with tonal gradation",
+        "mode": "sketch", "threshold": 128, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": False,
+        "midtone_threshold": 200, "contrast": 1.2, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": False, "denoise_size": 2,
+    },
+    "🖊️ Bold Outlines": {
+        "desc": "Thick, punchy outlines — great for stickers or cartoon style",
+        "mode": "pure_black", "threshold": 140, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 180, "contrast": 2.0, "sharpen": True,
+        "sharpen_amount": 1.5, "morphology": "dilate", "morph_iter": 2,
+        "kernel": 3, "denoise": True, "denoise_size": 3,
+    },
+    "🔍 Fine Detail Lines": {
+        "desc": "Thin, delicate lines preserving intricate detail",
+        "mode": "adaptive", "threshold": 128, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 220, "contrast": 1.8, "sharpen": True,
+        "sharpen_amount": 2.0, "morphology": "erode", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 1,
+    },
+    "💥 Comic Book Inks": {
+        "desc": "High-contrast inks like professional comic book art",
+        "mode": "pure_black", "threshold": 120, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 190, "contrast": 2.5, "sharpen": True,
+        "sharpen_amount": 1.8, "morphology": "close", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 3,
+    },
+    "📖 Manga Lines": {
+        "desc": "Clean adaptive lines suited for manga / anime styles",
+        "mode": "adaptive", "threshold": 128, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 210, "contrast": 1.6, "sharpen": True,
+        "sharpen_amount": 1.4, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 2,
+    },
+    "🖍️ Coloring Book": {
+        "desc": "Thick clean outlines with no inner detail — ready to color in",
+        "mode": "edge_detect", "threshold": 128, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 200, "contrast": 1.4, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "dilate", "morph_iter": 3,
+        "kernel": 5, "denoise": True, "denoise_size": 4,
+    },
+    "📐 Blueprint / Technical": {
+        "desc": "Precise edge-detected lines for technical / architectural art",
+        "mode": "edge_detect", "threshold": 128, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 200, "contrast": 1.0, "sharpen": True,
+        "sharpen_amount": 1.5, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 2,
+    },
+    "✂️ Stencil / Vinyl Cut": {
+        "desc": "High-contrast 1-bit shapes — perfect for stencils & vinyl cutters",
+        "mode": "stencil_1bit", "threshold": 128, "auto_threshold": True,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 200, "contrast": 2.0, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 2,
+        "kernel": 5, "denoise": True, "denoise_size": 5,
+    },
+    "🪵 Woodcut / Linocut": {
+        "desc": "Bold simplified shapes evoking hand-carved block prints",
+        "mode": "threshold", "threshold": 100, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 180, "contrast": 2.8, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 2,
+        "kernel": 7, "denoise": True, "denoise_size": 6,
+    },
+}
+
+PRESET_NAMES = list(LINEART_PRESETS.keys())
+
 
 class LineArtConverterPanel(ctk.CTkFrame):
     """UI panel for line art conversion."""
@@ -190,7 +276,30 @@ class LineArtConverterPanel(ctk.CTkFrame):
         
         ctk.CTkLabel(conv_frame, text="🎨 Conversion Settings", font=("Arial Bold", 14)).pack(pady=5)
         
-        # Conversion mode
+        # ── Preset selector ──────────────────────────────────────
+        preset_frame = ctk.CTkFrame(conv_frame)
+        preset_frame.pack(fill="x", pady=(5, 2), padx=10)
+        
+        ctk.CTkLabel(preset_frame, text="Preset:", font=("Arial Bold", 12)).pack(side="left", padx=5)
+        
+        self.preset_var = ctk.StringVar(value=PRESET_NAMES[0])
+        self.preset_menu = ctk.CTkOptionMenu(
+            preset_frame,
+            variable=self.preset_var,
+            values=PRESET_NAMES,
+            command=self._apply_preset,
+            width=220
+        )
+        self.preset_menu.pack(side="left", padx=5)
+        
+        self.preset_desc_label = ctk.CTkLabel(
+            conv_frame,
+            text=LINEART_PRESETS[PRESET_NAMES[0]]["desc"],
+            font=("Arial", 11), text_color="gray", wraplength=360
+        )
+        self.preset_desc_label.pack(pady=(0, 8), padx=10, anchor="w")
+        
+        # ── Conversion mode ──────────────────────────────────────
         mode_frame = ctk.CTkFrame(conv_frame)
         mode_frame.pack(fill="x", pady=5, padx=10)
         
@@ -497,6 +606,34 @@ class LineArtConverterPanel(ctk.CTkFrame):
             self.preview_image = file
             self._update_preview()
     
+    def _apply_preset(self, preset_name: str):
+        """Apply a preset's settings to all UI controls."""
+        if preset_name not in LINEART_PRESETS:
+            return
+        p = LINEART_PRESETS[preset_name]
+        self.preset_desc_label.configure(text=p["desc"])
+        self.mode_var.set(p["mode"])
+        self.threshold_var.set(p["threshold"])
+        self.threshold_label.configure(text=str(p["threshold"]))
+        self.auto_threshold_var.set(p["auto_threshold"])
+        self.background_var.set(p["background"])
+        self.invert_var.set(p["invert"])
+        self.remove_midtones_var.set(p["remove_midtones"])
+        self.midtone_threshold_var.set(p["midtone_threshold"])
+        self.midtone_label.configure(text=str(p["midtone_threshold"]))
+        self.contrast_var.set(p["contrast"])
+        self.contrast_label.configure(text=f"{p['contrast']:.1f}")
+        self.sharpen_var.set(p["sharpen"])
+        self.sharpen_amount_var.set(p["sharpen_amount"])
+        self.sharpen_label.configure(text=f"{p['sharpen_amount']:.1f}")
+        self.morphology_var.set(p["morphology"])
+        self.morphology_iterations_var.set(p["morph_iter"])
+        self.iter_label.configure(text=str(p["morph_iter"]))
+        self.kernel_size_var.set(p["kernel"])
+        self.denoise_var.set(p["denoise"])
+        self.denoise_size_var.set(p["denoise_size"])
+        self.denoise_label.configure(text=str(p["denoise_size"]))
+
     def _get_settings(self) -> LineArtSettings:
         """Get current settings from UI."""
         return LineArtSettings(
@@ -611,6 +748,11 @@ class LineArtConverterPanel(ctk.CTkFrame):
                         return text
                 return fallback
 
+            if hasattr(self, 'preset_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.preset_menu,
+                    _tt('la_preset', "Pick a ready-made preset to instantly configure all settings for a common line art style"),
+                    widget_id='la_preset', tooltip_manager=tm))
             if hasattr(self, 'convert_button'):
                 self._tooltips.append(WidgetTooltip(
                     self.convert_button,

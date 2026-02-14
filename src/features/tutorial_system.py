@@ -4176,6 +4176,24 @@ _PANDA_TOOLTIPS = {
             "Choose what kind of line art you want. Options include sketch, manga, blueprint, and more.",
         ],
     },
+    'la_preset': {
+        'normal': [
+            "Pick a ready-made preset to instantly configure all settings for a common line art style",
+            "Quick-start presets: Clean Inks, Pencil Sketch, Bold Outlines, Comic Book, and more",
+            "Select a preset to auto-fill all conversion settings — tweak afterwards if needed",
+        ],
+        'vulgar': [
+            "Preset picker. Because manually tweaking 15 sliders is for masochists. One click, boom, done.",
+            "Pre-built recipes for line art. Clean Inks for pros, Pencil Sketch for artsy types, Coloring Book for your inner 5-year-old.",
+            "Too lazy to configure everything? Same. Pick a preset and pretend you're an expert.",
+            "Presets. Like fast food for line art — quick, satisfying, and you don't have to think about it.",
+            "One-click line art magic. Pick a style, all the sliders move by themselves. Technology, baby.",
+        ],
+        'dumbed-down': [
+            "Choose a pre-made style and all settings fill in automatically! Pick the closest one to what you want.",
+            "Ready-made presets for common line art styles. Just pick one and go!",
+        ],
+    },
     'la_mode': {
         'normal': [
             "Select the line art conversion algorithm",
