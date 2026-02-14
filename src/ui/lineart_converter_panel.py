@@ -146,6 +146,7 @@ class LineArtConverterPanel(ctk.CTkFrame):
         self.output_directory: Optional[str] = None
         self.processing_thread = None
         self.preview_image = None
+        self._last_preview_result = None
         
         self._tooltips = []
         self._create_widgets()
@@ -698,7 +699,7 @@ class LineArtConverterPanel(ctk.CTkFrame):
 
     def _export_preview(self):
         """Export the currently previewed line art result to a file."""
-        if not hasattr(self, '_last_preview_result') or self._last_preview_result is None:
+        if self._last_preview_result is None:
             messagebox.showwarning("No Preview", "Update the preview first before exporting.")
             return
         filepath = filedialog.asksaveasfilename(

@@ -2880,17 +2880,22 @@ class GameTextureSorter(ctk.CTk):
             current = img
             if preserve_alpha and current.mode != "RGBA":
                 current = current.convert("RGBA")
-            remaining = factor
-            while remaining > 1:
-                step = 2 if remaining >= 4 else remaining
-                step_size = (current.size[0] * step, current.size[1] * step)
-                current = _resize_step(current, step_size)
+            # Track target dimensions directly to avoid integer division errors
+            target_w, target_h = new_size
+            while current.size[0] < target_w or current.size[1] < target_h:
+                # Calculate how much is left to go
+                ratio_w = target_w / current.size[0]
+                step = 2 if ratio_w >= 3.5 else max(2, round(ratio_w))
+                # Don't overshoot the target
+                next_w = min(current.size[0] * step, target_w)
+                next_h = min(current.size[1] * step, target_h)
+                is_last = (next_w >= target_w and next_h >= target_h)
+                current = _resize_step(current, (next_w, next_h))
                 # Light sharpen between passes to prevent blur accumulation
-                if remaining > step:
+                if not is_last:
                     current = self._apply_to_rgb(current,
                         lambda im: im.filter(ImageFilter.UnsharpMask(
                             radius=1.0, percent=60, threshold=2)))
-                remaining //= step
             result = current
         else:
             if preserve_alpha and img.mode == "RGBA":
