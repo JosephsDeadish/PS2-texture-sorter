@@ -2034,7 +2034,7 @@ _PANDA_TOOLTIPS = {
         ],
         'vulgar': [
             "Remove that grainy bullshit from your textures. You're welcome.",
-            "Denoise: because your source images look like they were photographed during an earthquake.",
+            "Denoise! Because your source images look like they were photographed during an earthquake.",
             "Smooth out the pixel vomit. The panda hates noisy textures.",
             "Click to remove artifacts. Turns 'crusty JPEG' into 'slightly less crusty.'",
             "Noise reduction ON. Your textures were screaming, now they whisper.",
@@ -2154,7 +2154,7 @@ _PANDA_TOOLTIPS = {
             "Make the preview smaller. For when you want to see the big picture. Literally.",
             "Shrink! The preview, not your expectations.",
             "Zoom out so you can pretend the artifacts aren't visible.",
-            "ENHANCE— wait no, the opposite of that.",
+            "ENHANCE — wait no, the opposite of that.",
         ]
     },
     'upscale_zoom_in': {
