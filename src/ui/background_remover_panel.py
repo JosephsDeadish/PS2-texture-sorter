@@ -5,14 +5,13 @@ live preview, alpha presets, archive support, and processing queue
 """
 
 import customtkinter as ctk
-from tkinter import filedialog, messagebox, Canvas
+from tkinter import filedialog, messagebox
 from pathlib import Path
 from typing import List, Optional, Callable
 import logging
 from PIL import Image, ImageTk
 import zipfile
 import threading
-import tempfile
 
 from src.tools.background_remover import BackgroundRemover, check_dependencies, AlphaPresets
 from src.tools.object_remover import ObjectRemover
@@ -508,65 +507,70 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
             logger.debug("Tooltip collections not available")
             return
         
-        # Helper to get tooltip by keyword
-        def get_tooltip(tooltips, keyword):
-            for tooltip in tooltips:
-                if keyword.lower() in tooltip.lower():
+        # Optimize: Pre-lowercase all tooltips once for faster matching
+        bg_tooltips_lower = [(tip, tip.lower()) for tip in bg_tooltips]
+        obj_tooltips_lower = [(tip, tip.lower()) for tip in obj_tooltips]
+        
+        # Helper to get tooltip by keyword (optimized with pre-lowercased list)
+        def get_tooltip(tooltips_with_lower, keyword):
+            keyword_lower = keyword.lower()
+            for tooltip, tooltip_lower in tooltips_with_lower:
+                if keyword_lower in tooltip_lower:
                     return tooltip
             return None
         
         # Background Remover tooltips
-        if bg_tooltips:
+        if bg_tooltips_lower:
             # Mode toggle
             if hasattr(self, 'bg_remover_radio'):
-                tooltip = get_tooltip(bg_tooltips, "Mode toggle") or "Remove background to create transparent PNGs"
+                tooltip = get_tooltip(bg_tooltips_lower, "Mode toggle") or "Remove background to create transparent PNGs"
                 self._tooltips.append(WidgetTooltip(self.bg_remover_radio, tooltip))
             
             # Preset dropdown
             if hasattr(self, 'preset_menu'):
-                tooltip = get_tooltip(bg_tooltips, "Preset selector") or "Choose a preset optimized for your image type"
+                tooltip = get_tooltip(bg_tooltips_lower, "Preset selector") or "Choose a preset optimized for your image type"
                 self._tooltips.append(WidgetTooltip(self.preset_menu, tooltip))
             
             # Edge slider
             if hasattr(self, 'edge_slider'):
-                tooltip = get_tooltip(bg_tooltips, "Edge refinement") or "Adjust edge feathering and refinement"
+                tooltip = get_tooltip(bg_tooltips_lower, "Edge refinement") or "Adjust edge feathering and refinement"
                 self._tooltips.append(WidgetTooltip(self.edge_slider, tooltip))
             
             # Model dropdown
             if hasattr(self, 'model_menu'):
-                tooltip = get_tooltip(bg_tooltips, "AI model") or "Select the AI model for background removal"
+                tooltip = get_tooltip(bg_tooltips_lower, "AI model") or "Select the AI model for background removal"
                 self._tooltips.append(WidgetTooltip(self.model_menu, tooltip))
             
             # Alpha matting checkbox
             if hasattr(self, 'alpha_matting_check'):
-                tooltip = get_tooltip(bg_tooltips, "Alpha matting") or "Enable for semi-transparent objects"
+                tooltip = get_tooltip(bg_tooltips_lower, "Alpha matting") or "Enable for semi-transparent objects"
                 self._tooltips.append(WidgetTooltip(self.alpha_matting_check, tooltip))
             
             # Archive button
             if hasattr(self, 'select_archive_btn'):
-                tooltip = get_tooltip(bg_tooltips, "Archive") or "Process ZIP/RAR archives without extracting"
+                tooltip = get_tooltip(bg_tooltips_lower, "Archive") or "Process ZIP/RAR archives without extracting"
                 self._tooltips.append(WidgetTooltip(self.select_archive_btn, tooltip))
         
         # Object Remover tooltips
-        if obj_tooltips:
+        if obj_tooltips_lower:
             # Mode toggle
             if hasattr(self, 'obj_remover_radio'):
-                tooltip = get_tooltip(obj_tooltips, "Mode toggle") or "Paint objects to remove them from images"
+                tooltip = get_tooltip(obj_tooltips_lower, "Mode toggle") or "Paint objects to remove them from images"
                 self._tooltips.append(WidgetTooltip(self.obj_remover_radio, tooltip))
             
             # Brush size slider
             if hasattr(self, 'brush_slider'):
-                tooltip = get_tooltip(obj_tooltips, "Brush size") or "Adjust brush size for painting"
+                tooltip = get_tooltip(obj_tooltips_lower, "Brush size") or "Adjust brush size for painting"
                 self._tooltips.append(WidgetTooltip(self.brush_slider, tooltip))
             
             # Paint toggle button
             if hasattr(self, 'paint_toggle_btn'):
-                tooltip = get_tooltip(obj_tooltips, "brush") or "Toggle painting mode"
+                tooltip = get_tooltip(obj_tooltips_lower, "brush") or "Toggle painting mode"
                 self._tooltips.append(WidgetTooltip(self.paint_toggle_btn, tooltip))
             
             # Eraser button
             if hasattr(self, 'eraser_btn'):
-                tooltip = get_tooltip(obj_tooltips, "Eraser") or "Switch to eraser mode"
+                tooltip = get_tooltip(obj_tooltips_lower, "Eraser") or "Switch to eraser mode"
                 self._tooltips.append(WidgetTooltip(self.eraser_btn, tooltip))
     
     def _check_availability(self):
