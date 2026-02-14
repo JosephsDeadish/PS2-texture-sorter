@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Badge shield -->
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <polyline points="9 12 11 14 15 10" stroke-width="3">
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite" />
+    </polyline>
+    <!-- Pulse effect -->
+    <circle cx="12" cy="12" r="8" fill="none" opacity="0">
+      <animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0;0.4;0" dur="2s" repeatCount="indefinite" />
+    </circle>
+  </g>
+</svg>

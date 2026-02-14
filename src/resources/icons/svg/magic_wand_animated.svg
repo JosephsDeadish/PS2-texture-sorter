@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Magic wand -->
+    <path d="M15 4l6 6-10 10-6-6z" transform-origin="12 12">
+      <animateTransform attributeName="transform" type="rotate" values="0 12 12;15 12 12;0 12 12;-15 12 12;0 12 12" dur="4s" repeatCount="indefinite" />
+    </path>
+    <!-- Sparkles -->
+    <g>
+      <path d="M5 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1z">
+        <animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite" />
+      </path>
+      <path d="M19 16l0.5 1 1 0.5-1 0.5-0.5 1-0.5-1-1-0.5 1-0.5z">
+        <animate attributeName="opacity" values="0;1;0" dur="2s" begin="0.5s" repeatCount="indefinite" />
+      </path>
+      <path d="M17 2l0.5 1 1 0.5-1 0.5-0.5 1-0.5-1-1-0.5 1-0.5z">
+        <animate attributeName="opacity" values="0;1;0" dur="2s" begin="1s" repeatCount="indefinite" />
+      </path>
+    </g>
+  </g>
+</svg>
