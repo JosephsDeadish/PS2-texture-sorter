@@ -20,6 +20,13 @@ from src.ui.live_preview_widget import LivePreviewWidget
 from src.ui.archive_queue_widgets import ArchiveSettingsWidget, ProcessingQueue, OutputMode
 from src.utils.archive_handler import ArchiveHandler
 
+try:
+    from src.features.tutorial_system import WidgetTooltip
+    TOOLTIPS_AVAILABLE = True
+except ImportError:
+    WidgetTooltip = None
+    TOOLTIPS_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Supported image file extensions
@@ -32,7 +39,7 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
     batch support, and edge refinement controls.
     """
     
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, unlockables_system=None, **kwargs):
         super().__init__(master, **kwargs)
         
         # Initialize background remover and object remover
@@ -43,6 +50,10 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
         self.output_directory: Optional[str] = None
         self.processing_thread = None
         self.current_preset = None
+        
+        # Store unlockables system for tooltips
+        self.unlockables_system = unlockables_system
+        self._tooltips = []
         
         # Mode tracking
         self.current_mode = "background"  # "background" or "object"
@@ -471,6 +482,92 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
             state="disabled"
         )
         self.cancel_btn.pack(fill="x", padx=10, pady=2)
+        
+        # Setup tooltips after all widgets are created
+        self._setup_tooltips()
+    
+    def _setup_tooltips(self):
+        """Setup tooltips for all controls using unlockables system."""
+        if not TOOLTIPS_AVAILABLE or not self.unlockables_system:
+            return
+        
+        # Get tooltip collection based on current mode
+        bg_tooltips = []
+        obj_tooltips = []
+        
+        # Try to get tooltips from unlockables system
+        try:
+            bg_collection = self.unlockables_system.tooltip_collections.get('background_remover')
+            if bg_collection and bg_collection.unlocked:
+                bg_tooltips = bg_collection.tooltips
+            
+            obj_collection = self.unlockables_system.tooltip_collections.get('object_remover')
+            if obj_collection and obj_collection.unlocked:
+                obj_tooltips = obj_collection.tooltips
+        except AttributeError:
+            logger.debug("Tooltip collections not available")
+            return
+        
+        # Helper to get tooltip by keyword
+        def get_tooltip(tooltips, keyword):
+            for tooltip in tooltips:
+                if keyword.lower() in tooltip.lower():
+                    return tooltip
+            return None
+        
+        # Background Remover tooltips
+        if bg_tooltips:
+            # Mode toggle
+            if hasattr(self, 'bg_remover_radio'):
+                tooltip = get_tooltip(bg_tooltips, "Mode toggle") or "Remove background to create transparent PNGs"
+                self._tooltips.append(WidgetTooltip(self.bg_remover_radio, tooltip))
+            
+            # Preset dropdown
+            if hasattr(self, 'preset_menu'):
+                tooltip = get_tooltip(bg_tooltips, "Preset selector") or "Choose a preset optimized for your image type"
+                self._tooltips.append(WidgetTooltip(self.preset_menu, tooltip))
+            
+            # Edge slider
+            if hasattr(self, 'edge_slider'):
+                tooltip = get_tooltip(bg_tooltips, "Edge refinement") or "Adjust edge feathering and refinement"
+                self._tooltips.append(WidgetTooltip(self.edge_slider, tooltip))
+            
+            # Model dropdown
+            if hasattr(self, 'model_menu'):
+                tooltip = get_tooltip(bg_tooltips, "AI model") or "Select the AI model for background removal"
+                self._tooltips.append(WidgetTooltip(self.model_menu, tooltip))
+            
+            # Alpha matting checkbox
+            if hasattr(self, 'alpha_matting_check'):
+                tooltip = get_tooltip(bg_tooltips, "Alpha matting") or "Enable for semi-transparent objects"
+                self._tooltips.append(WidgetTooltip(self.alpha_matting_check, tooltip))
+            
+            # Archive button
+            if hasattr(self, 'select_archive_btn'):
+                tooltip = get_tooltip(bg_tooltips, "Archive") or "Process ZIP/RAR archives without extracting"
+                self._tooltips.append(WidgetTooltip(self.select_archive_btn, tooltip))
+        
+        # Object Remover tooltips
+        if obj_tooltips:
+            # Mode toggle
+            if hasattr(self, 'obj_remover_radio'):
+                tooltip = get_tooltip(obj_tooltips, "Mode toggle") or "Paint objects to remove them from images"
+                self._tooltips.append(WidgetTooltip(self.obj_remover_radio, tooltip))
+            
+            # Brush size slider
+            if hasattr(self, 'brush_slider'):
+                tooltip = get_tooltip(obj_tooltips, "Brush size") or "Adjust brush size for painting"
+                self._tooltips.append(WidgetTooltip(self.brush_slider, tooltip))
+            
+            # Paint toggle button
+            if hasattr(self, 'paint_toggle_btn'):
+                tooltip = get_tooltip(obj_tooltips, "brush") or "Toggle painting mode"
+                self._tooltips.append(WidgetTooltip(self.paint_toggle_btn, tooltip))
+            
+            # Eraser button
+            if hasattr(self, 'eraser_btn'):
+                tooltip = get_tooltip(obj_tooltips, "Eraser") or "Switch to eraser mode"
+                self._tooltips.append(WidgetTooltip(self.eraser_btn, tooltip))
     
     def _check_availability(self):
         """Check if background removal is available."""

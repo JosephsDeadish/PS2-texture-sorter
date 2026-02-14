@@ -100,6 +100,13 @@ except ImportError:
     print("Warning: Unlockables system not available.")
 
 try:
+    from src.ui.scrollable_tabview import ScrollableTabView
+    SCROLLABLE_TABVIEW_AVAILABLE = True
+except ImportError:
+    SCROLLABLE_TABVIEW_AVAILABLE = False
+    print("Warning: Scrollable tabview not available.")
+
+try:
     from src.features.statistics import StatisticsTracker
     STATISTICS_AVAILABLE = True
 except ImportError:
@@ -864,8 +871,11 @@ class GameTextureSorter(ctk.CTk):
         self.tools_category = self.category_tabview.add("🔧 Tools")
         self.features_category = self.category_tabview.add("🐼 Panda & Features")
         
-        # Tools tabview (nested)
-        self.tabview = ctk.CTkTabview(self.tools_category)
+        # Tools tabview (nested) - use scrollable if available
+        if SCROLLABLE_TABVIEW_AVAILABLE:
+            self.tabview = ScrollableTabView(self.tools_category)
+        else:
+            self.tabview = ctk.CTkTabview(self.tools_category)
         self.tabview.pack(fill="both", expand=True)
         
         self.tab_sort = self.tabview.add("🐼 Sort Textures")
@@ -879,8 +889,11 @@ class GameTextureSorter(ctk.CTk):
             self.tab_bg_remover = self.tabview.add("🎭 Background Remover")
         self.tab_about = self.tabview.add("ℹ️ About")
         
-        # Features tabview (nested)
-        self.features_tabview = ctk.CTkTabview(self.features_category)
+        # Features tabview (nested) - use scrollable if available
+        if SCROLLABLE_TABVIEW_AVAILABLE:
+            self.features_tabview = ScrollableTabView(self.features_category)
+        else:
+            self.features_tabview = ctk.CTkTabview(self.features_category)
         self.features_tabview.pack(fill="both", expand=True)
         
         self.tab_shop = self.features_tabview.add("🛒 Shop")
@@ -7772,7 +7785,10 @@ class GameTextureSorter(ctk.CTk):
         try:
             if BACKGROUND_REMOVER_AVAILABLE:
                 # Create the BackgroundRemoverPanel
-                panel = BackgroundRemoverPanel(self.tab_bg_remover)
+                panel = BackgroundRemoverPanel(
+                    self.tab_bg_remover, 
+                    unlockables_system=self.unlockables_system if UNLOCKABLES_AVAILABLE else None
+                )
                 panel.pack(fill="both", expand=True, padx=10, pady=10)
                 logger.info("Background Remover tab created successfully")
             else:
