@@ -2017,10 +2017,10 @@ class GameTextureSorter(ctk.CTk):
 
         # Scale factor
         ctk.CTkLabel(opts, text="Scale Factor:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.upscale_factor_var = ctk.StringVar(value="2x")
+        self.upscale_factor_var = ctk.StringVar(value="🔢 2x")
         upscale_factor_menu = ctk.CTkOptionMenu(
             opts, variable=self.upscale_factor_var,
-            values=["2x", "4x", "8x"],
+            values=["🔢 2x", "🔢 3x", "🔢 4x", "🔢 6x", "🔢 8x", "🔢 16x"],
             command=self._update_upscale_preview)
         upscale_factor_menu.grid(row=0, column=1, padx=10, pady=5, sticky="w")
 
@@ -2035,6 +2035,9 @@ class GameTextureSorter(ctk.CTk):
                 "🟡 Bilinear (Fast)",
                 "🔶 Hamming",
                 "🟣 Box (Pixel Art)",
+                "⬜ Nearest (Pixel Perfect)",
+                "🔵 Mitchell",
+                "🟤 CatRom",
                 "🔴 Real-ESRGAN (AI)"
             ],
             command=self._update_upscale_preview)
@@ -2042,13 +2045,21 @@ class GameTextureSorter(ctk.CTk):
 
         # Export format
         ctk.CTkLabel(opts, text="Export As:").grid(row=1, column=0, padx=10, pady=5, sticky="w")
-        self.upscale_format_var = ctk.StringVar(value="PNG")
+        self.upscale_format_var = ctk.StringVar(value="🖼️ PNG")
         upscale_format_menu = ctk.CTkOptionMenu(
             opts, variable=self.upscale_format_var,
-            values=["PNG", "BMP", "TGA", "JPEG", "WEBP"])
+            values=["🖼️ PNG", "🗺️ BMP", "🎨 TGA", "📷 JPEG", "🌐 WEBP", "🎮 DDS", "📐 TIFF"])
         upscale_format_menu.grid(row=1, column=1, padx=10, pady=5, sticky="w")
 
-        # Checkboxes row
+        # Custom resolution input
+        ctk.CTkLabel(opts, text="Custom Size:").grid(row=1, column=2, padx=10, pady=5, sticky="w")
+        self.upscale_custom_res_var = ctk.StringVar(value="")
+        upscale_custom_entry = ctk.CTkEntry(
+            opts, textvariable=self.upscale_custom_res_var,
+            width=120, placeholder_text="e.g. 1024x1024")
+        upscale_custom_entry.grid(row=1, column=3, padx=10, pady=5, sticky="w")
+
+        # Checkboxes row 1
         check_frame = ctk.CTkFrame(opts_frame)
         check_frame.pack(fill="x", padx=10, pady=5)
         self.upscale_alpha_var = ctk.BooleanVar(value=True)
@@ -2067,6 +2078,46 @@ class GameTextureSorter(ctk.CTk):
         upscale_send_org_cb = ctk.CTkCheckBox(check_frame, text="🐼 Send to Organizer when done",
                        variable=self.upscale_send_organizer_var)
         upscale_send_org_cb.pack(side="left", padx=10)
+
+        # Checkboxes row 2 — advanced post-processing
+        check_frame2 = ctk.CTkFrame(opts_frame)
+        check_frame2.pack(fill="x", padx=10, pady=5)
+        self.upscale_sharpen_var = ctk.BooleanVar(value=False)
+        upscale_sharpen_cb = ctk.CTkCheckBox(check_frame2, text="🔪 Sharpen output",
+                       variable=self.upscale_sharpen_var)
+        upscale_sharpen_cb.pack(side="left", padx=10)
+        self.upscale_denoise_var = ctk.BooleanVar(value=False)
+        upscale_denoise_cb = ctk.CTkCheckBox(check_frame2, text="🔇 Reduce noise",
+                       variable=self.upscale_denoise_var)
+        upscale_denoise_cb.pack(side="left", padx=10)
+        self.upscale_face_enhance_var = ctk.BooleanVar(value=False)
+        upscale_face_cb = ctk.CTkCheckBox(check_frame2, text="👤 Face enhancement",
+                       variable=self.upscale_face_enhance_var)
+        upscale_face_cb.pack(side="left", padx=10)
+        self.upscale_gpu_var = ctk.BooleanVar(value=False)
+        upscale_gpu_cb = ctk.CTkCheckBox(check_frame2, text="🖥️ GPU acceleration",
+                       variable=self.upscale_gpu_var)
+        upscale_gpu_cb.pack(side="left", padx=10)
+
+        # Checkboxes row 3 — texture-specific options
+        check_frame3 = ctk.CTkFrame(opts_frame)
+        check_frame3.pack(fill="x", padx=10, pady=5)
+        self.upscale_tile_seamless_var = ctk.BooleanVar(value=False)
+        upscale_tile_cb = ctk.CTkCheckBox(check_frame3, text="🔁 Tile-seamless (for tiling textures)",
+                       variable=self.upscale_tile_seamless_var)
+        upscale_tile_cb.pack(side="left", padx=10)
+        self.upscale_normal_map_var = ctk.BooleanVar(value=False)
+        upscale_normal_cb = ctk.CTkCheckBox(check_frame3, text="🗺️ Normal map mode",
+                       variable=self.upscale_normal_map_var)
+        upscale_normal_cb.pack(side="left", padx=10)
+        self.upscale_auto_level_var = ctk.BooleanVar(value=False)
+        upscale_auto_level_cb = ctk.CTkCheckBox(check_frame3, text="⚖️ Auto-level colors",
+                       variable=self.upscale_auto_level_var)
+        upscale_auto_level_cb.pack(side="left", padx=10)
+        self.upscale_overwrite_var = ctk.BooleanVar(value=False)
+        upscale_overwrite_cb = ctk.CTkCheckBox(check_frame3, text="♻️ Overwrite existing",
+                       variable=self.upscale_overwrite_var)
+        upscale_overwrite_cb.pack(side="left", padx=10)
 
         # --- Preview section ---
         preview_frame = ctk.CTkFrame(scroll)
@@ -2215,11 +2266,20 @@ class GameTextureSorter(ctk.CTk):
             return Image.HAMMING
         elif "Box" in style:
             return Image.BOX
+        elif "Nearest" in style:
+            return Image.NEAREST
+        elif "Mitchell" in style or "CatRom" in style:
+            # PIL lacks dedicated Mitchell-Netravali / Catmull-Rom filters;
+            # BICUBIC is the closest general cubic interpolation available.
+            return Image.BICUBIC
         return Image.LANCZOS  # default
 
     def _get_upscale_factor(self):
         """Return the numeric scale factor."""
         text = self.upscale_factor_var.get()
+        # Strip emoji prefix (e.g. "🔢 4x" → "4x")
+        if " " in text:
+            text = text.split(" ", 1)[1]
         return int(text.replace("x", ""))
 
     def _preview_upscale_file(self):
@@ -2282,8 +2342,22 @@ class GameTextureSorter(ctk.CTk):
             self._show_upscale_preview(self._upscale_preview_image)
 
     def _upscale_pil_image(self, img, factor, preserve_alpha=True):
-        """Upscale a single PIL Image using the current style."""
-        new_size = (img.size[0] * factor, img.size[1] * factor)
+        """Upscale a single PIL Image using the current style and options."""
+        from PIL import ImageFilter
+        
+        # Determine target size — custom resolution overrides factor
+        custom_res = ""
+        if hasattr(self, 'upscale_custom_res_var'):
+            custom_res = self.upscale_custom_res_var.get().strip()
+        if custom_res and "x" in custom_res.lower():
+            try:
+                parts = custom_res.lower().split("x")
+                new_size = (int(parts[0]), int(parts[1]))
+            except (ValueError, IndexError):
+                new_size = (img.size[0] * factor, img.size[1] * factor)
+        else:
+            new_size = (img.size[0] * factor, img.size[1] * factor)
+        
         resample = self._get_pil_resample()
 
         if preserve_alpha and img.mode == "RGBA":
@@ -2292,12 +2366,48 @@ class GameTextureSorter(ctk.CTk):
             alpha = img.getchannel("A").resize(new_size, resample)
             result = rgb.copy()
             result.putalpha(alpha)
-            return result
         elif preserve_alpha and img.mode != "RGBA":
             img = img.convert("RGBA")
-            return img.resize(new_size, resample)
+            result = img.resize(new_size, resample)
         else:
-            return img.resize(new_size, resample)
+            result = img.resize(new_size, resample)
+        
+        # --- Post-processing options ---
+        if hasattr(self, 'upscale_denoise_var') and self.upscale_denoise_var.get():
+            # Noise reduction: slight blur to remove compression artifacts
+            if result.mode == "RGBA":
+                rgb_ch = result.convert("RGB").filter(ImageFilter.SMOOTH)
+                alpha_ch = result.getchannel("A")
+                result = rgb_ch.copy()
+                result.putalpha(alpha_ch)
+            else:
+                result = result.filter(ImageFilter.SMOOTH)
+        
+        if hasattr(self, 'upscale_sharpen_var') and self.upscale_sharpen_var.get():
+            # Sharpening pass
+            if result.mode == "RGBA":
+                rgb_ch = result.convert("RGB").filter(ImageFilter.SHARPEN)
+                alpha_ch = result.getchannel("A")
+                result = rgb_ch.copy()
+                result.putalpha(alpha_ch)
+            else:
+                result = result.filter(ImageFilter.SHARPEN)
+        
+        if hasattr(self, 'upscale_auto_level_var') and self.upscale_auto_level_var.get():
+            # Auto-level: stretch histogram to use full 0-255 range
+            try:
+                from PIL import ImageOps
+                if result.mode == "RGBA":
+                    rgb_ch = ImageOps.autocontrast(result.convert("RGB"), cutoff=1)
+                    alpha_ch = result.getchannel("A")
+                    result = rgb_ch.copy()
+                    result.putalpha(alpha_ch)
+                else:
+                    result = ImageOps.autocontrast(result, cutoff=1)
+            except Exception:
+                pass
+        
+        return result
 
     def _upscale_feedback(self, rating):
         """Record user feedback on upscale quality."""
@@ -2329,9 +2439,14 @@ class GameTextureSorter(ctk.CTk):
         recursive = self.upscale_recursive_var.get()
         zip_output = self.upscale_zip_output_var.get()
         send_to_organizer = self.upscale_send_organizer_var.get()
-        export_fmt = self.upscale_format_var.get().lower()
+        export_fmt = self.upscale_format_var.get()
+        # Strip emoji prefix (e.g. "🖼️ PNG" → "png")
+        if " " in export_fmt:
+            export_fmt = export_fmt.split(" ", 1)[1]
+        export_fmt = export_fmt.lower()
         style = self.upscale_style_var.get()
         is_esrgan = "ESRGAN" in style
+        overwrite = self.upscale_overwrite_var.get() if hasattr(self, 'upscale_overwrite_var') else False
 
         def worker():
             import tempfile
@@ -2401,6 +2516,11 @@ class GameTextureSorter(ctk.CTk):
                             rel = Path(fpath.name)
                         out_file = dst_path / rel.with_suffix(f".{export_fmt}")
                         out_file.parent.mkdir(parents=True, exist_ok=True)
+
+                        # Skip existing files unless overwrite is enabled
+                        if out_file.exists() and not overwrite:
+                            self._upscale_log(f"  ⏭️ [{i}/{len(files)}] {fpath.name} (exists, skipped)")
+                            continue
 
                         # Save
                         save_kwargs = {}
@@ -2809,6 +2929,13 @@ class GameTextureSorter(ctk.CTk):
                        command=self.browser_refresh)
         browser_show_archives_cb.pack(side="left", padx=10)
         
+        # Smart search checkbox: match against texture category keywords
+        self.browser_smart_search = ctk.BooleanVar(value=True)
+        browser_smart_cb = ctk.CTkCheckBox(file_header, text="🧠 Smart search",
+                       variable=self.browser_smart_search,
+                       command=self.browser_refresh)
+        browser_smart_cb.pack(side="left", padx=10)
+        
         # File list (scrollable)
         self.browser_file_list = ctk.CTkScrollableFrame(right_pane, height=450)
         self.browser_file_list.pack(fill="both", expand=True, padx=5, pady=5)
@@ -3009,14 +3136,14 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(dialog, text="Region:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
         region_var = ctk.StringVar(value="NTSC-U")
         region_menu = ctk.CTkOptionMenu(dialog, variable=region_var, width=550,
-                                        values=["NTSC-U", "NTSC-J", "PAL", "NTSC-K"])
+                                        values=["🇺🇸 NTSC-U", "🇯🇵 NTSC-J", "🇪🇺 PAL", "🇰🇷 NTSC-K"])
         region_menu.pack(padx=20, pady=5)
         
         # Organization style
         ctk.CTkLabel(dialog, text="Organization Style:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
         style_var = ctk.StringVar(value="by_category")
         style_menu = ctk.CTkOptionMenu(dialog, variable=style_var, width=550,
-                                       values=["by_category", "by_type", "by_size", "flat", "custom"])
+                                       values=["📂 by_category", "📄 by_type", "📏 by_size", "📋 flat", "✏️ custom"])
         style_menu.pack(padx=20, pady=5)
         
         # Naming pattern
@@ -3048,8 +3175,8 @@ class GameTextureSorter(ctk.CTk):
                     description=desc_entry.get().strip(),
                     game_name=game_name_entry.get().strip(),
                     game_serial=serial_entry.get().strip().upper(),
-                    game_region=region_var.get(),
-                    style=style_var.get(),
+                    game_region=self._strip_emoji_prefix(region_var.get()),
+                    style=self._strip_emoji_prefix(style_var.get()),
                     naming_pattern=pattern_entry.get().strip(),
                     auto_classify=auto_classify_var.get()
                 )
@@ -3106,14 +3233,14 @@ class GameTextureSorter(ctk.CTk):
             ctk.CTkLabel(dialog, text="Region:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
             region_var = ctk.StringVar(value=profile.game_region or "NTSC-U")
             region_menu = ctk.CTkOptionMenu(dialog, variable=region_var, width=550,
-                                            values=["NTSC-U", "NTSC-J", "PAL", "NTSC-K"])
+                                            values=["🇺🇸 NTSC-U", "🇯🇵 NTSC-J", "🇪🇺 PAL", "🇰🇷 NTSC-K"])
             region_menu.pack(padx=20, pady=5)
             
             # Organization style
             ctk.CTkLabel(dialog, text="Organization Style:", font=("Arial Bold", 12)).pack(pady=(10, 5), padx=20, anchor="w")
             style_var = ctk.StringVar(value=profile.style or "by_category")
             style_menu = ctk.CTkOptionMenu(dialog, variable=style_var, width=550,
-                                           values=["by_category", "by_type", "by_size", "flat", "custom"])
+                                           values=["📂 by_category", "📄 by_type", "📏 by_size", "📋 flat", "✏️ custom"])
             style_menu.pack(padx=20, pady=5)
             
             # Naming pattern
@@ -3147,8 +3274,8 @@ class GameTextureSorter(ctk.CTk):
                             description=desc_entry.get().strip(),
                             game_name=game_name_entry.get().strip(),
                             game_serial=serial_entry.get().strip().upper(),
-                            game_region=region_var.get(),
-                            style=style_var.get(),
+                            game_region=self._strip_emoji_prefix(region_var.get()),
+                            style=self._strip_emoji_prefix(style_var.get()),
                             naming_pattern=pattern_entry.get().strip(),
                             auto_classify=auto_classify_var.get()
                         )
@@ -3161,8 +3288,8 @@ class GameTextureSorter(ctk.CTk):
                             description=desc_entry.get().strip(),
                             game_name=game_name_entry.get().strip(),
                             game_serial=serial_entry.get().strip().upper(),
-                            game_region=region_var.get(),
-                            style=style_var.get(),
+                            game_region=self._strip_emoji_prefix(region_var.get()),
+                            style=self._strip_emoji_prefix(style_var.get()),
                             naming_pattern=pattern_entry.get().strip(),
                             auto_classify=auto_classify_var.get()
                         )
@@ -3567,6 +3694,7 @@ class GameTextureSorter(ctk.CTk):
             show_all = self.browser_show_all.get() if hasattr(self, 'browser_show_all') else False
             show_archives = self.browser_show_archives.get() if hasattr(self, 'browser_show_archives') else False
             search_query = self.browser_search_var.get().lower() if hasattr(self, 'browser_search_var') else ""
+            smart_search = self.browser_smart_search.get() if hasattr(self, 'browser_smart_search') else False
             current_dir = self.browser_current_dir
             
             def _scan_files():
@@ -3574,7 +3702,44 @@ class GameTextureSorter(ctk.CTk):
                 texture_extensions = {'.dds', '.png', '.jpg', '.jpeg', '.bmp', '.tga'}
                 archive_extensions = {'.zip', '.7z', '.rar', '.tar.gz', '.tgz'}
                 files = []
-                MAX_MATCHING_FILES = 10000
+                MAX_MATCHING_FILES = 50000
+                
+                # Build expanded keyword set for smart search.
+                # When the user types e.g. "gun", find all categories whose
+                # keywords contain "gun" and collect *all* keywords from those
+                # categories so files named "weapon_rifle_01.dds" also match.
+                smart_keywords = set()
+                if search_query and smart_search:
+                    try:
+                        import importlib, re as _re
+                        _spec = importlib.util.spec_from_file_location(
+                            'categories',
+                            str(Path(__file__).parent / 'src' / 'classifier' / 'categories.py'))
+                        _mod = importlib.util.module_from_spec(_spec)
+                        _spec.loader.exec_module(_mod)
+                        for attr_name in dir(_mod):
+                            obj = getattr(_mod, attr_name)
+                            if isinstance(obj, dict) and attr_name.isupper():
+                                for _cat_id, _cat_data in obj.items():
+                                    if not isinstance(_cat_data, dict):
+                                        continue
+                                    kws = _cat_data.get('keywords', [])
+                                    # Check if search_query matches any keyword
+                                    # or the category name itself
+                                    cat_name = _cat_data.get('name', '').lower()
+                                    matched = search_query in cat_name or search_query == _cat_id
+                                    if not matched:
+                                        for kw in kws:
+                                            if search_query in kw.lower():
+                                                matched = True
+                                                break
+                                    if matched:
+                                        # Add all keywords from this category
+                                        for kw in kws:
+                                            smart_keywords.add(kw.lower())
+                    except Exception as e:
+                        logger.debug(f"Smart search category load failed: {e}")
+                
                 try:
                     # Use list() to ensure iterator is properly consumed and closed
                     dir_entries = list(current_dir.iterdir())
@@ -3588,8 +3753,24 @@ class GameTextureSorter(ctk.CTk):
                                 is_archive = suffix in archive_extensions
                                 if not (is_texture or (is_archive and show_archives)):
                                     continue
-                            if search_query and search_query not in f.name.lower():
-                                continue
+                            if search_query:
+                                fname_lower = f.name.lower()
+                                # Direct filename match
+                                if search_query in fname_lower:
+                                    pass  # matches
+                                elif smart_keywords:
+                                    # Smart search: check if filename contains
+                                    # any keyword from matched categories
+                                    found = False
+                                    fname_stem = f.stem.lower()
+                                    for kw in smart_keywords:
+                                        if kw in fname_stem:
+                                            found = True
+                                            break
+                                    if not found:
+                                        continue
+                                else:
+                                    continue
                             files.append(f)
                             if len(files) >= MAX_MATCHING_FILES:
                                 break
@@ -3643,7 +3824,7 @@ class GameTextureSorter(ctk.CTk):
             for widget in self.browser_file_list.winfo_children():
                 widget.destroy()
             
-            MAX_DISPLAY = 200
+            MAX_DISPLAY = 500
             total_files = len(files_sorted)
             display_files = files_sorted[:MAX_DISPLAY]
             
@@ -3733,7 +3914,7 @@ class GameTextureSorter(ctk.CTk):
             filtered_files.sort()
             
             # Display files
-            MAX_DISPLAY = 200
+            MAX_DISPLAY = 500
             total_files = len(filtered_files)
             display_files = filtered_files[:MAX_DISPLAY]
             
@@ -4089,17 +4270,38 @@ class GameTextureSorter(ctk.CTk):
                 self.log(f"✅ Theme applied: {theme.get('name', 'Unknown')}")
                 
             elif setting_type == 'color':
-                # Apply accent color changes to buttons and accents
-                accent_color = value
+                # Apply color changes to the selected target element
+                if isinstance(value, dict):
+                    color = value.get('color', value)
+                    target = value.get('target', 'accent')
+                else:
+                    color = value
+                    target = 'accent'
+                
                 try:
-                    # Update button colors throughout the app
-                    for widget in self.winfo_children():
-                        self._apply_color_to_widget(widget, accent_color)
+                    if target == 'accent':
+                        for widget in self.winfo_children():
+                            self._apply_color_to_widget(widget, color)
+                    elif target == 'background':
+                        try:
+                            self.configure(fg_color=color)
+                        except Exception:
+                            pass
+                    elif target in ('text', 'text_secondary'):
+                        for widget in self.winfo_children():
+                            self._apply_text_color_to_widget(widget, color, target == 'text_secondary')
+                    elif target in ('button', 'button_hover'):
+                        for widget in self.winfo_children():
+                            self._apply_button_color_to_widget(widget, color, target == 'button_hover')
+                    else:
+                        # For primary, secondary, border — apply as accent fallback
+                        for widget in self.winfo_children():
+                            self._apply_color_to_widget(widget, color)
                 except Exception as color_err:
                     logger.debug(f"Could not update all widget colors: {color_err}")
                 
                 self.update_idletasks()
-                self.log(f"✅ Accent color changed: {accent_color}")
+                self.log(f"✅ {target.replace('_', ' ').title()} color changed: {color}")
                 
             elif setting_type == 'cursor':
                 # Apply cursor changes to window and child widgets
@@ -4256,16 +4458,51 @@ class GameTextureSorter(ctk.CTk):
             self.log(f"❌ Error applying customization: {e}")
             logger.error(f"Customization change error: {e}", exc_info=True)
     
+    @staticmethod
+    def _ensure_readable_text(bg_color, text_color):
+        """Return text_color adjusted to guarantee readability against bg_color.
+        
+        If the luminance contrast ratio is too low (< 3:1), returns black or
+        white depending on the background luminance.
+        """
+        try:
+            def _lum(hex_c):
+                hex_c = hex_c.lstrip('#')
+                r, g, b = int(hex_c[0:2], 16), int(hex_c[2:4], 16), int(hex_c[4:6], 16)
+                return (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+            
+            bg_l = _lum(bg_color)
+            tx_l = _lum(text_color)
+            # Simple contrast check (WCAG-like)
+            lighter = max(bg_l, tx_l) + 0.05
+            darker = min(bg_l, tx_l) + 0.05
+            ratio = lighter / darker
+            if ratio < 3.0:
+                # Not enough contrast — pick black or white
+                return "#000000" if bg_l > 0.5 else "#ffffff"
+        except Exception:
+            pass
+        return text_color
+    
     def _apply_theme_to_widget(self, widget, colors):
         """Recursively apply theme colors to a widget and its children"""
+        # Ensure text is readable when both background and text colors are set
+        if 'background' in colors and 'text' in colors:
+            colors = dict(colors)  # shallow copy to avoid mutating caller's dict
+            colors['text'] = self._ensure_readable_text(colors['background'], colors['text'])
+        
         try:
             # Apply colors to CTkButton widgets
             if isinstance(widget, ctk.CTkButton):
                 if 'button' in colors:
                     widget.configure(fg_color=colors['button'])
+                    # Ensure button text readable against button bg
+                    if 'text' in colors:
+                        safe_text = self._ensure_readable_text(colors['button'], colors['text'])
+                        widget.configure(text_color=safe_text)
                 if 'button_hover' in colors:
                     widget.configure(hover_color=colors['button_hover'])
-                if 'text' in colors:
+                if 'text' in colors and 'button' not in colors:
                     widget.configure(text_color=colors['text'])
             
             # Apply colors to CTkLabel widgets
@@ -4482,6 +4719,37 @@ class GameTextureSorter(ctk.CTk):
                 
         except Exception:
             pass  # Ignore widgets that don't support color changes
+    
+    def _apply_text_color_to_widget(self, widget, color, secondary=False):
+        """Recursively apply text color to labels and text widgets"""
+        try:
+            if isinstance(widget, ctk.CTkLabel):
+                # Secondary text: only small/gray labels; Primary: all labels
+                if secondary:
+                    current = widget.cget("text_color")
+                    if current and current in ("gray", "#888888", "#666666", "#999999"):
+                        widget.configure(text_color=color)
+                else:
+                    widget.configure(text_color=color)
+            elif isinstance(widget, ctk.CTkTextbox):
+                widget.configure(text_color=color)
+            for child in widget.winfo_children():
+                self._apply_text_color_to_widget(child, color, secondary)
+        except Exception:
+            pass
+    
+    def _apply_button_color_to_widget(self, widget, color, hover=False):
+        """Recursively apply button color to buttons"""
+        try:
+            if isinstance(widget, ctk.CTkButton):
+                if hover:
+                    widget.configure(hover_color=color)
+                else:
+                    widget.configure(fg_color=color)
+            for child in widget.winfo_children():
+                self._apply_button_color_to_widget(child, color, hover)
+        except Exception:
+            pass
     
     def _apply_cursor_to_widget(self, widget, cursor_type):
         """Recursively apply cursor to a widget and its children"""
@@ -5090,7 +5358,7 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(blend_frame, text="AI Blend Mode:").pack(side="left", padx=10)
         blend_var = ctk.StringVar(value=config.get('ai', 'blend_mode', default='confidence_weighted'))
         blend_menu = ctk.CTkOptionMenu(blend_frame, variable=blend_var,
-                                       values=["confidence_weighted", "max", "average", "offline_only", "online_only"])
+                                       values=["⚖️ confidence_weighted", "🔝 max", "📊 average", "💾 offline_only", "🌐 online_only"])
         blend_menu.pack(side="left", padx=10)
         ctk.CTkLabel(blend_frame, text="(how to combine offline and online predictions)",
                     font=("Arial", 9), text_color="gray").pack(side="left", padx=5)
@@ -5205,7 +5473,7 @@ class GameTextureSorter(ctk.CTk):
         ctk.CTkLabel(loglevel_frame, text="Log Level:").pack(side="left", padx=10)
         loglevel_var = ctk.StringVar(value=config.get('logging', 'log_level', default='INFO'))
         loglevel_menu = ctk.CTkOptionMenu(loglevel_frame, variable=loglevel_var,
-                                          values=["DEBUG", "INFO", "WARNING", "ERROR"])
+                                          values=["🐛 DEBUG", "ℹ️ INFO", "⚠️ WARNING", "❌ ERROR"])
         loglevel_menu.pack(side="left", padx=10)
         
         crash_report_var = ctk.BooleanVar(value=config.get('logging', 'crash_reports', default=True))
@@ -5343,7 +5611,7 @@ class GameTextureSorter(ctk.CTk):
                     raise ValueError(f"File handling settings error: {e}")
                 
                 # Logging
-                config.set('logging', 'log_level', value=loglevel_var.get())
+                config.set('logging', 'log_level', value=self._strip_emoji_prefix(loglevel_var.get()))
                 config.set('logging', 'crash_reports', value=crash_report_var.get())
                 
                 # AI Settings
@@ -5389,7 +5657,7 @@ class GameTextureSorter(ctk.CTk):
                     raise ValueError(f"Online AI settings error: {e}")
                 
                 # AI Blending
-                config.set('ai', 'blend_mode', value=blend_var.get())
+                config.set('ai', 'blend_mode', value=self._strip_emoji_prefix(blend_var.get()))
                 config.set('ai', 'min_confidence', value=float(min_conf_slider.get()))
                 
                 # Hotkeys
