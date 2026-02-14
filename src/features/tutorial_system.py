@@ -1822,7 +1822,7 @@ _PANDA_TOOLTIPS = {
             "Input folder for upscaling. The panda needs to see the before pics.",
             "Browse for the source folder. These textures about to get SWOLE.",
             "Select your input directory. The pixelated victims — I mean, textures.",
-            "Show me the folder. The panda promises to make them bigger. And better.",
+            "Show me the INPUT folder. The panda promises to make them bigger. And better.",
         ]
     },
     'upscale_zip_input': {
