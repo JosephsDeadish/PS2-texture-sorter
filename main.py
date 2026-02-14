@@ -106,6 +106,13 @@ except ImportError:
     print("Warning: Color correction panel not available.")
 
 try:
+    from src.ui.image_repair_panel import ImageRepairPanel
+    IMAGE_REPAIR_AVAILABLE = True
+except ImportError:
+    IMAGE_REPAIR_AVAILABLE = False
+    print("Warning: Image repair panel not available.")
+
+try:
     from src.features.panda_character import PandaCharacter, PandaGender
     PANDA_CHARACTER_AVAILABLE = True
 except ImportError:
@@ -927,6 +934,7 @@ class GameTextureSorter(ctk.CTk):
         self.tab_lineart_converter = self.tabview.add("✏️ Line Art")
         self.tab_batch_rename = self.tabview.add("📝 Batch Rename")
         self.tab_color_correction = self.tabview.add("🎨 Color Correction")
+        self.tab_image_repair = self.tabview.add("🔧 Image Repair")
         self.tab_about = self.tabview.add("ℹ️ About")
         
         # Features tabview (nested) - use scrollable if available
@@ -992,6 +1000,7 @@ class GameTextureSorter(ctk.CTk):
             self.create_lineart_converter_tab,
             self.create_batch_rename_tab,
             self.create_color_correction_tab,
+            self.create_image_repair_tab,
         ])
         
         # Add remaining tabs
@@ -7967,6 +7976,29 @@ class GameTextureSorter(ctk.CTk):
             ctk.CTkLabel(
                 self.tab_color_correction,
                 text=f"Error loading Color Correction:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_image_repair_tab(self):
+        """Create image repair tab for fixing corrupted files"""
+        try:
+            if IMAGE_REPAIR_AVAILABLE:
+                panel = ImageRepairPanel(self.tab_image_repair)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Image Repair tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_image_repair,
+                    text="Image Repair not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating image repair tab: {e}")
+            ctk.CTkLabel(
+                self.tab_image_repair,
+                text=f"Error loading Image Repair:\n{str(e)}",
                 font=("Arial", 12),
                 text_color="red"
             ).pack(pady=20)
