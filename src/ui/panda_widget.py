@@ -3146,13 +3146,24 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 fill=white, outline=black, width=2, tags="body"
             )
             
-            # Belly patch - shifted slightly based on facing direction
-            belly_shift_x = int(4 * sx * side_dir)
-            c.create_oval(
-                cx_draw - int(22 * sx * diag_body_scale) + belly_shift_x, body_top + int(18 * sy),
-                cx_draw + int(22 * sx * diag_body_scale) + belly_shift_x, body_bot - int(14 * sy),
-                fill="#FAFAFA", outline="", tags="belly"
-            )
+            # Belly patch / tail nub depends on facing direction
+            if is_back_facing:
+                # Back-diagonal: small tail nub visible (shifted toward camera side)
+                tail_x = cx_draw - int(6 * sx * side_dir)
+                tail_y = int(148 * sy + by)
+                c.create_oval(
+                    tail_x - int(5 * sx), tail_y - int(4 * sy),
+                    tail_x + int(5 * sx), tail_y + int(4 * sy),
+                    fill=white, outline=black, width=1, tags="tail"
+                )
+            else:
+                # Front-diagonal: belly patch shifted slightly based on facing direction
+                belly_shift_x = int(4 * sx * side_dir)
+                c.create_oval(
+                    cx_draw - int(22 * sx * diag_body_scale) + belly_shift_x, body_top + int(18 * sy),
+                    cx_draw + int(22 * sx * diag_body_scale) + belly_shift_x, body_bot - int(14 * sy),
+                    fill="#FAFAFA", outline="", tags="belly"
+                )
             
             # Front leg (closer to viewer)
             c.create_oval(
@@ -3198,75 +3209,112 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 fill=white, outline=black, width=2, tags="head"
             )
             
-            # Ears - both visible but one smaller (perspective)
-            ear_y = head_cy - head_ry + int(5 * sy)
-            ear_w = int(22 * sx)
-            
-            # Far ear (smaller)
-            far_ear_x = cx_draw - int(head_rx * 0.7 * side_dir) + ear_wiggle
-            c.create_oval(
-                far_ear_x - int(ear_w * 0.4), ear_y - int(14 * sy),
-                far_ear_x + int(ear_w * 0.4), ear_y + int(8 * sy),
-                fill=black, outline=black, tags="ear"
-            )
-            c.create_oval(
-                far_ear_x - int(ear_w * 0.25), ear_y - int(9 * sy),
-                far_ear_x + int(ear_w * 0.25), ear_y + int(3 * sy),
-                fill=pink, outline="", tags="ear_inner"
-            )
-            
-            # Near ear (larger)
-            near_ear_x = cx_draw + int(head_rx * 0.7 * side_dir) + ear_wiggle
-            c.create_oval(
-                near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
-                near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
-                fill=black, outline=black, tags="ear"
-            )
-            c.create_oval(
-                near_ear_x - int(ear_w * 0.3), ear_y - int(10 * sy),
-                near_ear_x + int(ear_w * 0.3), ear_y + int(2 * sy),
-                fill=pink, outline="", tags="ear_inner"
-            )
-            
-            # Eye patches - both visible with diagonal positioning
-            eye_y = head_cy - int(4 * sy)
-            patch_rx = int(12 * sx * diag_body_scale)
-            patch_ry = int(10 * sy)
-            
-            # Far eye patch (smaller, partially obscured)
-            far_eye_x = cx_draw - int(16 * sx * diag_body_scale * side_dir)
-            c.create_oval(
-                far_eye_x - int(patch_rx * 0.8), eye_y - patch_ry,
-                far_eye_x + int(patch_rx * 0.8), eye_y + patch_ry,
-                fill=black, outline="", tags="eye_patch"
-            )
-            
-            # Near eye patch (larger, fully visible)
-            near_eye_x = cx_draw + int(16 * sx * diag_body_scale * side_dir)
-            c.create_oval(
-                near_eye_x - patch_rx, eye_y - patch_ry,
-                near_eye_x + patch_rx, eye_y + patch_ry,
-                fill=black, outline="", tags="eye_patch"
-            )
-            
-            # Draw equipped items on panda body
-            self._draw_equipped_items(c, cx_draw, by, sx, sy)
-            
-            # Eyes with diagonal gaze
-            self._draw_eye_on_patch(c, far_eye_x, eye_y, eye_style, sx, sy, 0.8)
-            self._draw_eye_on_patch(c, near_eye_x, eye_y, eye_style, sx, sy, 1.0)
-            
-            # Nose - centered
-            nose_y = head_cy + int(8 * sy)
-            c.create_oval(
-                cx_draw - int(5 * sx), nose_y - int(4 * sy),
-                cx_draw + int(5 * sx), nose_y + int(4 * sy),
-                fill=nose_color, outline="", tags="nose"
-            )
-            
-            # Mouth
-            self._draw_mouth(c, cx_draw, nose_y + int(8 * sy), mouth_style, 
-                           sx, sy, black, white)
+            if is_back_facing:
+                # --- BACK-DIAGONAL (3/4 back view) ---
+                # Ears seen mostly from behind (no pink inner visible)
+                ear_y = head_cy - head_ry + int(5 * sy)
+                ear_w = int(22 * sx)
+                
+                # Far ear (smaller, further from viewer)
+                far_ear_x = cx_draw - int(head_rx * 0.7 * side_dir) + ear_wiggle
+                c.create_oval(
+                    far_ear_x - int(ear_w * 0.4), ear_y - int(14 * sy),
+                    far_ear_x + int(ear_w * 0.4), ear_y + int(8 * sy),
+                    fill=black, outline=black, tags="ear"
+                )
+                
+                # Near ear (larger, closer to viewer - still back view so no pink)
+                near_ear_x = cx_draw + int(head_rx * 0.7 * side_dir) + ear_wiggle
+                c.create_oval(
+                    near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
+                    near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
+                    fill=black, outline=black, tags="ear"
+                )
+                
+                # Back-of-head marking (light patch to indicate rear view)
+                back_patch_rx = int(18 * sx * diag_body_scale)
+                back_patch_ry = int(12 * sy)
+                c.create_oval(
+                    cx_draw - back_patch_rx, head_cy - back_patch_ry + int(4 * sy),
+                    cx_draw + back_patch_rx, head_cy + back_patch_ry - int(4 * sy),
+                    fill="#F5F5F5", outline="", tags="back_head"
+                )
+                
+                # Draw equipped items
+                self._draw_equipped_items(c, cx_draw, by, sx, sy)
+                
+                # No face features for back-diagonal (walking away from viewer)
+            else:
+                # --- FRONT-DIAGONAL (3/4 front view) ---
+                # Ears - both visible, one smaller (perspective), with pink inner
+                ear_y = head_cy - head_ry + int(5 * sy)
+                ear_w = int(22 * sx)
+                
+                # Far ear (smaller)
+                far_ear_x = cx_draw - int(head_rx * 0.7 * side_dir) + ear_wiggle
+                c.create_oval(
+                    far_ear_x - int(ear_w * 0.4), ear_y - int(14 * sy),
+                    far_ear_x + int(ear_w * 0.4), ear_y + int(8 * sy),
+                    fill=black, outline=black, tags="ear"
+                )
+                c.create_oval(
+                    far_ear_x - int(ear_w * 0.25), ear_y - int(9 * sy),
+                    far_ear_x + int(ear_w * 0.25), ear_y + int(3 * sy),
+                    fill=pink, outline="", tags="ear_inner"
+                )
+                
+                # Near ear (larger)
+                near_ear_x = cx_draw + int(head_rx * 0.7 * side_dir) + ear_wiggle
+                c.create_oval(
+                    near_ear_x - int(ear_w * 0.5), ear_y - int(16 * sy),
+                    near_ear_x + int(ear_w * 0.5), ear_y + int(8 * sy),
+                    fill=black, outline=black, tags="ear"
+                )
+                c.create_oval(
+                    near_ear_x - int(ear_w * 0.3), ear_y - int(10 * sy),
+                    near_ear_x + int(ear_w * 0.3), ear_y + int(2 * sy),
+                    fill=pink, outline="", tags="ear_inner"
+                )
+                
+                # Eye patches - both visible with diagonal positioning
+                eye_y = head_cy - int(4 * sy)
+                patch_rx = int(12 * sx * diag_body_scale)
+                patch_ry = int(10 * sy)
+                
+                # Far eye patch (smaller, partially obscured)
+                far_eye_x = cx_draw - int(16 * sx * diag_body_scale * side_dir)
+                c.create_oval(
+                    far_eye_x - int(patch_rx * 0.8), eye_y - patch_ry,
+                    far_eye_x + int(patch_rx * 0.8), eye_y + patch_ry,
+                    fill=black, outline="", tags="eye_patch"
+                )
+                
+                # Near eye patch (larger, fully visible)
+                near_eye_x = cx_draw + int(16 * sx * diag_body_scale * side_dir)
+                c.create_oval(
+                    near_eye_x - patch_rx, eye_y - patch_ry,
+                    near_eye_x + patch_rx, eye_y + patch_ry,
+                    fill=black, outline="", tags="eye_patch"
+                )
+                
+                # Draw equipped items
+                self._draw_equipped_items(c, cx_draw, by, sx, sy)
+                
+                # Eyes with diagonal gaze
+                self._draw_eye_on_patch(c, far_eye_x, eye_y, eye_style, sx, sy, 0.8)
+                self._draw_eye_on_patch(c, near_eye_x, eye_y, eye_style, sx, sy, 1.0)
+                
+                # Nose - centered
+                nose_y = head_cy + int(8 * sy)
+                c.create_oval(
+                    cx_draw - int(5 * sx), nose_y - int(4 * sy),
+                    cx_draw + int(5 * sx), nose_y + int(4 * sy),
+                    fill=nose_color, outline="", tags="nose"
+                )
+                
+                # Mouth
+                self._draw_mouth(c, cx_draw, nose_y + int(8 * sy), mouth_style, 
+                               sx, sy, black, white)
             
             # Animation extras
             self._draw_animation_extras(c, cx_draw, by, anim, frame_idx, sx, sy)
@@ -6914,10 +6962,22 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._set_animation_no_cancel('tossed')
         self._toss_bounce_count = 0
         
-        # Turn panda toward the direction it's being thrown
+        # Turn panda toward the direction it's being thrown (including diagonals)
         vx = self._toss_velocity_x
         vy = self._toss_velocity_y
-        if abs(vx) > abs(vy):
+        avx = abs(vx)
+        avy = abs(vy)
+        max_av = max(avx, avy)
+        if max_av > 0 and avx > 0 and avy > 0 and min(avx, avy) / max_av > self.DIAGONAL_MOVEMENT_THRESHOLD:
+            if vy < 0 and vx < 0:
+                self._facing_direction = 'back_left'
+            elif vy < 0 and vx > 0:
+                self._facing_direction = 'back_right'
+            elif vy > 0 and vx < 0:
+                self._facing_direction = 'front_left'
+            else:
+                self._facing_direction = 'front_right'
+        elif avx > avy:
             self._facing_direction = 'right' if vx > 0 else 'left'
         else:
             self._facing_direction = 'down' if vy > 0 else 'up'
@@ -6925,7 +6985,11 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             from src.features.panda_character import PandaFacing
             facing_map = {'front': PandaFacing.FRONT, 'back': PandaFacing.BACK,
                           'left': PandaFacing.LEFT, 'right': PandaFacing.RIGHT,
-                          'up': PandaFacing.BACK, 'down': PandaFacing.FRONT}
+                          'up': PandaFacing.BACK, 'down': PandaFacing.FRONT,
+                          'front_left': PandaFacing.FRONT_LEFT,
+                          'front_right': PandaFacing.FRONT_RIGHT,
+                          'back_left': PandaFacing.BACK_LEFT,
+                          'back_right': PandaFacing.BACK_RIGHT}
             self.panda.set_facing(facing_map.get(self._facing_direction, PandaFacing.FRONT))
         self._toss_physics_tick()
     
@@ -6977,11 +7041,23 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 self._toss_bounce_count += 1
                 # Squash on impact (cartoon physics)
                 self._squash_factor = 0.7
-                # Update facing direction after bounce reversal
+                # Update facing direction after bounce reversal (including diagonals)
                 vx = self._toss_velocity_x
                 vy = self._toss_velocity_y
+                avx = abs(vx)
+                avy = abs(vy)
+                max_av = max(avx, avy)
                 new_facing = self._facing_direction
-                if abs(vx) > abs(vy):
+                if max_av > 0 and avx > 0 and avy > 0 and min(avx, avy) / max_av > self.DIAGONAL_MOVEMENT_THRESHOLD:
+                    if vy < 0 and vx < 0:
+                        new_facing = 'back_left'
+                    elif vy < 0 and vx > 0:
+                        new_facing = 'back_right'
+                    elif vy > 0 and vx < 0:
+                        new_facing = 'front_left'
+                    else:
+                        new_facing = 'front_right'
+                elif avx > avy:
                     new_facing = 'right' if vx > 0 else 'left'
                 else:
                     new_facing = 'down' if vy > 0 else 'up'
