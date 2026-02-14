@@ -239,10 +239,12 @@ def bitmap_to_svg(
         Color difference threshold for edge detection (0-255).
         Lower values = more detail. Only used by native implementation.
     mode : str, default "color"
-        Tracing mode: "color", "binary", or "spline".
+        Tracing mode: "color", "binary", "spline", "polygon", or "none".
         - "color": Full color vectorization
         - "binary": Black and white tracing
         - "spline": Smooth spline curves
+        - "polygon": Polygon-based paths
+        - "none": No path simplification
         Only used by native implementation.
 
     Returns
@@ -264,7 +266,6 @@ def bitmap_to_svg(
     # Pure-Python fallback using edge detection
     try:
         import cv2
-        from xml.sax.saxutils import escape
 
         # Convert to grayscale for edge detection
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)

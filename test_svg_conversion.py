@@ -183,7 +183,7 @@ def test_svg_edge_cases():
         empty_img = np.zeros((0, 0, 3), dtype=np.uint8)
         svg = bitmap_to_svg(empty_img)
         print(f"  Empty image: Handled gracefully")
-    except (ValueError, Exception) as e:
+    except Exception as e:
         print(f"  Empty image: Raised expected error")
     
     # Single pixel
