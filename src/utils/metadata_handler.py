@@ -132,18 +132,16 @@ class MetadataHandler:
                 # Add info dict for formats that support it (like PNG)
                 if 'info' in metadata and output_path.suffix.lower() in {'.png', '.webp'}:
                     # PNG metadata
-                    pnginfo = None
-                    if 'info' in metadata:
-                        from PIL import PngImagePlugin
-                        pnginfo = PngImagePlugin.PngInfo()
-                        for key, value in metadata['info'].items():
-                            if isinstance(key, str) and isinstance(value, (str, bytes)):
-                                try:
-                                    pnginfo.add_text(key, value if isinstance(value, str) else value.decode('utf-8', errors='ignore'))
-                                except Exception:
-                                    pass
-                        final_kwargs['pnginfo'] = pnginfo
-                        metadata_preserved = True
+                    from PIL import PngImagePlugin
+                    pnginfo = PngImagePlugin.PngInfo()
+                    for key, value in metadata['info'].items():
+                        if isinstance(key, str) and isinstance(value, (str, bytes)):
+                            try:
+                                pnginfo.add_text(key, value if isinstance(value, str) else value.decode('utf-8', errors='ignore'))
+                            except Exception:
+                                pass
+                    final_kwargs['pnginfo'] = pnginfo
+                    metadata_preserved = True
             
             # Save the image
             image.save(output_path, **final_kwargs)

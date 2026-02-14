@@ -2877,7 +2877,19 @@ class GameTextureSorter(ctk.CTk):
                     self._upscale_log("📋 Metadata preservation enabled")
                     
                     # Check format support and warn user
-                    file_ext = f".{export_fmt}"
+                    # Map format names to proper extensions
+                    format_to_ext = {
+                        'jpeg': '.jpg',
+                        'jpg': '.jpg',
+                        'png': '.png',
+                        'tiff': '.tiff',
+                        'tif': '.tiff',
+                        'bmp': '.bmp',
+                        'webp': '.webp',
+                        'tga': '.tga',
+                        'dds': '.dds'
+                    }
+                    file_ext = format_to_ext.get(export_fmt.lower(), f".{export_fmt}")
                     supports_exif, warning = metadata_handler.check_format_support(file_ext)
                     if warning:
                         self._upscale_log(f"⚠️  {warning}")
