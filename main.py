@@ -6747,7 +6747,11 @@ class GameTextureSorter(ctk.CTk):
                 config.set('ai', 'bg_remover_api_key', value=bgr_api_key_var.get())
                 config.set('ai', 'upscaler_model', value=ups_model_var.get())
                 config.set('ai', 'upscaler_use_gpu', value=ups_gpu_var.get())
-                config.set('ai', 'upscaler_tile_size', value=int(ups_tile_var.get() or 0))
+                try:
+                    _tile = int(ups_tile_var.get() or 0)
+                except (ValueError, TypeError):
+                    _tile = 0
+                config.set('ai', 'upscaler_tile_size', value=_tile)
                 config.set('ai', 'upscaler_custom_api', value=ups_use_custom_var.get())
                 config.set('ai', 'upscaler_api_url', value=ups_api_url_var.get())
                 config.set('ai', 'upscaler_api_key', value=ups_api_key_var.get())

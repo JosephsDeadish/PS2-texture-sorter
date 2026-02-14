@@ -10,7 +10,6 @@ from typing import List, Optional
 import logging
 from PIL import Image, ImageTk
 import threading
-import time
 
 from src.tools.lineart_converter import (
     LineArtConverter, LineArtSettings,
