@@ -3294,21 +3294,33 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             leg_top = int(145 * sy + by)
             leg_len = int(30 * sy)
             
+            # Perspective depth for legs (same principle as arms)
+            leg_depth = abs(self._drag_body_angle) / math.pi * 0.12 if abs(self._drag_body_angle) > 0.05 else 0.0
+            if self._drag_body_angle > 0:
+                left_leg_scale = 1.0 - leg_depth
+                right_leg_scale = 1.0 + leg_depth
+            else:
+                left_leg_scale = 1.0 + leg_depth
+                right_leg_scale = 1.0 - leg_depth
+            
             # Apply individual limb dangle physics during drag
             # Left leg (vertical + horizontal dangle)
             left_leg_dangle = int(self._dangle_left_leg) if is_being_dragged else 0
             left_leg_dangle_h = int(self._dangle_left_leg_h) if is_being_dragged else 0
             left_leg_x = cx_draw - int(25 * sx) + left_leg_dangle_h
             left_leg_swing = leg_swing + left_leg_dangle
+            ll_rx = int(12 * sx * left_leg_scale)
+            ll_ry = int(leg_len * left_leg_scale)
             c.create_oval(
-                left_leg_x - int(12 * sx), leg_top + left_leg_swing,
-                left_leg_x + int(12 * sx), leg_top + leg_len + left_leg_swing,
+                left_leg_x - ll_rx, leg_top + left_leg_swing,
+                left_leg_x + ll_rx, leg_top + ll_ry + left_leg_swing,
                 fill=black, outline=black, tags="leg"
             )
             # Left foot (white pad)
+            lf_rx = int(10 * sx * left_leg_scale)
             c.create_oval(
-                left_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + left_leg_swing,
-                left_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + left_leg_swing,
+                left_leg_x - lf_rx, leg_top + ll_ry - int(8 * sy) + left_leg_swing,
+                left_leg_x + lf_rx, leg_top + ll_ry + int(4 * sy) + left_leg_swing,
                 fill=white, outline=black, width=1, tags="foot"
             )
             
@@ -3317,15 +3329,18 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             right_leg_dangle_h = int(self._dangle_right_leg_h) if is_being_dragged else 0
             right_leg_x = cx_draw + int(25 * sx) + right_leg_dangle_h
             right_leg_swing = -leg_swing + right_leg_dangle
+            rl_rx = int(12 * sx * right_leg_scale)
+            rl_ry = int(leg_len * right_leg_scale)
             c.create_oval(
-                right_leg_x - int(12 * sx), leg_top + right_leg_swing,
-                right_leg_x + int(12 * sx), leg_top + leg_len + right_leg_swing,
+                right_leg_x - rl_rx, leg_top + right_leg_swing,
+                right_leg_x + rl_rx, leg_top + rl_ry + right_leg_swing,
                 fill=black, outline=black, tags="leg"
             )
             # Right foot (white pad)
+            rf_rx = int(10 * sx * right_leg_scale)
             c.create_oval(
-                right_leg_x - int(10 * sx), leg_top + leg_len - int(8 * sy) + right_leg_swing,
-                right_leg_x + int(10 * sx), leg_top + leg_len + int(4 * sy) + right_leg_swing,
+                right_leg_x - rf_rx, leg_top + rl_ry - int(8 * sy) + right_leg_swing,
+                right_leg_x + rf_rx, leg_top + rl_ry + int(4 * sy) + right_leg_swing,
                 fill=white, outline=black, width=1, tags="foot"
             )
             
@@ -3354,14 +3369,27 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             arm_top = int(95 * sy + by)
             arm_len = int(35 * sy)
             
+            # Perspective depth: when body is rotated, near arm is bigger, far arm smaller
+            depth_factor = abs(self._drag_body_angle) / math.pi * 0.15 if abs(self._drag_body_angle) > 0.05 else 0.0
+            # Positive angle = tilting right → right arm is nearer
+            if self._drag_body_angle > 0:
+                left_arm_scale = 1.0 - depth_factor
+                right_arm_scale = 1.0 + depth_factor
+            else:
+                left_arm_scale = 1.0 + depth_factor
+                right_arm_scale = 1.0 - depth_factor
+            
             # Apply individual limb dangle physics during drag
             # Left arm (vertical + horizontal dangle)
             left_arm_dangle = int(self._dangle_left_arm) if is_being_dragged else 0
             left_arm_dangle_h = int(self._dangle_left_arm_h) if is_being_dragged else 0
             la_swing = arm_swing + left_arm_dangle
+            la_rx = int(12.5 * sx * left_arm_scale)
+            la_ry = int(17.5 * sy * left_arm_scale)
+            la_cx = cx_draw - int(42.5 * sx) + left_arm_dangle_h
             c.create_oval(
-                cx_draw - int(55 * sx) + left_arm_dangle_h, arm_top + la_swing,
-                cx_draw - int(30 * sx) + left_arm_dangle_h, arm_top + arm_len + la_swing,
+                la_cx - la_rx, arm_top + la_swing,
+                la_cx + la_rx, arm_top + la_swing + la_ry * 2,
                 fill=black, outline=black, tags="arm"
             )
             
@@ -3369,9 +3397,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
             right_arm_dangle = int(self._dangle_right_arm) if is_being_dragged else 0
             right_arm_dangle_h = int(self._dangle_right_arm_h) if is_being_dragged else 0
             ra_swing = -arm_swing + right_arm_dangle
+            ra_rx = int(12.5 * sx * right_arm_scale)
+            ra_ry = int(17.5 * sy * right_arm_scale)
+            ra_cx = cx_draw + int(42.5 * sx) + right_arm_dangle_h
             c.create_oval(
-                cx_draw + int(30 * sx) + right_arm_dangle_h, arm_top + ra_swing,
-                cx_draw + int(55 * sx) + right_arm_dangle_h, arm_top + arm_len + ra_swing,
+                ra_cx - ra_rx, arm_top + ra_swing,
+                ra_cx + ra_rx, arm_top + ra_swing + ra_ry * 2,
                 fill=black, outline=black, tags="arm"
             )
             
