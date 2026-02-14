@@ -3484,7 +3484,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # --- Squash/stretch on impact (cartoon physics) ---
         squash = self._squash_factor
         if abs(squash - 1.0) > 0.01:
-            stretch_x = 1.0 + (1.0 - squash) * 0.5  # wider when squashed
+            # Volume-preserving: squash vertically → stretch horizontally
+            stretch_x = 1.0 + (1.0 - squash) * 0.5
             foot_y = int(175 * sy + by)
             c.scale("all", w / 2, foot_y, stretch_x, squash)
         

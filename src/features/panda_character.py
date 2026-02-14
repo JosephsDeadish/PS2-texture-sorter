@@ -65,7 +65,7 @@ class PandaCharacter:
     
     # Body part region boundaries (relative Y position 0.0-1.0)
     # Calibrated to the 220×380 canvas (sx=W/160, sy=H/200) with
-    # PANDA_DRAW_Y_OFFSET=20.  Actual pixel Y = base_y * sy + offset,
+    # PANDA_DRAW_Y_OFFSET = 20. Actual pixel Y = base_y * sy + offset,
     # so rel_y ≈ base_y/200 + 0.053.
     # Ears (base 9-33)  → rel 0.10-0.22
     # Head (base 20-84) → rel 0.15-0.47
