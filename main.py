@@ -1887,8 +1887,24 @@ class GameTextureSorter(ctk.CTk):
                     elif from_format == '.png' and to_format == '.dds':
                         self.file_handler.convert_png_to_dds(str(file_path), str(target_path))
                     elif from_format in ('.svg', '.svgz') and to_format in ('.png', '.jpg', '.jpeg', '.bmp', '.tga'):
-                        # SVG to raster conversion
-                        result = self.file_handler.convert_svg_to_png(file_path, target_path)
+                        # SVG to raster: first convert to PNG, then to target format if needed
+                        if to_format == '.png':
+                            result = self.file_handler.convert_svg_to_png(file_path, target_path)
+                        else:
+                            # Convert SVG → PNG in memory, then save as target format
+                            import tempfile
+                            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                                tmp_png = Path(tmp.name)
+                            result = self.file_handler.convert_svg_to_png(file_path, tmp_png)
+                            if result:
+                                from PIL import Image as _Img
+                                _img = _Img.open(tmp_png)
+                                _img.save(target_path)
+                                _img.close()
+                                tmp_png.unlink(missing_ok=True)
+                                result = target_path
+                            else:
+                                tmp_png.unlink(missing_ok=True)
                         if not result:
                             raise RuntimeError("SVG conversion failed (cairosvg may not be available)")
                     elif to_format == '.svg' and from_format not in ('.svg', '.svgz'):
