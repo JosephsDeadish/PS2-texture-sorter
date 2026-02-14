@@ -56,13 +56,8 @@ class ScrollableTabView(ctk.CTkFrame):
         tab_frame = ctk.CTkFrame(self.content_frame)
         self.tabs[name] = tab_frame
 
-        # Determine which row this button goes in
-        idx = len(self.tab_buttons)
-        half = max(1, math.ceil(len(self.tabs) / 2))
-        parent_row = self.row1 if idx < half else self.row2
-
         btn = ctk.CTkButton(
-            parent_row,
+            self.row1,
             text=name,
             command=lambda n=name: self.set(n),
             height=28,
@@ -71,7 +66,6 @@ class ScrollableTabView(ctk.CTkFrame):
             fg_color=["gray75", "gray25"],
             hover_color=["gray70", "gray30"],
         )
-        btn.pack(side="left", padx=2, pady=1)
         self.tab_buttons[name] = btn
 
         # Re-balance rows whenever total count changes
