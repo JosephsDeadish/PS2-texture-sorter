@@ -3175,8 +3175,8 @@ class GameTextureSorter(ctk.CTk):
                     description=desc_entry.get().strip(),
                     game_name=game_name_entry.get().strip(),
                     game_serial=serial_entry.get().strip().upper(),
-                    game_region=region_var.get(),
-                    style=style_var.get(),
+                    game_region=self._strip_emoji_prefix(region_var.get()),
+                    style=self._strip_emoji_prefix(style_var.get()),
                     naming_pattern=pattern_entry.get().strip(),
                     auto_classify=auto_classify_var.get()
                 )
@@ -3274,8 +3274,8 @@ class GameTextureSorter(ctk.CTk):
                             description=desc_entry.get().strip(),
                             game_name=game_name_entry.get().strip(),
                             game_serial=serial_entry.get().strip().upper(),
-                            game_region=region_var.get(),
-                            style=style_var.get(),
+                            game_region=self._strip_emoji_prefix(region_var.get()),
+                            style=self._strip_emoji_prefix(style_var.get()),
                             naming_pattern=pattern_entry.get().strip(),
                             auto_classify=auto_classify_var.get()
                         )
@@ -3288,8 +3288,8 @@ class GameTextureSorter(ctk.CTk):
                             description=desc_entry.get().strip(),
                             game_name=game_name_entry.get().strip(),
                             game_serial=serial_entry.get().strip().upper(),
-                            game_region=region_var.get(),
-                            style=style_var.get(),
+                            game_region=self._strip_emoji_prefix(region_var.get()),
+                            style=self._strip_emoji_prefix(style_var.get()),
                             naming_pattern=pattern_entry.get().strip(),
                             auto_classify=auto_classify_var.get()
                         )
@@ -5611,7 +5611,7 @@ class GameTextureSorter(ctk.CTk):
                     raise ValueError(f"File handling settings error: {e}")
                 
                 # Logging
-                config.set('logging', 'log_level', value=loglevel_var.get())
+                config.set('logging', 'log_level', value=self._strip_emoji_prefix(loglevel_var.get()))
                 config.set('logging', 'crash_reports', value=crash_report_var.get())
                 
                 # AI Settings
@@ -5657,7 +5657,7 @@ class GameTextureSorter(ctk.CTk):
                     raise ValueError(f"Online AI settings error: {e}")
                 
                 # AI Blending
-                config.set('ai', 'blend_mode', value=blend_var.get())
+                config.set('ai', 'blend_mode', value=self._strip_emoji_prefix(blend_var.get()))
                 config.set('ai', 'min_confidence', value=float(min_conf_slider.get()))
                 
                 # Hotkeys

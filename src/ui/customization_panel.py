@@ -171,7 +171,7 @@ class ColorWheelWidget(ctk.CTkFrame):
             "🎨 accent", "🔵 primary", "🟣 secondary", "🖼️ background",
             "🔘 button", "✨ button_hover", "📝 text", "💬 text_secondary", "📏 border"
         ]
-        self._target_display_to_key = {v: v.split(" ", 1)[1] for v in target_options}
+        self._target_display_to_key = {v: v.split(" ", 1)[1] if " " in v else v for v in target_options}
         target_menu = ctk.CTkOptionMenu(target_frame, variable=self.color_target_var,
                                         values=target_options, width=200,
                                         command=self._on_target_change)
@@ -783,7 +783,7 @@ class CursorCustomizer(ctk.CTkFrame):
         picker_window.title("Pick Tint Color")
         picker_window.geometry("400x500")
         
-        def on_color_selected(color):
+        def on_color_selected(color, target=None):
             self.current_tint = color
             self.tint_var.set(color)
             self.tint_preview.configure(fg_color=color)
