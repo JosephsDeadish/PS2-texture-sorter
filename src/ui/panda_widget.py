@@ -192,8 +192,8 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     
     # Offset in pixels for where food/toy items appear relative to the panda
     # when given from the menu (the panda walks this distance to pick them up)
-    ITEM_WALK_OFFSET_X = 80
-    ITEM_WALK_OFFSET_Y = 30
+    ITEM_WALK_OFFSET_X = 160
+    ITEM_WALK_OFFSET_Y = 60
     
     # Recovery time after falling on face or tipping over (ms)
     FALL_RECOVERY_TIME_MS = 5000
@@ -5959,11 +5959,12 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         if self._destroyed:
             return
         
+        # Stop any active auto-walk so we don't conflict
+        if self._is_auto_walking:
+            self._is_auto_walking = False
+        
         # Set the active item so it renders during the interaction
         self.set_active_item(item_name, item_emoji, item_type, item_key, item_physics)
-        
-        # Start walking animation
-        self._set_animation_no_cancel('carrying' if item_type == 'food' else 'playing')
         
         # Get current panda position
         try:
@@ -5990,6 +5991,47 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         self._walk_on_arrive = on_arrive
         self._walk_item_type = item_type
         
+        # Set facing direction based on movement direction (same logic as _start_auto_walk)
+        adx = abs(dx)
+        ady = abs(dy)
+        if adx > 0 and ady > 0 and min(adx, ady) / max(adx, ady) > self.DIAGONAL_MOVEMENT_THRESHOLD:
+            if dy < 0 and dx < 0:
+                self._facing_direction = 'back_left'
+                walk_anim = 'walking_up_left'
+            elif dy < 0 and dx > 0:
+                self._facing_direction = 'back_right'
+                walk_anim = 'walking_up_right'
+            elif dy > 0 and dx < 0:
+                self._facing_direction = 'front_left'
+                walk_anim = 'walking_down_left'
+            else:
+                self._facing_direction = 'front_right'
+                walk_anim = 'walking_down_right'
+        elif adx > ady:
+            self._facing_direction = 'right' if dx > 0 else 'left'
+            walk_anim = 'walking_right' if dx > 0 else 'walking_left'
+        else:
+            self._facing_direction = 'down' if dy > 0 else 'up'
+            walk_anim = 'walking_down' if dy > 0 else 'walking_up'
+        
+        # Update panda character facing if available
+        if self.panda and hasattr(self.panda, 'set_facing'):
+            try:
+                from src.features.panda_character import PandaFacing
+                facing_map = {'front': PandaFacing.FRONT, 'back': PandaFacing.BACK,
+                              'left': PandaFacing.LEFT, 'right': PandaFacing.RIGHT,
+                              'up': PandaFacing.BACK, 'down': PandaFacing.FRONT,
+                              'front_left': PandaFacing.FRONT_LEFT,
+                              'front_right': PandaFacing.FRONT_RIGHT,
+                              'back_left': PandaFacing.BACK_LEFT,
+                              'back_right': PandaFacing.BACK_RIGHT}
+                self.panda.set_facing(facing_map.get(self._facing_direction, PandaFacing.FRONT))
+            except Exception:
+                pass
+        
+        # Start directional walking animation so the panda visually walks
+        self.start_animation(walk_anim)
+        
         # Show speech
         if self.panda and item_name:
             response = self.panda.on_item_interact(item_name, item_type, item_physics)
@@ -6004,7 +6046,15 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         
         self._walk_step_count += 1
         if self._walk_step_count > self._walk_total_steps:
-            # Arrived at the item
+            # Arrived at the item — reset facing to front
+            self._facing_direction = 'front'
+            if self.panda and hasattr(self.panda, 'set_facing'):
+                try:
+                    from src.features.panda_character import PandaFacing
+                    self.panda.set_facing(PandaFacing.FRONT)
+                except Exception:
+                    pass
+            
             if self._walk_item_type == 'food':
                 # Food: multi-phase sequence — pickup comment, then detailed eat
                 if self.panda and self._active_item_name:
@@ -6015,13 +6065,13 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                 # Callback fires only after the full eating animation finishes
                 # (handled inside _eating_sequence_tick)
             else:
-                # Toys: play animation normally
-                self.play_animation_once('playing')
+                # Toys: switch to playing animation now that we've arrived
                 if self._walk_on_arrive:
                     try:
                         self._walk_on_arrive()
                     except Exception:
                         pass
+                self.play_animation_once('playing')
             return
         
         try:
@@ -7321,14 +7371,36 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                         wkey = k
                         break
 
-            # Determine a target position slightly in front of the panda
-            # so it visibly walks to pick the item up.
+            # Determine a target position the panda will walk to.
+            # Randomize direction so the panda walks in varied directions each time.
             try:
                 px = self._toplevel.winfo_x()
                 py = self._toplevel.winfo_y()
-                # Place the item ~80px to the right and ~30px below the panda
-                target_x = px + self._toplevel_w // 2 + self.ITEM_WALK_OFFSET_X
-                target_y = py + self._toplevel_h // 2 + self.ITEM_WALK_OFFSET_Y
+                panda_cx = px + self._toplevel_w // 2
+                panda_cy = py + self._toplevel_h // 2
+                
+                # Pick a random direction (angle) and walk the offset distance
+                angle = random.uniform(0, 2 * math.pi)
+                walk_dist_x = self.ITEM_WALK_OFFSET_X
+                walk_dist_y = self.ITEM_WALK_OFFSET_Y
+                offset_x = int(math.cos(angle) * walk_dist_x)
+                offset_y = int(math.sin(angle) * walk_dist_y)
+                # Ensure minimum movement so the walk is visible
+                if abs(offset_x) < 40:
+                    offset_x = 40 * (1 if offset_x >= 0 else -1)
+                if abs(offset_y) < 20:
+                    offset_y = 20 * (1 if offset_y >= 0 else -1)
+                
+                target_x = panda_cx + offset_x
+                target_y = panda_cy + offset_y
+                
+                # Clamp target within application bounds
+                try:
+                    min_x, min_y, max_x, max_y = self._get_main_window_bounds()
+                    target_x = max(min_x, min(target_x, max_x))
+                    target_y = max(min_y, min(target_y, max_y))
+                except Exception:
+                    pass
             except Exception:
                 target_x, target_y = 0, 0
 
@@ -7359,7 +7431,6 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
                     result = widget.use()
                     message = result.get('message', f"Panda enjoys the {widget.name}!")
                     self.info_label.configure(text=message)
-                    self.play_animation_once(result.get('animation', 'playing'))
                     if self.panda_level_system:
                         try:
                             xp = self.panda_level_system.get_xp_reward('click')
