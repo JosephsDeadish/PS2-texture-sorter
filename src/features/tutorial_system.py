@@ -2007,6 +2007,202 @@ _PANDA_TOOLTIPS = {
             "Looks terrible? Rate it. The panda uses this data to improve. Allegedly.",
         ]
     },
+    'upscale_sharpen': {
+        'normal': [
+            "Apply sharpening filter after upscaling to enhance edges and fine detail",
+            "Post-process with an unsharp mask to restore crispness",
+            "Sharpen output — great for textures that look soft after upscaling",
+            "Adds a sharpening pass to the upscaled result — preview updates live",
+        ],
+        'vulgar': [
+            "Make it CRISPY. Like a well-done pizza crust but for pixels.",
+            "Sharpen those blurry-ass edges. Your textures deserve better.",
+            "Click to make the upscale look less like it was smeared in vaseline.",
+            "ENHANCE! *slams table* — actually works unlike CSI zoom-enhance.",
+            "Sharpening: because nobody asked for blurry textures. Nobody.",
+            "Turn on the edge enhancer. Preview updates right away so you can see the magic.",
+            "Make your pixels ANGRY and DEFINED. Soft is for pillows, not textures.",
+            "Crispify those edges! The panda demands HD-quality sharpness.",
+        ]
+    },
+    'upscale_denoise': {
+        'normal': [
+            "Apply noise reduction to remove compression artifacts",
+            "Smooth out grainy noise from the upscaled result",
+            "Reduce visual noise — useful for JPEG source images",
+            "Gentle blur to clean up artifacts — preview updates live",
+        ],
+        'vulgar': [
+            "Remove that grainy bullshit from your textures. You're welcome.",
+            "Denoise: because your source images look like they were photographed during an earthquake.",
+            "Smooth out the pixel vomit. The panda hates noisy textures.",
+            "Click to remove artifacts. Turns 'crusty JPEG' into 'slightly less crusty.'",
+            "Noise reduction ON. Your textures were screaming, now they whisper.",
+            "Clean up those compression artifacts. Whoever saved as JPEG should be ashamed.",
+            "Shhh... quiet those noisy pixels. The panda needs its beauty sleep.",
+            "De-crustify your images. Preview updates live so you can watch the magic happen.",
+        ]
+    },
+    'upscale_face_enhance': {
+        'normal': [
+            "Enhance facial features in character textures",
+            "Apply face-specific processing for better results on portraits",
+            "Optimize upscaling for face and character textures",
+        ],
+        'vulgar': [
+            "Give those low-res faces a glow-up. Botox for pixels, basically.",
+            "Face enhancer: because your characters shouldn't look like potatoes.",
+            "Click to make faces look like FACES and not abstract art.",
+            "Enhance faces! Your NPCs deserve to not look like melted wax figures.",
+            "Turn on face mode. The panda promises better cheekbones for everyone.",
+            "Fix those fugly faces. Every pixel deserves jawline definition.",
+            "Character faces looking rough? This'll make them look merely 'meh.'",
+        ]
+    },
+    'upscale_gpu': {
+        'normal': [
+            "Use GPU acceleration for faster upscaling",
+            "Enable CUDA/OpenCL processing — requires compatible graphics card",
+            "Speed up upscaling with GPU compute",
+        ],
+        'vulgar': [
+            "Make your GPU earn its keep. It's been slacking playing games all day.",
+            "GPU go BRRRRR. Uses your graphics card for SPEED.",
+            "Engage turbo mode! Your GPU didn't cost $500 to sit there idle.",
+            "Click to wake up your graphics card from its gaming-only retirement.",
+            "GPU acceleration: because your CPU was crying and your GPU was bored.",
+            "Put that overpriced graphics card to work! COMPUTE, damn you!",
+            "Turn on the rocket engines! Requires an actual GPU, not hopes and dreams.",
+        ]
+    },
+    'upscale_tile_seamless': {
+        'normal': [
+            "Ensure texture tiles seamlessly after upscaling",
+            "Edge-wrap processing for repeating/tiling textures",
+            "Best for floor, wall, and fabric textures that need to tile",
+            "Prevents visible seams at tile boundaries after upscale",
+        ],
+        'vulgar': [
+            "Make your tiles actually TILE. Revolutionary concept, we know.",
+            "Seamless mode: because visible seams are the worst thing since dial-up.",
+            "Click so your floor textures don't look like a bad wallpaper job.",
+            "Tiling mode ON. Your walls won't have that 'I clearly repeat' look.",
+            "Remove seams! Nobody wants to see where your texture goes 'copy paste copy paste.'",
+            "Seamless tiling for the OCD perfectionist in all of us.",
+            "For tiling textures. If you use this on a character face, the panda judges you.",
+            "Make repeating textures actually seamless. Groundbreaking, honestly.",
+        ]
+    },
+    'upscale_normal_map': {
+        'normal': [
+            "Process image as a normal map — preserves directional lighting data",
+            "Normal map mode keeps RGB channel data physically accurate",
+            "Optimized for normal/bump map textures used in 3D rendering",
+        ],
+        'vulgar': [
+            "Normal map mode. For those blue-purple textures that make surfaces bumpy.",
+            "Treat this as a NORMAL MAP. The panda knows what normals are. Allegedly.",
+            "Click if this is one of those weird blue textures. Trust the process.",
+            "Normal map processing! Preserves those precious XYZ vectors or whatever.",
+            "For normal maps ONLY. If you click this on a regular texture, chaos ensues.",
+            "Blue-purple bumpy texture? Click this. Regular photo? Don't.",
+            "Preserve lighting data during upscale. The 3D nerds will thank you.",
+        ]
+    },
+    'upscale_auto_level': {
+        'normal': [
+            "Auto-level: stretch color histogram to full 0–255 range",
+            "Automatically adjust contrast for better tonal range",
+            "Improve washed-out textures by auto-stretching brightness levels",
+            "Auto-contrast enhancement — preview updates live",
+        ],
+        'vulgar': [
+            "Auto-level: makes your washed-out textures less... washed out. Shocker.",
+            "ENHANCE THE CONTRAST! Your textures look like they've been left in the sun.",
+            "Click to un-fade your textures. The panda disapproves of low contrast.",
+            "Stretch those histograms! (That sounded dirtier than intended.)",
+            "Auto-level colors because your textures have the contrast of a foggy day.",
+            "Fix that flat, lifeless look. Preview updates live so you can gasp in real time.",
+            "Contrast boost! Go from 'meh gray blob' to 'ooh, actual colors!'",
+            "The 'make it not look like crap' button. Uses histogram stretching. Very fancy.",
+        ]
+    },
+    'upscale_overwrite': {
+        'normal': [
+            "Overwrite existing output files instead of skipping them",
+            "When enabled, re-processes files that already exist in the output folder",
+            "If unchecked, files already in the output directory are skipped",
+        ],
+        'vulgar': [
+            "Overwrite mode: DESTROY the old files. No mercy. No backup.",
+            "Click to enable file destruction. Old outputs get REPLACED.",
+            "Replace existing files? Living dangerously, I see.",
+            "Overwrite: because you want the NEW version, not that old garbage.",
+            "Enable to re-do everything. The panda respects your commitment to perfection.",
+            "Skip nothing! Overwrite EVERYTHING! ...hope you have backups.",
+            "Bulldoze existing files. The panda takes no prisoners.",
+        ]
+    },
+    'upscale_zoom_out': {
+        'normal': [
+            "Zoom out — shrink the preview thumbnails",
+            "Decrease preview zoom level by 25%",
+            "See more of the texture at a smaller size",
+        ],
+        'vulgar': [
+            "Zoom OUT. See more, squint harder. The panda has tiny eyes too.",
+            "Make the preview smaller. For when you want to see the big picture. Literally.",
+            "Shrink! The preview, not your expectations.",
+            "Zoom out so you can pretend the artifacts aren't visible.",
+            "ENHANCE— wait no, the opposite of that.",
+        ]
+    },
+    'upscale_zoom_in': {
+        'normal': [
+            "Zoom in — enlarge the preview thumbnails",
+            "Increase preview zoom level by 25%",
+            "Get a closer look at the upscale result details",
+        ],
+        'vulgar': [
+            "Zoom IN. Get uncomfortably close to those pixels.",
+            "ENHANCE! Finally, a zoom that actually works.",
+            "Get closer! Inspect every single damn pixel if you want.",
+            "Zoom in to either admire or be horrified by the details.",
+            "Magnify! The panda wants to see those pores... er, pixels.",
+        ]
+    },
+    'upscale_zoom_fit': {
+        'normal': [
+            "Reset preview zoom to 100%",
+            "Fit preview back to default size",
+            "Return to standard preview zoom level",
+        ],
+        'vulgar': [
+            "Back to normal! Reset zoom to 100%. The boring default.",
+            "Fit to size. Like finding the right pair of pants but for previews.",
+            "Reset zoom. The panda prefers the Goldilocks view — juuust right.",
+            "Undo your zoom rampage. Return to sensible preview size.",
+            "100% zoom. Not too big, not too small. The panda approves.",
+        ]
+    },
+    'upscale_export_single': {
+        'normal': [
+            "Export the previewed texture with all current settings applied",
+            "Save this single upscaled image to a file",
+            "Export the currently displayed before/after result",
+            "Save the upscaled texture with the chosen scale, style, and post-processing",
+        ],
+        'vulgar': [
+            "SAVE IT! Export this beautiful upscaled masterpiece to a file.",
+            "Export this one texture with ALL your fancy settings applied. Chef's kiss.",
+            "Save the result before you forget what settings you used.",
+            "Export button! The panda packed your upscaled texture for takeout.",
+            "Download your creation! It's like hitting 'Save As' but fancier.",
+            "Save this upscale to disk. The panda will guard it with its life.",
+            "Export with all filters applied. One-click gourmet texture export.",
+            "Yoink! Save that upscaled texture before the preview disappears.",
+        ]
+    },
     'panda_sound_eat': {
         'normal': [
             "Choose the sound played when your panda eats bamboo",

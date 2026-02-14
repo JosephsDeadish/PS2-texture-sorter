@@ -2160,15 +2160,18 @@ class GameTextureSorter(ctk.CTk):
         zoom_frame.pack(fill="x", padx=10, pady=(0, 5))
         ctk.CTkLabel(zoom_frame, text="Zoom:", font=("Arial", 11)).pack(side="left", padx=(10, 5))
         self._upscale_zoom_var = ctk.DoubleVar(value=1.0)
-        ctk.CTkButton(zoom_frame, text="−", width=30,
-                       command=self._upscale_zoom_out).pack(side="left", padx=2)
+        upscale_zoom_out_btn = ctk.CTkButton(zoom_frame, text="−", width=30,
+                       command=self._upscale_zoom_out)
+        upscale_zoom_out_btn.pack(side="left", padx=2)
         self._upscale_zoom_label = ctk.CTkLabel(zoom_frame, text="100%", width=50,
                                                  font=("Arial", 11))
         self._upscale_zoom_label.pack(side="left", padx=2)
-        ctk.CTkButton(zoom_frame, text="+", width=30,
-                       command=self._upscale_zoom_in).pack(side="left", padx=2)
-        ctk.CTkButton(zoom_frame, text="Fit", width=40,
-                       command=self._upscale_zoom_fit).pack(side="left", padx=5)
+        upscale_zoom_in_btn = ctk.CTkButton(zoom_frame, text="+", width=30,
+                       command=self._upscale_zoom_in)
+        upscale_zoom_in_btn.pack(side="left", padx=2)
+        upscale_zoom_fit_btn = ctk.CTkButton(zoom_frame, text="Fit", width=40,
+                       command=self._upscale_zoom_fit)
+        upscale_zoom_fit_btn.pack(side="left", padx=5)
         self._upscale_zoom_info = ctk.CTkLabel(zoom_frame, text="", font=("Arial", 10),
                                                 text_color="gray")
         self._upscale_zoom_info.pack(side="left", padx=10)
@@ -2235,13 +2238,23 @@ class GameTextureSorter(ctk.CTk):
             upscale_factor_menu, upscale_style_menu, upscale_format_menu,
             upscale_alpha_cb, upscale_recursive_cb, upscale_zip_cb,
             upscale_send_org_cb, upscale_preview_btn,
-            upscale_fb_good_btn, upscale_fb_bad_btn)
+            upscale_fb_good_btn, upscale_fb_bad_btn,
+            upscale_sharpen_cb, upscale_denoise_cb, upscale_face_cb,
+            upscale_gpu_cb, upscale_tile_cb, upscale_normal_cb,
+            upscale_auto_level_cb, upscale_overwrite_cb,
+            upscale_zoom_out_btn, upscale_zoom_in_btn, upscale_zoom_fit_btn,
+            self.upscale_export_single_btn)
 
     def _apply_upscaler_tooltips(self, input_btn, zip_btn, output_btn,
                                   factor_menu, style_menu, format_menu,
                                   alpha_cb, recursive_cb, zip_cb,
                                   send_org_cb, preview_btn,
-                                  fb_good_btn, fb_bad_btn):
+                                  fb_good_btn, fb_bad_btn,
+                                  sharpen_cb=None, denoise_cb=None, face_cb=None,
+                                  gpu_cb=None, tile_cb=None, normal_cb=None,
+                                  auto_level_cb=None, overwrite_cb=None,
+                                  zoom_out_btn=None, zoom_in_btn=None,
+                                  zoom_fit_btn=None, export_single_btn=None):
         """Apply tooltips to upscaler tab widgets"""
         if not WidgetTooltip:
             return
@@ -2289,6 +2302,57 @@ class GameTextureSorter(ctk.CTk):
         self._tooltips.append(WidgetTooltip(fb_bad_btn,
             tt('upscale_fb_bad') or "Rate this upscale result as poor quality\nConsider trying a different style or scale factor",
             widget_id='upscale_fb_bad', tooltip_manager=tm))
+        # Row 2 checkboxes — post-processing
+        if sharpen_cb:
+            self._tooltips.append(WidgetTooltip(sharpen_cb,
+                tt('upscale_sharpen') or "Apply sharpening filter after upscaling\nEnhances edges and fine detail — updates preview live",
+                widget_id='upscale_sharpen', tooltip_manager=tm))
+        if denoise_cb:
+            self._tooltips.append(WidgetTooltip(denoise_cb,
+                tt('upscale_denoise') or "Reduce noise and compression artifacts\nApplies gentle smoothing — updates preview live",
+                widget_id='upscale_denoise', tooltip_manager=tm))
+        if face_cb:
+            self._tooltips.append(WidgetTooltip(face_cb,
+                tt('upscale_face_enhance') or "Enhance facial features in textures\nBest for character face textures",
+                widget_id='upscale_face_enhance', tooltip_manager=tm))
+        if gpu_cb:
+            self._tooltips.append(WidgetTooltip(gpu_cb,
+                tt('upscale_gpu') or "Use GPU acceleration for faster processing\nRequires compatible CUDA or OpenCL device",
+                widget_id='upscale_gpu', tooltip_manager=tm))
+        # Row 3 checkboxes — texture-specific
+        if tile_cb:
+            self._tooltips.append(WidgetTooltip(tile_cb,
+                tt('upscale_tile_seamless') or "Ensure seamless tiling after upscale\nBest for repeating textures like floors, walls, fabrics",
+                widget_id='upscale_tile_seamless', tooltip_manager=tm))
+        if normal_cb:
+            self._tooltips.append(WidgetTooltip(normal_cb,
+                tt('upscale_normal_map') or "Treat image as a normal map\nPreserves directional data for lighting calculations",
+                widget_id='upscale_normal_map', tooltip_manager=tm))
+        if auto_level_cb:
+            self._tooltips.append(WidgetTooltip(auto_level_cb,
+                tt('upscale_auto_level') or "Auto-level colors: stretch histogram to full 0–255 range\nImproves contrast — updates preview live",
+                widget_id='upscale_auto_level', tooltip_manager=tm))
+        if overwrite_cb:
+            self._tooltips.append(WidgetTooltip(overwrite_cb,
+                tt('upscale_overwrite') or "Overwrite existing output files\nIf unchecked, existing files are skipped",
+                widget_id='upscale_overwrite', tooltip_manager=tm))
+        # Zoom & export buttons
+        if zoom_out_btn:
+            self._tooltips.append(WidgetTooltip(zoom_out_btn,
+                tt('upscale_zoom_out') or "Zoom out preview (shrink thumbnail)",
+                widget_id='upscale_zoom_out', tooltip_manager=tm))
+        if zoom_in_btn:
+            self._tooltips.append(WidgetTooltip(zoom_in_btn,
+                tt('upscale_zoom_in') or "Zoom in preview (enlarge thumbnail)",
+                widget_id='upscale_zoom_in', tooltip_manager=tm))
+        if zoom_fit_btn:
+            self._tooltips.append(WidgetTooltip(zoom_fit_btn,
+                tt('upscale_zoom_fit') or "Reset preview zoom to 100%",
+                widget_id='upscale_zoom_fit', tooltip_manager=tm))
+        if export_single_btn:
+            self._tooltips.append(WidgetTooltip(export_single_btn,
+                tt('upscale_export_single') or "Export the currently previewed texture\nwith all applied scale, style, and post-processing settings",
+                widget_id='upscale_export_single', tooltip_manager=tm))
 
     def _browse_upscale_zip(self):
         """Browse for a ZIP file as upscaler input."""
