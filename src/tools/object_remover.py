@@ -153,6 +153,108 @@ class ObjectRemover:
         if self.mask:
             self.mask = Image.new("L", self.original_image.size, 0)
     
+    def paint_rectangle(self, x1: int, y1: int, x2: int, y2: int, erase: bool = False, opacity: int = 100):
+        """
+        Paint a rectangular selection.
+        
+        Args:
+            x1, y1: Top-left corner
+            x2, y2: Bottom-right corner
+            erase: If True, erase, else paint
+            opacity: Opacity 0-100%
+        """
+        if self.mask is None:
+            return
+        
+        # Ensure correct ordering
+        x1, x2 = min(x1, x2), max(x1, x2)
+        y1, y2 = min(y1, y2), max(y1, y2)
+        
+        opacity_value = int((opacity / 100.0) * 255)
+        mask_array = np.array(self.mask, dtype=np.int16)
+        
+        # Paint rectangle
+        if erase:
+            mask_array[y1:y2, x1:x2] = np.maximum(0, mask_array[y1:y2, x1:x2] - opacity_value)
+        else:
+            mask_array[y1:y2, x1:x2] = np.minimum(255, mask_array[y1:y2, x1:x2] + opacity_value)
+        
+        self.mask = Image.fromarray(np.clip(mask_array, 0, 255).astype(np.uint8), mode="L")
+    
+    def paint_polygon(self, points: List[Tuple[int, int]], erase: bool = False, opacity: int = 100):
+        """
+        Paint a polygon selection (lasso).
+        
+        Args:
+            points: List of (x, y) points forming the polygon
+            erase: If True, erase, else paint
+            opacity: Opacity 0-100%
+        """
+        if self.mask is None or len(points) < 3:
+            return
+        
+        opacity_value = int((opacity / 100.0) * 255)
+        
+        # Create temporary mask with polygon
+        temp_mask = Image.new("L", self.mask.size, 0)
+        draw = ImageDraw.Draw(temp_mask)
+        draw.polygon(points, fill=255)
+        
+        # Blend with existing mask
+        mask_array = np.array(self.mask, dtype=np.int16)
+        temp_array = np.array(temp_mask, dtype=np.int16)
+        
+        blend_mask = temp_array > 0
+        if erase:
+            mask_array[blend_mask] = np.maximum(0, mask_array[blend_mask] - opacity_value)
+        else:
+            mask_array[blend_mask] = np.minimum(255, mask_array[blend_mask] + opacity_value)
+        
+        self.mask = Image.fromarray(np.clip(mask_array, 0, 255).astype(np.uint8), mode="L")
+    
+    def magic_wand_select(self, x: int, y: int, tolerance: int = 30, erase: bool = False, opacity: int = 100):
+        """
+        Select similar colors using magic wand (flood fill based).
+        
+        Args:
+            x, y: Start position
+            tolerance: Color similarity tolerance (0-255)
+            erase: If True, erase, else paint
+            opacity: Opacity 0-100%
+        """
+        if self.original_image is None or self.mask is None:
+            return
+        
+        try:
+            # Get target color
+            rgb_image = self.original_image.convert("RGB")
+            target_color = rgb_image.getpixel((x, y))
+            
+            # Create selection based on color similarity
+            img_array = np.array(rgb_image)
+            target = np.array(target_color)
+            
+            # Calculate color distance
+            diff = np.abs(img_array - target)
+            distance = np.sqrt(np.sum(diff ** 2, axis=2))
+            
+            # Create selection mask
+            selection = distance <= tolerance
+            
+            # Apply to mask with opacity
+            opacity_value = int((opacity / 100.0) * 255)
+            mask_array = np.array(self.mask, dtype=np.int16)
+            
+            if erase:
+                mask_array[selection] = np.maximum(0, mask_array[selection] - opacity_value)
+            else:
+                mask_array[selection] = np.minimum(255, mask_array[selection] + opacity_value)
+            
+            self.mask = Image.fromarray(np.clip(mask_array, 0, 255).astype(np.uint8), mode="L")
+            
+        except Exception as e:
+            logger.error(f"Magic wand select failed: {e}")
+    
     def invert_mask(self):
         """Invert the mask (swap keep/remove areas)."""
         if self.mask:

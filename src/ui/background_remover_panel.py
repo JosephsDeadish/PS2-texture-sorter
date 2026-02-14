@@ -1027,6 +1027,13 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
         thread = threading.Thread(target=process_and_archive, daemon=True)
         thread.start()
     
+    def _safe_ui_update(self, func, *args, **kwargs):
+        """Thread-safe UI update using after() method."""
+        try:
+            self.after(0, func, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"UI update failed: {e}")
+    
     def _on_progress(self, current: int, total: int, filename: str):
         """Handle progress updates."""
         progress = current / total
@@ -1157,48 +1164,104 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
             self.eraser_btn.configure(text="🧹 Eraser", fg_color="#3B82F6")
     
     def _on_paint_click(self, event):
-        """Handle paint click."""
+        """Handle paint click - tool-specific behavior."""
         if not self.painting_enabled or self.current_mode != "object":
             return
         
-        self.last_paint_x = event.x
-        self.last_paint_y = event.y
-        self.current_stroke = [(event.x, event.y)]
-        
-        # Paint at click position
-        self.object_remover.paint_mask(event.x, event.y, self.brush_size, self.eraser_mode, self.brush_opacity)
-        self._update_object_preview()
+        if self.selection_tool == "brush":
+            # Brush tool - start painting
+            self.last_paint_x = event.x
+            self.last_paint_y = event.y
+            self.current_stroke = [(event.x, event.y)]
+            
+            # Paint at click position
+            self.object_remover.paint_mask(event.x, event.y, self.brush_size, self.eraser_mode, self.brush_opacity)
+            self._update_object_preview()
+            
+        elif self.selection_tool == "rectangle":
+            # Rectangle tool - start selection
+            self.rect_start = (event.x, event.y)
+            
+        elif self.selection_tool == "lasso":
+            # Lasso tool - start freehand selection
+            self.lasso_points = [(event.x, event.y)]
+            
+        elif self.selection_tool == "wand":
+            # Magic wand - instant selection
+            self.object_remover.magic_wand_select(
+                event.x, event.y, 
+                self.wand_tolerance, 
+                self.eraser_mode, 
+                self.brush_opacity
+            )
+            self._save_paint_state()
+            self._update_object_preview()
     
     def _on_paint_drag(self, event):
-        """Handle paint drag."""
+        """Handle paint drag - tool-specific behavior."""
         if not self.painting_enabled or self.current_mode != "object":
             return
         
-        if self.last_paint_x is not None and self.last_paint_y is not None:
-            # Paint stroke from last position to current
-            points = [(self.last_paint_x, self.last_paint_y), (event.x, event.y)]
-            self.object_remover.paint_mask_stroke(points, self.brush_size, self.eraser_mode, self.brush_opacity)
-            self.current_stroke.append((event.x, event.y))
-        
-        self.last_paint_x = event.x
-        self.last_paint_y = event.y
-        self._update_object_preview()
+        if self.selection_tool == "brush":
+            # Brush tool - continue painting
+            if self.last_paint_x is not None and self.last_paint_y is not None:
+                # Paint stroke from last position to current
+                points = [(self.last_paint_x, self.last_paint_y), (event.x, event.y)]
+                self.object_remover.paint_mask_stroke(points, self.brush_size, self.eraser_mode, self.brush_opacity)
+                self.current_stroke.append((event.x, event.y))
+            
+            self.last_paint_x = event.x
+            self.last_paint_y = event.y
+            self._update_object_preview()
+            
+        elif self.selection_tool == "rectangle":
+            # Rectangle tool - show preview (would need canvas overlay)
+            pass  # Visual feedback could be added
+            
+        elif self.selection_tool == "lasso":
+            # Lasso tool - add points to polygon
+            self.lasso_points.append((event.x, event.y))
+            # Could draw preview line
     
     def _on_paint_release(self, event):
-        """Handle paint release - save stroke for undo."""
-        if hasattr(self, 'current_stroke') and self.current_stroke:
-            self.paint_strokes.append({
-                'points': self.current_stroke.copy(),
-                'brush_size': self.brush_size,
-                'eraser': self.eraser_mode,
-                'mask': self.object_remover.mask.copy() if self.object_remover.mask else None
-            })
-            # Clear redo stack when new painting happens
-            self.paint_redo_stack.clear()
+        """Handle paint release - tool-specific behavior."""
+        if not self.painting_enabled or self.current_mode != "object":
+            return
         
-        self.last_paint_x = None
-        self.last_paint_y = None
-        self.current_stroke = []
+        if self.selection_tool == "brush":
+            # Brush tool - save stroke for undo
+            if hasattr(self, 'current_stroke') and self.current_stroke:
+                self._save_paint_state()
+            
+            self.last_paint_x = None
+            self.last_paint_y = None
+            self.current_stroke = []
+            
+        elif self.selection_tool == "rectangle":
+            # Rectangle tool - complete selection
+            if self.rect_start:
+                x1, y1 = self.rect_start
+                x2, y2 = event.x, event.y
+                self.object_remover.paint_rectangle(x1, y1, x2, y2, self.eraser_mode, self.brush_opacity)
+                self._save_paint_state()
+                self._update_object_preview()
+                self.rect_start = None
+                
+        elif self.selection_tool == "lasso":
+            # Lasso tool - complete polygon
+            if len(self.lasso_points) >= 3:
+                self.object_remover.paint_polygon(self.lasso_points, self.eraser_mode, self.brush_opacity)
+                self._save_paint_state()
+                self._update_object_preview()
+            self.lasso_points = []
+    
+    def _save_paint_state(self):
+        """Save current paint state for undo."""
+        self.paint_strokes.append({
+            'mask': self.object_remover.mask.copy() if self.object_remover.mask else None
+        })
+        # Clear redo stack when new painting happens
+        self.paint_redo_stack.clear()
     
     def _undo_paint_stroke(self):
         """Undo last paint stroke."""
