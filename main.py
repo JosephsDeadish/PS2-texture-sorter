@@ -99,6 +99,13 @@ except ImportError:
     print("Warning: Batch rename panel not available.")
 
 try:
+    from src.ui.color_correction_panel import ColorCorrectionPanel
+    COLOR_CORRECTION_AVAILABLE = True
+except ImportError:
+    COLOR_CORRECTION_AVAILABLE = False
+    print("Warning: Color correction panel not available.")
+
+try:
     from src.features.panda_character import PandaCharacter, PandaGender
     PANDA_CHARACTER_AVAILABLE = True
 except ImportError:
@@ -919,6 +926,7 @@ class GameTextureSorter(ctk.CTk):
         self.tab_batch_normalizer = self.tabview.add("📏 Batch Normalizer")
         self.tab_lineart_converter = self.tabview.add("✏️ Line Art")
         self.tab_batch_rename = self.tabview.add("📝 Batch Rename")
+        self.tab_color_correction = self.tabview.add("🎨 Color Correction")
         self.tab_about = self.tabview.add("ℹ️ About")
         
         # Features tabview (nested) - use scrollable if available
@@ -983,6 +991,7 @@ class GameTextureSorter(ctk.CTk):
             self.create_batch_normalizer_tab,
             self.create_lineart_converter_tab,
             self.create_batch_rename_tab,
+            self.create_color_correction_tab,
         ])
         
         # Add remaining tabs
@@ -7935,6 +7944,29 @@ class GameTextureSorter(ctk.CTk):
             ctk.CTkLabel(
                 self.tab_batch_rename,
                 text=f"Error loading Batch Rename:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_color_correction_tab(self):
+        """Create color correction tab for image enhancement"""
+        try:
+            if COLOR_CORRECTION_AVAILABLE:
+                panel = ColorCorrectionPanel(self.tab_color_correction)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Color Correction tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_color_correction,
+                    text="Color Correction not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating color correction tab: {e}")
+            ctk.CTkLabel(
+                self.tab_color_correction,
+                text=f"Error loading Color Correction:\n{str(e)}",
                 font=("Arial", 12),
                 text_color="red"
             ).pack(pady=20)
