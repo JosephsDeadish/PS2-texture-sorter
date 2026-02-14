@@ -1430,7 +1430,9 @@ class GameTextureSorter(ctk.CTk):
         input_path_frame = ctk.CTkFrame(input_frame)
         input_path_frame.pack(fill="x", padx=10, pady=5)
         
-        self.input_path_var = ctk.StringVar(value="")
+        # Load last used input directory from config
+        last_input = config.get('session', 'last_input_directory', default="")
+        self.input_path_var = ctk.StringVar(value=last_input)
         input_entry = ctk.CTkEntry(input_path_frame, textvariable=self.input_path_var, width=800)
         input_entry.pack(side="left", fill="x", expand=True, padx=5)
         
@@ -1446,7 +1448,9 @@ class GameTextureSorter(ctk.CTk):
         output_path_frame = ctk.CTkFrame(output_frame)
         output_path_frame.pack(fill="x", padx=10, pady=5)
         
-        self.output_path_var = ctk.StringVar(value="")
+        # Load last used output directory from config
+        last_output = config.get('session', 'last_output_directory', default="")
+        self.output_path_var = ctk.StringVar(value=last_output)
         output_entry = ctk.CTkEntry(output_path_frame, textvariable=self.output_path_var, width=800)
         output_entry.pack(side="left", fill="x", expand=True, padx=5)
         
@@ -2072,7 +2076,9 @@ class GameTextureSorter(ctk.CTk):
         input_frame.pack(fill="x", padx=10, pady=10)
         ctk.CTkLabel(input_frame, text="Input Folder / ZIP:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.upscale_input_var = ctk.StringVar()
+        # Load last used upscale input from config
+        last_upscale_input = config.get('session', 'last_upscale_input', default="")
+        self.upscale_input_var = ctk.StringVar(value=last_upscale_input)
         upscale_input_entry = ctk.CTkEntry(input_frame, textvariable=self.upscale_input_var,
                      width=500)
         upscale_input_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
@@ -2115,7 +2121,9 @@ class GameTextureSorter(ctk.CTk):
         output_frame.pack(fill="x", padx=10, pady=10)
         ctk.CTkLabel(output_frame, text="Output Folder:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.upscale_output_var = ctk.StringVar()
+        # Load last used upscale output from config
+        last_upscale_output = config.get('session', 'last_upscale_output', default="")
+        self.upscale_output_var = ctk.StringVar(value=last_upscale_output)
         upscale_output_entry = ctk.CTkEntry(output_frame, textvariable=self.upscale_output_var,
                      width=500)
         upscale_output_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
@@ -2837,6 +2845,13 @@ class GameTextureSorter(ctk.CTk):
                 return
             folders_to_process = [Path(input_path)]
 
+        # Save paths to config for next time
+        if input_path:
+            config.set('session', 'last_upscale_input', value=input_path)
+        if output_path:
+            config.set('session', 'last_upscale_output', value=output_path)
+        config.save()
+
         self.upscale_start_btn.configure(state="disabled")
         self.upscale_log_text.delete("1.0", "end")
         self.upscale_progress_bar.set(0)
@@ -3190,14 +3205,16 @@ class GameTextureSorter(ctk.CTk):
         # Input section
         input_frame = ctk.CTkFrame(scroll)
         input_frame.pack(fill="x", padx=10, pady=10)
-        ctk.CTkLabel(input_frame, text="Input Folder:",
+        ctk.CTkLabel(input_frame, text="Input File/Folder:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.alpha_fix_input_var = ctk.StringVar()
+        # Load last used alpha fix input from config
+        last_alpha_input = config.get('session', 'last_alpha_fix_input', default="")
+        self.alpha_fix_input_var = ctk.StringVar(value=last_alpha_input)
         alpha_input_entry = ctk.CTkEntry(input_frame, textvariable=self.alpha_fix_input_var,
                      width=500)
         alpha_input_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
-        # Enable drag-drop on input field
-        self._enable_drag_drop(alpha_input_entry, self.alpha_fix_input_var, accept_folders=True, accept_files=False)
+        # Enable drag-drop on input field - accept both files and folders
+        self._enable_drag_drop(alpha_input_entry, self.alpha_fix_input_var, accept_folders=True, accept_files=True)
         alpha_input_btn = ctk.CTkButton(input_frame, text="📂 Browse", width=100,
                      command=lambda: self.browse_directory(self.alpha_fix_input_var))
         alpha_input_btn.grid(row=0, column=2, padx=10, pady=5)
@@ -3208,7 +3225,9 @@ class GameTextureSorter(ctk.CTk):
         output_frame.pack(fill="x", padx=10, pady=10)
         ctk.CTkLabel(output_frame, text="Output Folder:",
                      font=("Arial Bold", 12)).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.alpha_fix_output_var = ctk.StringVar()
+        # Load last used alpha fix output from config
+        last_alpha_output = config.get('session', 'last_alpha_fix_output', default="")
+        self.alpha_fix_output_var = ctk.StringVar(value=last_alpha_output)
         alpha_output_entry = ctk.CTkEntry(output_frame, textvariable=self.alpha_fix_output_var,
                      width=500)
         alpha_output_entry.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
@@ -3317,14 +3336,20 @@ class GameTextureSorter(ctk.CTk):
         self.alpha_fix_log_text.see("end")
 
     def _run_alpha_fix(self):
-        """Run alpha correction on selected folder in a background thread."""
-        input_dir = self.alpha_fix_input_var.get().strip()
-        if not input_dir or not os.path.isdir(input_dir):
+        """Run alpha correction on selected file or folder in a background thread."""
+        input_path_str = self.alpha_fix_input_var.get().strip()
+        if not input_path_str or not os.path.exists(input_path_str):
             if GUI_AVAILABLE:
-                messagebox.showwarning("No Input", "Please select a valid input folder.")
+                messagebox.showwarning("No Input", "Please select a valid input file or folder.")
             return
 
         output_dir = self.alpha_fix_output_var.get().strip() if hasattr(self, 'alpha_fix_output_var') else ""
+
+        # Save paths to config for next time
+        config.set('session', 'last_alpha_fix_input', value=input_path_str)
+        if output_dir:
+            config.set('session', 'last_alpha_fix_output', value=output_dir)
+        config.save()
 
         self.alpha_fix_start_btn.configure(state="disabled")
         self.alpha_fix_log_text.delete("1.0", "end")
@@ -3338,19 +3363,35 @@ class GameTextureSorter(ctk.CTk):
         def worker():
             try:
                 corrector = AlphaCorrector()
-                input_path = Path(input_dir)
+                input_path = Path(input_path_str)
                 output_path = Path(output_dir) if output_dir else None
                 exts = {'.png', '.bmp', '.tga', '.dds', '.jpg', '.jpeg'}
-                if recursive:
-                    files = [p for p in input_path.rglob('*') if p.suffix.lower() in exts]
+                
+                # Check if input is a file or directory
+                if input_path.is_file():
+                    # Process single file
+                    if input_path.suffix.lower() not in exts:
+                        self._alpha_fix_log(f"Unsupported file type: {input_path.suffix}")
+                        return
+                    
+                    files = [input_path]
+                    self._alpha_fix_log(f"Processing single file: {input_path.name}")
+                    
+                    # If output directory specified, use it
+                    if output_path:
+                        output_path.mkdir(parents=True, exist_ok=True)
                 else:
-                    files = [p for p in input_path.iterdir() if p.is_file() and p.suffix.lower() in exts]
+                    # Process directory (existing behavior)
+                    if recursive:
+                        files = [p for p in input_path.rglob('*') if p.suffix.lower() in exts]
+                    else:
+                        files = [p for p in input_path.iterdir() if p.is_file() and p.suffix.lower() in exts]
 
                 if not files:
-                    self._alpha_fix_log("No image files found in the selected folder.")
+                    self._alpha_fix_log("No image files found in the selected location.")
                     return
 
-                if output_path:
+                if output_path and input_path.is_dir():
                     output_path.mkdir(parents=True, exist_ok=True)
                     self._alpha_fix_log(f"Output directory: {output_path}")
 
@@ -3360,8 +3401,13 @@ class GameTextureSorter(ctk.CTk):
                 for i, fpath in enumerate(files, 1):
                     # If output dir specified, compute destination path
                     if output_path:
-                        rel = fpath.relative_to(input_path)
-                        dest = output_path / rel
+                        if input_path.is_file():
+                            # Single file: output directly to output folder
+                            dest = output_path / fpath.name
+                        else:
+                            # Directory: preserve relative structure
+                            rel = fpath.relative_to(input_path)
+                            dest = output_path / rel
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(fpath, dest)
                         result = corrector.process_image(
@@ -10113,6 +10159,11 @@ Built with:
                 logger.error(f"Sorting aborted - input directory does not exist: {input_path}")
                 messagebox.showerror("Error", "Input directory does not exist")
                 return
+            
+            # Save paths to config for next time
+            config.set('session', 'last_input_directory', value=input_path)
+            config.set('session', 'last_output_directory', value=output_path)
+            config.save()
             
             self.log("=" * 60)
             self.log("Starting texture sorting operation...")
