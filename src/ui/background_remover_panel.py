@@ -637,6 +637,42 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
             if hasattr(self, 'eraser_btn'):
                 tooltip = get_tooltip(obj_tooltips_lower, "Eraser") or "Switch to eraser mode"
                 self._tooltips.append(WidgetTooltip(self.eraser_btn, tooltip))
+            
+            # Opacity slider
+            if hasattr(self, 'opacity_slider'):
+                tooltip = get_tooltip(obj_tooltips_lower, "opacity") or "Adjust brush opacity for gradual masking"
+                self._tooltips.append(WidgetTooltip(self.opacity_slider, tooltip))
+            
+            # Selection tools
+            if hasattr(self, 'brush_tool_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "brush") or "Freehand brush tool for painting selection"
+                self._tooltips.append(WidgetTooltip(self.brush_tool_btn, tooltip))
+            
+            if hasattr(self, 'rect_tool_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "Rectangle") or "Rectangle selection tool for quick area masking"
+                self._tooltips.append(WidgetTooltip(self.rect_tool_btn, tooltip))
+            
+            if hasattr(self, 'lasso_tool_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "Lasso") or "Lasso tool for freehand polygon selection"
+                self._tooltips.append(WidgetTooltip(self.lasso_tool_btn, tooltip))
+            
+            if hasattr(self, 'wand_tool_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "wand") or "Magic wand for color-based selection"
+                self._tooltips.append(WidgetTooltip(self.wand_tool_btn, tooltip))
+            
+            # Undo/Redo buttons
+            if hasattr(self, 'undo_paint_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "Undo") or "Undo last brush stroke"
+                self._tooltips.append(WidgetTooltip(self.undo_paint_btn, tooltip))
+            
+            if hasattr(self, 'redo_paint_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "Redo") or "Redo previously undone stroke"
+                self._tooltips.append(WidgetTooltip(self.redo_paint_btn, tooltip))
+            
+            # Remove object button
+            if hasattr(self, 'remove_object_btn'):
+                tooltip = get_tooltip(obj_tooltips_lower, "Remove button") or "Process the masked area to remove object"
+                self._tooltips.append(WidgetTooltip(self.remove_object_btn, tooltip))
     
     def _check_availability(self):
         """Check if background removal is available."""
