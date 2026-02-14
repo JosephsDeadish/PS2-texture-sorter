@@ -2059,11 +2059,11 @@ class GameTextureSorter(ctk.CTk):
                 "🔷 Lanczos (Sharpest)",
                 "🟢 Bicubic (Smooth)",
                 "🟡 Bilinear (Fast)",
-                "🔶 Hamming",
+                "🔶 Hamming (Balanced)",
                 "🟣 Box (Pixel Art)",
                 "⬜ Nearest (Pixel Perfect)",
-                "🔵 Mitchell",
-                "🟤 CatRom",
+                "🔵 Mitchell (Natural)",
+                "🟤 CatRom (Sharp Detail)",
                 "🔴 Real-ESRGAN (AI)"
             ],
             command=self._update_upscale_preview)
@@ -2243,7 +2243,8 @@ class GameTextureSorter(ctk.CTk):
             upscale_gpu_cb, upscale_tile_cb, upscale_normal_cb,
             upscale_auto_level_cb, upscale_overwrite_cb,
             upscale_zoom_out_btn, upscale_zoom_in_btn, upscale_zoom_fit_btn,
-            self.upscale_export_single_btn)
+            self.upscale_export_single_btn,
+            upscale_custom_entry)
 
     def _apply_upscaler_tooltips(self, input_btn, zip_btn, output_btn,
                                   factor_menu, style_menu, format_menu,
@@ -2254,7 +2255,8 @@ class GameTextureSorter(ctk.CTk):
                                   gpu_cb=None, tile_cb=None, normal_cb=None,
                                   auto_level_cb=None, overwrite_cb=None,
                                   zoom_out_btn=None, zoom_in_btn=None,
-                                  zoom_fit_btn=None, export_single_btn=None):
+                                  zoom_fit_btn=None, export_single_btn=None,
+                                  custom_res_entry=None):
         """Apply tooltips to upscaler tab widgets"""
         if not WidgetTooltip:
             return
@@ -2353,6 +2355,10 @@ class GameTextureSorter(ctk.CTk):
             self._tooltips.append(WidgetTooltip(export_single_btn,
                 tt('upscale_export_single') or "Export the currently previewed texture\nwith all applied scale, style, and post-processing settings",
                 widget_id='upscale_export_single', tooltip_manager=tm))
+        if custom_res_entry:
+            self._tooltips.append(WidgetTooltip(custom_res_entry,
+                tt('upscale_custom_res') or "Enter a custom output resolution (e.g. 1024x1024)\nOverrides the scale factor when set",
+                widget_id='upscale_custom_res', tooltip_manager=tm))
 
     def _browse_upscale_zip(self):
         """Browse for a ZIP file as upscaler input."""
