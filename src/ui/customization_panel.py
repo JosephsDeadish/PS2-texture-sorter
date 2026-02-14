@@ -529,17 +529,20 @@ class CursorCustomizer(ctk.CTkFrame):
         "gold": "✨",
     }
     
-    def __init__(self, master, on_cursor_change=None):
+    def __init__(self, master, on_cursor_change=None, unlockables_system=None, shop_system=None):
         super().__init__(master)
         self.on_cursor_change = on_cursor_change
+        self.unlockables_system = unlockables_system
+        self.shop_system = shop_system
         
-        self.cursor_types = [
+        # Default cursors (always available)
+        self.default_cursor_types = [
             "default", "Arrow Pointer", "Pointing Hand", "Crosshair",
-            "Text Select", "Hourglass", "Pirate Skull", "Heart",
-            "Target Cross", "Star", "Circle", "Plus Sign",
-            "Pencil", "Dot", "X Cursor", "Diamond", "Fleur",
-            "Spraycan", "Left Arrow", "Right Arrow"
+            "Text Select", "Hourglass"
         ]
+        
+        # Initialize with defaults only - will be updated with unlocked/purchased cursors
+        self.cursor_types = self.default_cursor_types.copy()
         self.cursor_sizes = {
             "🔹 tiny": (8, 8),
             "🔸 small": (16, 16),
@@ -570,7 +573,47 @@ class CursorCustomizer(ctk.CTkFrame):
         self._trail_preview_canvas = None
         self._trail_preview_bind_id = None
         
+        # Update available cursors based on unlocks/purchases
+        self._refresh_available_cursors()
+        
         self._create_widgets()
+    
+    def _refresh_available_cursors(self):
+        """Refresh the list of available cursors based on unlock/purchase status."""
+        # Start with default cursors (always available)
+        available_cursors = self.default_cursor_types.copy()
+        
+        # Add unlocked cursors from achievements/progression
+        if self.unlockables_system:
+            try:
+                unlocked_cursors = self.unlockables_system.get_unlocked_cursors()
+                for cursor in unlocked_cursors:
+                    cursor_name = cursor.name
+                    if cursor_name not in available_cursors:
+                        available_cursors.append(cursor_name)
+                logger.debug(f"Added {len(unlocked_cursors)} unlocked cursors from achievements")
+            except Exception as e:
+                logger.warning(f"Failed to get unlocked cursors: {e}")
+        
+        # Add purchased cursors from shop
+        if self.shop_system:
+            try:
+                # Get all cursor items from shop catalog
+                from src.features.shop_system import ShopCategory
+                cursor_items = [
+                    item for item_id, item in self.shop_system.CATALOG.items()
+                    if item.category == ShopCategory.CURSORS and self.shop_system.is_purchased(item_id)
+                ]
+                for item in cursor_items:
+                    cursor_name = item.name
+                    if cursor_name not in available_cursors:
+                        available_cursors.append(cursor_name)
+                logger.debug(f"Added {len(cursor_items)} purchased cursors from shop")
+            except Exception as e:
+                logger.warning(f"Failed to get purchased cursors: {e}")
+        
+        self.cursor_types = available_cursors
+        logger.info(f"Available cursors: {len(self.cursor_types)} total")
     
     def _create_widgets(self):
         # Use scrollable frame so cursor selector has scrollbar
@@ -866,18 +909,22 @@ class CursorCustomizer(ctk.CTkFrame):
             'trail_color': self.trail_style
         }
     
-    def update_available_cursors(self, cursor_names: List[str]):
+    def update_available_cursors(self, cursor_names: List[str] = None):
         """Update the available cursor options in the dropdown.
         
         Args:
-            cursor_names: List of cursor type names to show as options
+            cursor_names: Optional list of cursor type names to show. If None, refreshes from systems.
         """
-        # Merge with default cursors, avoiding duplicates
-        all_cursors = list(self.cursor_types)
-        for name in cursor_names:
-            if name not in all_cursors:
-                all_cursors.append(name)
-        self.cursor_types = all_cursors
+        if cursor_names is not None:
+            # Legacy behavior - merge with defaults
+            all_cursors = list(self.default_cursor_types)
+            for name in cursor_names:
+                if name not in all_cursors:
+                    all_cursors.append(name)
+            self.cursor_types = all_cursors
+        else:
+            # New behavior - refresh from unlockables and shop systems
+            self._refresh_available_cursors()
         
         # Build display values with icons
         self._cursor_display_values = [
@@ -887,6 +934,7 @@ class CursorCustomizer(ctk.CTkFrame):
         # Update the option menu widget with new values
         try:
             self.cursor_menu.configure(values=self._cursor_display_values)
+            logger.debug(f"Updated cursor menu with {len(self._cursor_display_values)} options")
         except Exception as e:
             logger.debug(f"Failed to update cursor menu options: {e}")
 
@@ -1751,9 +1799,11 @@ class SoundSettingsPanel(ctk.CTkFrame):
 class CustomizationPanel(ctk.CTkFrame):
     """Main customization panel with all features"""
     
-    def __init__(self, master, on_settings_change=None):
+    def __init__(self, master, on_settings_change=None, unlockables_system=None, shop_system=None):
         super().__init__(master)
         self.on_settings_change = on_settings_change
+        self.unlockables_system = unlockables_system
+        self.shop_system = shop_system
         
         self._create_widgets()
     
@@ -1776,7 +1826,13 @@ class CustomizationPanel(ctk.CTkFrame):
         self.color_picker = ColorWheelWidget(tab_colors, on_color_change=self._on_color_change)
         self.color_picker.pack(fill="both", expand=True, padx=10, pady=10)
         
-        self.cursor_customizer = CursorCustomizer(tab_cursor, on_cursor_change=self._on_cursor_change)
+        # Pass unlockables and shop systems to cursor customizer
+        self.cursor_customizer = CursorCustomizer(
+            tab_cursor, 
+            on_cursor_change=self._on_cursor_change,
+            unlockables_system=self.unlockables_system,
+            shop_system=self.shop_system
+        )
         self.cursor_customizer.pack(fill="both", expand=True, padx=10, pady=10)
         
         self.sound_panel = SoundSettingsPanel(tab_sound, on_settings_change=self._on_setting_change)
@@ -1810,13 +1866,15 @@ class CustomizationPanel(ctk.CTkFrame):
         }
 
 
-def open_customization_dialog(parent=None, on_settings_change=None, initial_tab=None):
+def open_customization_dialog(parent=None, on_settings_change=None, initial_tab=None, unlockables_system=None, shop_system=None):
     """Open customization dialog window
     
     Args:
         parent: Parent window
         on_settings_change: Optional callback function(setting_type, value) to handle setting changes
         initial_tab: Optional tab name to open initially (e.g. "🔊 Sound")
+        unlockables_system: UnlockablesSystem instance for cursor filtering
+        shop_system: ShopSystem instance for cursor filtering
     """
     dialog = ctk.CTkToplevel(parent)
     dialog.title("🎨 UI Customization")
@@ -1835,7 +1893,12 @@ def open_customization_dialog(parent=None, on_settings_change=None, initial_tab=
     
     dialog.protocol("WM_DELETE_WINDOW", on_close)
     
-    panel = CustomizationPanel(dialog, on_settings_change=on_settings_change)
+    panel = CustomizationPanel(
+        dialog, 
+        on_settings_change=on_settings_change,
+        unlockables_system=unlockables_system,
+        shop_system=shop_system
+    )
     panel.pack(fill="both", expand=True, padx=10, pady=10)
     
     # Navigate to requested tab if specified
