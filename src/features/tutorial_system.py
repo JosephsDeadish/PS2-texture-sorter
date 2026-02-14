@@ -2525,6 +2525,34 @@ _PANDA_TOOLTIPS = {
             "Custom dimensions! Because sometimes you need EXACTLY 1337x420 pixels. No judgment.",
         ]
     },
+    'upscale_preserve_metadata': {
+        'normal': [
+            "Preserve original image metadata (EXIF) when upscaling",
+            "Keep EXIF data from source images in the upscaled output",
+            "Maintain camera info, timestamps, and other metadata during upscaling",
+            "Copy metadata from original images to processed files",
+            "Preserve image properties like creation date and camera settings",
+            "Transfer EXIF data to upscaled images (best for JPEG files)",
+        ],
+        'dumbed-down': [
+            "Keep the extra info from your photos (like when it was taken)!",
+            "This saves photo details like date and camera info when upscaling.",
+            "Check this to keep the 'behind-the-scenes' info from your images!",
+            "Works best with JPEG photos — keeps all the camera details!",
+            "Copies the photo's 'birth certificate' to the bigger version.",
+            "Preserves info like when and where the photo was taken!",
+        ],
+        'vulgar': [
+            "Keep that EXIF sh*t. Date, camera model, all that nerdy metadata.",
+            "Preserve metadata? Sure, if you care about timestamps and camera info.",
+            "EXIF preservation: for when you give a damn about photo metadata.",
+            "Copy all that technical crap from the original. JPEG nerds will thank you.",
+            "Metadata mode: because apparently you need to know WHEN a texture was created. Sure.",
+            "Keep the photo's metadata. Date, camera, GPS... wait, why do your textures have GPS?",
+            "EXIF copying go brrr. All your precious metadata stays intact.",
+            "For photographers who upscale. The panda judges your metadata obsession. Gently.",
+        ]
+    },
     'panda_sound_eat': {
         'normal': [
             "Choose the sound played when your panda eats bamboo",
