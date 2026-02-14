@@ -23,10 +23,27 @@ A professional Windows application for automatically sorting game texture dumps 
 - **🛡️ File Integrity** - Corruption detection and safe file operations
 - **💾 Progress Saving** - Pause/resume operations anytime with auto-save
 
+### AI-Powered Tools
+- **🎭 Background Remover** - One-click AI background removal with transparent PNG export
+  - 8 optimized alpha presets (PS2 Textures, Gaming Assets, Photography, etc.)
+  - Edge refinement controls (feathering, dilation, erosion)
+  - 4 AI models (U2-Net, U2-Net Portrait, ISNet variants)
+  - Alpha matting for semi-transparent objects
+  - Live preview with before/after comparison
+  - Archive support (ZIP, 7Z, RAR, TAR)
+  - Batch processing with queue management
+- **✏️ Object Remover** - Interactive object removal with mask painting
+  - 4 selection tools: Brush, Rectangle, Lasso, Magic Wand
+  - Adjustable brush size (5-50px) and opacity (10-100%)
+  - Undo/Redo stack (50 levels)
+  - Color-based selection with tolerance control
+  - Real-time mask overlay preview
+  - AI-powered content-aware fill
+
 ### User Interface
 - **🐼 Interactive Panda Character** - Animated companion with 13 mood states, leveling system, and personality
 - **🎨 Full Customization** - Colors, cursors (skull, panda, sword), themes, layouts, custom color palettes
-- **💡 4-Level Tooltips** - From expert mode to "Panda Explains It" mode with 250+ tooltip variations that change dynamically
+- **💡 3-Mode Tooltip System** - 210+ tooltips in Normal, Dumbed-Down, and Cursing/Unhinged modes
 - **🌓 Dark/Light Mode** - Built-in theme switching with 6+ preset themes (themes only affect colors)
 - **📊 Real-Time Monitoring** - Live progress for massive operations with detailed statistics
 - **📝 Built-in Notepad** - Multi-tab notepad with pop-out support
