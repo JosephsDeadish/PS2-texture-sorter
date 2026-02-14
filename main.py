@@ -2847,23 +2847,20 @@ class GameTextureSorter(ctk.CTk):
             from PIL import Image
 
             tmp_extract_dirs = []
-            is_paused = False
-            is_cancelled = False
+            is_paused = threading.Event()
+            is_cancelled = threading.Event()
             
             # Setup callbacks for progress dialog
             def on_pause():
-                nonlocal is_paused
-                is_paused = True
+                is_paused.set()
                 self._upscale_log("⏸ Paused")
             
             def on_resume():
-                nonlocal is_paused
-                is_paused = False
+                is_paused.clear()
                 self._upscale_log("▶ Resumed")
             
             def on_cancel():
-                nonlocal is_cancelled
-                is_cancelled = True
+                is_cancelled.set()
                 self._upscale_log("❌ Cancelling...")
             
             if progress_dialog:
@@ -2890,9 +2887,13 @@ class GameTextureSorter(ctk.CTk):
                         self._upscale_log(f"Extracting ZIP: {src_path.name}")
                         with zipfile.ZipFile(str(src_path), 'r') as zf:
                             # Validate paths to prevent zip-slip
+                            tmp_extract_path = Path(tmp_extract_dir).resolve()
                             for member in zf.namelist():
-                                member_path = os.path.realpath(os.path.join(tmp_extract_dir, member))
-                                if not member_path.startswith(os.path.realpath(tmp_extract_dir)):
+                                member_path = (tmp_extract_path / member).resolve()
+                                try:
+                                    # Use relative_to to ensure path is within tmp_extract_path
+                                    member_path.relative_to(tmp_extract_path)
+                                except ValueError:
                                     raise ValueError(f"Unsafe path in ZIP: {member}")
                             zf.extractall(tmp_extract_dir)
                         src_path = Path(tmp_extract_dir)
@@ -2943,12 +2944,12 @@ class GameTextureSorter(ctk.CTk):
                 
                 for file_idx, (folder_idx, src_base, fpath) in enumerate(all_files, 1):
                     # Check for cancel
-                    if is_cancelled:
+                    if is_cancelled.is_set():
                         self._upscale_log("Operation cancelled by user")
                         break
                     
                     # Check for pause
-                    while is_paused and not is_cancelled:
+                    while is_paused.is_set() and not is_cancelled.is_set():
                         time.sleep(PAUSE_CHECK_INTERVAL)
                     
                     try:

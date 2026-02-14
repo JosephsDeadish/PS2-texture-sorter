@@ -206,7 +206,8 @@ class GPUDetector:
                 if len(parts) >= 2:
                     index = int(parts[0])
                     name = self._parse_nvidia_name(parts[1])
-                    memory_mb = int(float(parts[2])) if len(parts) > 2 and parts[2] else None
+                    # Round memory to nearest MB to avoid precision loss
+                    memory_mb = round(float(parts[2])) if len(parts) > 2 and parts[2] else None
                     driver = parts[3] if len(parts) > 3 else None
                     pci_id = parts[4] if len(parts) > 4 else None
                     
@@ -455,7 +456,8 @@ class GPUDetector:
                 timeout=2
             )
             
-            if 'Apple' in result.stdout and ('M1' in result.stdout or 'M2' in result.stdout or 'M3' in result.stdout):
+            # Use flexible regex to match any M-series chip (M1, M2, M3, M4, etc.)
+            if 'Apple' in result.stdout and re.search(r'M\d+', result.stdout):
                 # Extract chip name
                 chip_match = re.search(r'Apple (M\d+[^\s]*)', result.stdout)
                 chip_name = chip_match.group(1) if chip_match else "Apple Silicon"

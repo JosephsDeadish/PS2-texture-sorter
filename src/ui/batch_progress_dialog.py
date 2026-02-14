@@ -477,12 +477,18 @@ class BatchProgressDialog:
                 # Keep filename and truncate parents
                 remaining = max_length - len(filename) - 5
                 parent = str(Path(*parts[:-1]))
-                if len(parent) > remaining:
+                if len(parent) > remaining and remaining > 3:
+                    # Safe truncation: ensure remaining > 3 to avoid negative index
                     return f"...{parent[-(remaining-3):]}/{filename}"
+                elif len(parent) > remaining:
+                    # If remaining <= 3, just show filename
+                    return f".../{filename}"
                 return f"{parent}/{filename}"
         
-        # Just truncate
-        return f"...{path[-(max_length-3):]}"
+        # Just truncate from end
+        if max_length > 3:
+            return f"...{path[-(max_length-3):]}"
+        return path[:max_length]
     
     def _format_duration(self, seconds: float) -> str:
         """
