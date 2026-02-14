@@ -92,6 +92,13 @@ except ImportError:
     print("Warning: Line art converter panel not available.")
 
 try:
+    from src.ui.batch_rename_panel import BatchRenamePanel
+    BATCH_RENAME_AVAILABLE = True
+except ImportError:
+    BATCH_RENAME_AVAILABLE = False
+    print("Warning: Batch rename panel not available.")
+
+try:
     from src.features.panda_character import PandaCharacter, PandaGender
     PANDA_CHARACTER_AVAILABLE = True
 except ImportError:
@@ -911,6 +918,7 @@ class GameTextureSorter(ctk.CTk):
         self.tab_quality_checker = self.tabview.add("🔍 Quality Checker")
         self.tab_batch_normalizer = self.tabview.add("📏 Batch Normalizer")
         self.tab_lineart_converter = self.tabview.add("✏️ Line Art")
+        self.tab_batch_rename = self.tabview.add("📝 Batch Rename")
         self.tab_about = self.tabview.add("ℹ️ About")
         
         # Features tabview (nested) - use scrollable if available
@@ -974,6 +982,7 @@ class GameTextureSorter(ctk.CTk):
             self.create_quality_checker_tab,
             self.create_batch_normalizer_tab,
             self.create_lineart_converter_tab,
+            self.create_batch_rename_tab,
         ])
         
         # Add remaining tabs
@@ -7903,6 +7912,29 @@ class GameTextureSorter(ctk.CTk):
             ctk.CTkLabel(
                 self.tab_lineart_converter,
                 text=f"Error loading Line Art Converter:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_batch_rename_tab(self):
+        """Create batch rename tab for file renaming with patterns"""
+        try:
+            if BATCH_RENAME_AVAILABLE:
+                panel = BatchRenamePanel(self.tab_batch_rename)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Batch Rename tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_batch_rename,
+                    text="Batch Rename not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating batch rename tab: {e}")
+            ctk.CTkLabel(
+                self.tab_batch_rename,
+                text=f"Error loading Batch Rename:\n{str(e)}",
                 font=("Arial", 12),
                 text_color="red"
             ).pack(pady=20)
