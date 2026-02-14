@@ -631,7 +631,7 @@ class BackgroundRemoverPanel(ctk.CTkFrame):
                 self._tooltips.append(WidgetTooltip(
                     self.obj_remover_radio,
                     _tt('bg_mode', "Paint objects to remove them from images"),
-                    widget_id='bg_mode', tooltip_manager=tm))
+                    widget_id='obj_mode', tooltip_manager=tm))
             
         except Exception as e:
             logger.error(f"Error adding tooltips to Background Remover Panel: {e}")
