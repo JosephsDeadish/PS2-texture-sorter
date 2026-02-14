@@ -71,6 +71,27 @@ except ImportError:
     print("Warning: Background remover panel not available.")
 
 try:
+    from src.ui.quality_checker_panel import QualityCheckerPanel
+    QUALITY_CHECKER_AVAILABLE = True
+except ImportError:
+    QUALITY_CHECKER_AVAILABLE = False
+    print("Warning: Quality checker panel not available.")
+
+try:
+    from src.ui.batch_normalizer_panel import BatchNormalizerPanel
+    BATCH_NORMALIZER_AVAILABLE = True
+except ImportError:
+    BATCH_NORMALIZER_AVAILABLE = False
+    print("Warning: Batch normalizer panel not available.")
+
+try:
+    from src.ui.lineart_converter_panel import LineArtConverterPanel
+    LINEART_CONVERTER_AVAILABLE = True
+except ImportError:
+    LINEART_CONVERTER_AVAILABLE = False
+    print("Warning: Line art converter panel not available.")
+
+try:
     from src.features.panda_character import PandaCharacter, PandaGender
     PANDA_CHARACTER_AVAILABLE = True
 except ImportError:
@@ -887,6 +908,9 @@ class GameTextureSorter(ctk.CTk):
         self.tab_upscaler = self.tabview.add("🔍 Image Upscaler")
         if BACKGROUND_REMOVER_AVAILABLE:
             self.tab_bg_remover = self.tabview.add("🎭 Background Remover")
+        self.tab_quality_checker = self.tabview.add("🔍 Quality Checker")
+        self.tab_batch_normalizer = self.tabview.add("📏 Batch Normalizer")
+        self.tab_lineart_converter = self.tabview.add("✏️ Line Art")
         self.tab_about = self.tabview.add("ℹ️ About")
         
         # Features tabview (nested) - use scrollable if available
@@ -944,6 +968,13 @@ class GameTextureSorter(ctk.CTk):
         # Conditionally add background remover tab if available
         if BACKGROUND_REMOVER_AVAILABLE:
             _all_tab_creators.append(self.create_bg_remover_tab)
+        
+        # Add new tool tabs
+        _all_tab_creators.extend([
+            self.create_quality_checker_tab,
+            self.create_batch_normalizer_tab,
+            self.create_lineart_converter_tab,
+        ])
         
         # Add remaining tabs
         _all_tab_creators.extend([
@@ -7803,6 +7834,75 @@ class GameTextureSorter(ctk.CTk):
             ctk.CTkLabel(
                 self.tab_bg_remover,
                 text=f"Error loading Background Remover:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_quality_checker_tab(self):
+        """Create quality checker tab for image analysis"""
+        try:
+            if QUALITY_CHECKER_AVAILABLE:
+                panel = QualityCheckerPanel(self.tab_quality_checker)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Quality Checker tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_quality_checker,
+                    text="Quality Checker not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating quality checker tab: {e}")
+            ctk.CTkLabel(
+                self.tab_quality_checker,
+                text=f"Error loading Quality Checker:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_batch_normalizer_tab(self):
+        """Create batch normalizer tab for format standardization"""
+        try:
+            if BATCH_NORMALIZER_AVAILABLE:
+                panel = BatchNormalizerPanel(self.tab_batch_normalizer)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Batch Normalizer tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_batch_normalizer,
+                    text="Batch Normalizer not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating batch normalizer tab: {e}")
+            ctk.CTkLabel(
+                self.tab_batch_normalizer,
+                text=f"Error loading Batch Normalizer:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_lineart_converter_tab(self):
+        """Create line art converter tab for stencil generation"""
+        try:
+            if LINEART_CONVERTER_AVAILABLE:
+                panel = LineArtConverterPanel(self.tab_lineart_converter)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Line Art Converter tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_lineart_converter,
+                    text="Line Art Converter not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating line art converter tab: {e}")
+            ctk.CTkLabel(
+                self.tab_lineart_converter,
+                text=f"Error loading Line Art Converter:\n{str(e)}",
                 font=("Arial", 12),
                 text_color="red"
             ).pack(pady=20)
