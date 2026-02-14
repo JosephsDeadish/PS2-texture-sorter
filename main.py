@@ -200,6 +200,13 @@ except ImportError:
     print("Warning: Goodbye splash not available.")
 
 try:
+    from src.ui.batch_progress_dialog import BatchProgressDialog
+    BATCH_PROGRESS_DIALOG_AVAILABLE = True
+except ImportError:
+    BATCH_PROGRESS_DIALOG_AVAILABLE = False
+    print("Warning: Batch progress dialog not available.")
+
+try:
     from src.preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets
     ALPHA_CORRECTION_AVAILABLE = True
 except ImportError:
@@ -2065,6 +2072,30 @@ class GameTextureSorter(ctk.CTk):
         upscale_input_zip_btn.grid(row=0, column=3, padx=5, pady=5)
         input_frame.columnconfigure(1, weight=1)
 
+        # --- Folder Queue section ---
+        queue_frame = ctk.CTkFrame(scroll)
+        queue_frame.pack(fill="x", padx=10, pady=10)
+        ctk.CTkLabel(queue_frame, text="Folder Queue:",
+                     font=("Arial Bold", 12)).pack(anchor="w", padx=10, pady=5)
+        
+        queue_controls = ctk.CTkFrame(queue_frame)
+        queue_controls.pack(fill="x", padx=10, pady=5)
+        
+        upscale_add_folder_btn = ctk.CTkButton(queue_controls, text="➕ Add Folder to Queue", width=150,
+                     command=self._add_folder_to_queue)
+        upscale_add_folder_btn.pack(side="left", padx=5)
+        
+        upscale_clear_queue_btn = ctk.CTkButton(queue_controls, text="🗑️ Clear Queue", width=120,
+                     command=self._clear_folder_queue)
+        upscale_clear_queue_btn.pack(side="left", padx=5)
+        
+        # Queue listbox
+        self.upscale_queue_frame = ctk.CTkScrollableFrame(queue_frame, height=100)
+        self.upscale_queue_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        # Initialize queue list
+        self.upscale_folder_queue = []
+
         # --- Output section ---
         output_frame = ctk.CTkFrame(scroll)
         output_frame.pack(fill="x", padx=10, pady=10)
@@ -2413,6 +2444,64 @@ class GameTextureSorter(ctk.CTk):
         if result:
             self.upscale_input_var.set(result)
 
+    def _add_folder_to_queue(self):
+        """Add a folder to the upscale queue."""
+        folder = filedialog.askdirectory(title="Select Folder to Add to Queue")
+        if folder:
+            folder_path = Path(folder)
+            if folder_path in self.upscale_folder_queue:
+                messagebox.showinfo("Already in Queue", f"This folder is already in the queue.")
+                return
+            
+            self.upscale_folder_queue.append(folder_path)
+            self._update_queue_display()
+    
+    def _clear_folder_queue(self):
+        """Clear the folder queue."""
+        if self.upscale_folder_queue:
+            if messagebox.askyesno("Clear Queue", "Clear all folders from the queue?"):
+                self.upscale_folder_queue.clear()
+                self._update_queue_display()
+    
+    def _update_queue_display(self):
+        """Update the folder queue display."""
+        # Clear existing widgets
+        for widget in self.upscale_queue_frame.winfo_children():
+            widget.destroy()
+        
+        if not self.upscale_folder_queue:
+            ctk.CTkLabel(
+                self.upscale_queue_frame,
+                text="No folders in queue. Add folders or use the input field above for single folder processing.",
+                font=("Arial", 10),
+                text_color="gray"
+            ).pack(pady=10)
+            return
+        
+        for idx, folder in enumerate(self.upscale_folder_queue):
+            item_frame = ctk.CTkFrame(self.upscale_queue_frame)
+            item_frame.pack(fill="x", padx=5, pady=2)
+            
+            ctk.CTkLabel(
+                item_frame,
+                text=f"{idx + 1}. {folder.name}",
+                font=("Arial", 10),
+                anchor="w"
+            ).pack(side="left", fill="x", expand=True, padx=5)
+            
+            ctk.CTkButton(
+                item_frame,
+                text="❌",
+                width=30,
+                command=lambda i=idx: self._remove_from_queue(i)
+            ).pack(side="right", padx=5)
+    
+    def _remove_from_queue(self, index: int):
+        """Remove a folder from the queue."""
+        if 0 <= index < len(self.upscale_folder_queue):
+            self.upscale_folder_queue.pop(index)
+            self._update_queue_display()
+
     def _upscale_log(self, message):
         """Thread-safe log helper for upscaler."""
         self.after(0, lambda m=message: self._upscale_log_impl(m))
@@ -2698,17 +2787,30 @@ class GameTextureSorter(ctk.CTk):
         self._upscale_log(f"Feedback: {rating} for style={style}, factor={factor}")
 
     def _run_upscale(self):
-        """Run batch upscaling in a background thread."""
+        """Run batch upscaling in a background thread with enhanced progress dialog."""
         input_path = self.upscale_input_var.get().strip()
         output_path = self.upscale_output_var.get().strip()
-        if not input_path:
-            if GUI_AVAILABLE:
-                messagebox.showwarning("No Input", "Please select an input folder or ZIP.")
-            return
-        if not output_path:
-            if GUI_AVAILABLE:
-                messagebox.showwarning("No Output", "Please select an output folder.")
-            return
+        
+        # Determine folders to process: either from queue or single input
+        folders_to_process = []
+        if self.upscale_folder_queue:
+            # Use folder queue
+            folders_to_process = list(self.upscale_folder_queue)
+            if not output_path:
+                if GUI_AVAILABLE:
+                    messagebox.showwarning("No Output", "Please select an output folder.")
+                return
+        else:
+            # Single folder/ZIP mode
+            if not input_path:
+                if GUI_AVAILABLE:
+                    messagebox.showwarning("No Input", "Please select an input folder/ZIP or add folders to the queue.")
+                return
+            if not output_path:
+                if GUI_AVAILABLE:
+                    messagebox.showwarning("No Output", "Please select an output folder.")
+                return
+            folders_to_process = [Path(input_path)]
 
         self.upscale_start_btn.configure(state="disabled")
         self.upscale_log_text.delete("1.0", "end")
@@ -2728,57 +2830,143 @@ class GameTextureSorter(ctk.CTk):
         is_esrgan = "ESRGAN" in style
         overwrite = self.upscale_overwrite_var.get() if hasattr(self, 'upscale_overwrite_var') else False
 
+        # Create progress dialog if available
+        progress_dialog = None
+        if BATCH_PROGRESS_DIALOG_AVAILABLE and GUI_AVAILABLE:
+            progress_dialog = BatchProgressDialog(self, "Batch Upscaling Progress")
+            progress_dialog.set_folder_queue([str(f) for f in folders_to_process])
+
         def worker():
             import tempfile
             import zipfile
             import shutil
             from PIL import Image
 
-            tmp_extract_dir = None
+            tmp_extract_dirs = []
+            is_paused = False
+            is_cancelled = False
+            
+            # Setup callbacks for progress dialog
+            def on_pause():
+                nonlocal is_paused
+                is_paused = True
+                self._upscale_log("⏸ Paused")
+            
+            def on_resume():
+                nonlocal is_paused
+                is_paused = False
+                self._upscale_log("▶ Resumed")
+            
+            def on_cancel():
+                nonlocal is_cancelled
+                is_cancelled = True
+                self._upscale_log("❌ Cancelling...")
+            
+            if progress_dialog:
+                progress_dialog.on_pause_callback = on_pause
+                progress_dialog.on_resume_callback = on_resume
+                progress_dialog.on_cancel_callback = on_cancel
+                self.after(0, progress_dialog.show)
+            
             try:
-                src_path = Path(input_path)
-                dst_path = Path(output_path)
-                dst_path.mkdir(parents=True, exist_ok=True)
-
-                # Handle ZIP input
-                if src_path.suffix.lower() == '.zip':
-                    tmp_extract_dir = tempfile.mkdtemp(prefix="upscaler_")
-                    self._upscale_log(f"Extracting ZIP: {src_path.name}")
-                    with zipfile.ZipFile(str(src_path), 'r') as zf:
-                        # Validate paths to prevent zip-slip
-                        for member in zf.namelist():
-                            member_path = os.path.realpath(os.path.join(tmp_extract_dir, member))
-                            if not member_path.startswith(os.path.realpath(tmp_extract_dir)):
-                                raise ValueError(f"Unsafe path in ZIP: {member}")
-                        zf.extractall(tmp_extract_dir)
-                    src_path = Path(tmp_extract_dir)
-
-                # Collect image files
+                # Pre-scan to get total file count and size estimates
+                all_files = []
+                total_size_bytes = 0
                 exts = {'.png', '.bmp', '.tga', '.jpg', '.jpeg', '.webp'}
-                if recursive:
-                    files = [p for p in src_path.rglob('*') if p.suffix.lower() in exts]
-                else:
-                    files = [p for p in src_path.iterdir() if p.is_file() and p.suffix.lower() in exts]
-
-                if not files:
+                
+                self._upscale_log(f"Scanning {len(folders_to_process)} folder(s)...")
+                
+                for folder_idx, src_input in enumerate(folders_to_process):
+                    src_path = Path(src_input)
+                    
+                    # Handle ZIP input
+                    if src_path.suffix.lower() == '.zip':
+                        tmp_extract_dir = tempfile.mkdtemp(prefix="upscaler_")
+                        tmp_extract_dirs.append(tmp_extract_dir)
+                        self._upscale_log(f"Extracting ZIP: {src_path.name}")
+                        with zipfile.ZipFile(str(src_path), 'r') as zf:
+                            # Validate paths to prevent zip-slip
+                            for member in zf.namelist():
+                                member_path = os.path.realpath(os.path.join(tmp_extract_dir, member))
+                                if not member_path.startswith(os.path.realpath(tmp_extract_dir)):
+                                    raise ValueError(f"Unsafe path in ZIP: {member}")
+                            zf.extractall(tmp_extract_dir)
+                        src_path = Path(tmp_extract_dir)
+                    
+                    # Collect files
+                    if recursive:
+                        folder_files = [(folder_idx, src_path, p) for p in src_path.rglob('*') if p.suffix.lower() in exts]
+                    else:
+                        folder_files = [(folder_idx, src_path, p) for p in src_path.iterdir() if p.is_file() and p.suffix.lower() in exts]
+                    
+                    all_files.extend(folder_files)
+                    
+                    # Calculate size
+                    for _, _, fpath in folder_files:
+                        try:
+                            total_size_bytes += fpath.stat().st_size
+                        except Exception:
+                            pass
+                
+                if not all_files:
                     self._upscale_log("No image files found.")
+                    if progress_dialog:
+                        self.after(0, progress_dialog.close)
                     return
-
-                self._upscale_log(f"Found {len(files)} image(s). Scale: {factor}x, Style: {style}")
+                
+                total_files = len(all_files)
+                self._upscale_log(f"Found {total_files} image(s) across {len(folders_to_process)} folder(s)")
+                self._upscale_log(f"Total size: {total_size_bytes / (1024*1024):.1f} MB")
+                self._upscale_log(f"Scale: {factor}x, Style: {style}, Overwrite: {overwrite}")
+                
+                if progress_dialog:
+                    self.after(0, lambda: progress_dialog.set_total_files(total_files))
+                    self.after(0, lambda: progress_dialog.update_storage(0, total_size_bytes))
+                
+                # Process files
                 processed = 0
                 errors = 0
-
+                skipped = 0
+                processed_bytes = 0
+                
+                dst_path = Path(output_path)
+                dst_path.mkdir(parents=True, exist_ok=True)
+                
                 if is_esrgan:
                     import numpy as np
                     from src.preprocessing.upscaler import TextureUpscaler
                     tu = TextureUpscaler()
-
-                for i, fpath in enumerate(files, 1):
+                
+                for file_idx, (folder_idx, src_base, fpath) in enumerate(all_files, 1):
+                    # Check for cancel
+                    if is_cancelled:
+                        self._upscale_log("Operation cancelled by user")
+                        break
+                    
+                    # Check for pause
+                    while is_paused and not is_cancelled:
+                        time.sleep(0.1)
+                    
                     try:
+                        # Update progress dialog
+                        if progress_dialog:
+                            # Determine subfolder
+                            try:
+                                rel_path = fpath.relative_to(src_base)
+                                subfolder = str(rel_path.parent) if rel_path.parent != Path('.') else None
+                            except ValueError:
+                                subfolder = None
+                            
+                            self.after(0, lambda idx=folder_idx, f=str(folders_to_process[folder_idx]): 
+                                      progress_dialog.set_current_folder(f, idx))
+                            self.after(0, lambda sf=subfolder: progress_dialog.set_current_subfolder(sf))
+                            self.after(0, lambda fn=fpath.name: progress_dialog.set_current_file(fn))
+                        
+                        # Load image
                         img = Image.open(str(fpath))
-
+                        
+                        # Upscale
                         if is_esrgan:
-                            # Use the existing TextureUpscaler for ESRGAN
                             arr = np.array(img.convert("RGB"))
                             result_arr = tu.upscale(arr, scale_factor=factor, method='realesrgan')
                             result = Image.fromarray(result_arr)
@@ -2788,43 +2976,62 @@ class GameTextureSorter(ctk.CTk):
                                 result.putalpha(alpha)
                         else:
                             result = self._upscale_pil_image(img, factor, preserve_alpha)
-
+                        
                         # Build output path preserving relative structure
                         try:
-                            rel = fpath.relative_to(src_path)
+                            rel = fpath.relative_to(src_base)
                         except ValueError:
                             rel = Path(fpath.name)
-                        out_file = dst_path / rel.with_suffix(f".{export_fmt}")
+                        
+                        # Include folder name in output if processing multiple folders
+                        if len(folders_to_process) > 1:
+                            folder_name = folders_to_process[folder_idx].stem
+                            out_file = dst_path / folder_name / rel.with_suffix(f".{export_fmt}")
+                        else:
+                            out_file = dst_path / rel.with_suffix(f".{export_fmt}")
+                        
                         out_file.parent.mkdir(parents=True, exist_ok=True)
-
-                        # Skip existing files unless overwrite is enabled
+                        
+                        # Check if exists
                         if out_file.exists() and not overwrite:
-                            self._upscale_log(f"  ⏭️ [{i}/{len(files)}] {fpath.name} (exists, skipped)")
-                            continue
-
-                        # Save
-                        save_kwargs = {}
-                        if export_fmt == "jpeg":
-                            save_kwargs["quality"] = 95
-                            if result.mode == "RGBA":
-                                result = result.convert("RGB")
-                        elif export_fmt == "webp":
-                            save_kwargs["quality"] = 95
-                        result.save(str(out_file), **save_kwargs)
-                        processed += 1
-                        self._upscale_log(f"  ✅ [{i}/{len(files)}] {fpath.name}")
+                            self._upscale_log(f"  ⏭️ [{file_idx}/{total_files}] {fpath.name} (exists, skipped)")
+                            skipped += 1
+                        else:
+                            # Save
+                            save_kwargs = {}
+                            if export_fmt == "jpeg":
+                                save_kwargs["quality"] = 95
+                                if result.mode == "RGBA":
+                                    result = result.convert("RGB")
+                            elif export_fmt == "webp":
+                                save_kwargs["quality"] = 95
+                            result.save(str(out_file), **save_kwargs)
+                            processed += 1
+                            self._upscale_log(f"  ✅ [{file_idx}/{total_files}] {fpath.name}")
+                        
+                        # Update size tracking
+                        try:
+                            processed_bytes += fpath.stat().st_size
+                        except Exception:
+                            pass
+                        
                     except Exception as e:
                         errors += 1
-                        self._upscale_log(f"  ❌ [{i}/{len(files)}] {fpath.name}: {e}")
-
+                        self._upscale_log(f"  ❌ [{file_idx}/{total_files}] {fpath.name}: {e}")
+                    
                     # Update progress
-                    progress = i / len(files)
+                    if progress_dialog:
+                        self.after(0, lambda p=processed, e=errors, s=skipped, pb=processed_bytes: 
+                                  progress_dialog.update_progress(p, e, s))
+                        self.after(0, lambda pb=processed_bytes: progress_dialog.update_storage(pb))
+                    
+                    progress = file_idx / total_files
                     self.after(0, lambda p=progress: self.upscale_progress_bar.set(p))
-
-                self._upscale_log(f"\nDone! Processed: {processed}, Errors: {errors}")
-
+                
+                self._upscale_log(f"\n✅ Done! Processed: {processed}, Skipped: {skipped}, Errors: {errors}")
+                
                 # ZIP output
-                if zip_output:
+                if zip_output and not is_cancelled:
                     zip_path = dst_path.parent / f"{dst_path.name}_upscaled.zip"
                     self._upscale_log(f"Creating ZIP: {zip_path.name}")
                     with zipfile.ZipFile(str(zip_path), 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -2832,16 +3039,25 @@ class GameTextureSorter(ctk.CTk):
                             if f.is_file():
                                 zf.write(str(f), str(f.relative_to(dst_path)))
                     self._upscale_log(f"  ✅ ZIP created: {zip_path}")
-
+                
                 # Send to organizer
-                if send_to_organizer and hasattr(self, 'input_var'):
+                if send_to_organizer and hasattr(self, 'input_var') and not is_cancelled:
                     self.after(0, lambda: self._send_upscaled_to_organizer(str(dst_path)))
-
+                
             except Exception as e:
                 self._upscale_log(f"❌ Error: {e}")
+                logger.error(f"Upscale error: {e}", exc_info=True)
             finally:
-                if tmp_extract_dir and os.path.isdir(tmp_extract_dir):
-                    shutil.rmtree(tmp_extract_dir, ignore_errors=True)
+                # Cleanup temp directories
+                for tmp_dir in tmp_extract_dirs:
+                    if os.path.isdir(tmp_dir):
+                        shutil.rmtree(tmp_dir, ignore_errors=True)
+                
+                # Close progress dialog
+                if progress_dialog:
+                    self.after(0, progress_dialog.close)
+                
+                # Re-enable button
                 self.after(0, lambda: self.upscale_start_btn.configure(state="normal"))
 
         import threading
