@@ -3944,6 +3944,44 @@ _PANDA_TOOLTIPS = {
             "The results of the quality scan. Look here to see what's good and what needs fixing.",
         ],
     },
+    'qc_export': {
+        'normal': [
+            "Export the quality analysis report to a text file",
+            "Save the quality check results for review or sharing",
+            "Download quality metrics as a formatted report",
+            "Write the analysis results to a file on disk",
+        ],
+        'vulgar': [
+            "Export report. Because showing proof of your texture crimes is sometimes necessary. Evidence!",
+            "Save the report. Print it out, frame it, hang it on your wall of shame. Or fix the problems. Your call.",
+            "Export results. Share with your team so everyone knows whose textures suck the most. Accountability!",
+            "Save the report. Keep receipts of which textures are garbage. Digital forensics for pixel detectives.",
+            "Export button. Because 'the panda said my textures are bad' isn't convincing without documentation.",
+        ],
+        'dumbed-down': [
+            "Saves the quality report to a text file so you can read it later or share with others.",
+            "Click to export — it creates a file with all the results from the quality check.",
+        ],
+    },
+    'qc_dpi': {
+        'normal': [
+            "Set the target DPI for quality analysis (72=screen, 300=print)",
+            "Choose the DPI standard to check textures against",
+            "Select the resolution threshold for quality evaluation",
+            "Configure the DPI baseline for the quality checker",
+        ],
+        'vulgar': [
+            "DPI setting. 72 for screens, 300 for print, 600 for absolute overkill. Pick your poison.",
+            "Dots per inch. The number that tells you if your textures are HD or potato quality. No middle ground.",
+            "Target DPI. Set it high and watch everything fail. Set it low and feel great about mediocrity. Balance!",
+            "DPI picker. Like choosing between a microscope and binoculars for judging your pixel density.",
+            "Resolution standard. 72 DPI is 'meh' for print but fine for screens. 300 is 'chef's kiss' for everything.",
+        ],
+        'dumbed-down': [
+            "Pick the DPI to check against. 72 is normal for screens, 300 is for printing. Higher = stricter checks.",
+            "DPI is like detail density. 72 is standard for digital, 300 is needed for sharp prints.",
+        ],
+    },
 
     # ── Batch Normalizer Panel ─────────────────────────────────────
     'bn_normalize': {
@@ -4003,6 +4041,82 @@ _PANDA_TOOLTIPS = {
             "Choose how big or small the final images should be. Bigger = more detail but larger file size.",
         ],
     },
+    'bn_resize_mode': {
+        'normal': [
+            "Choose how images are resized: fit, fill, stretch, or none",
+            "Select the resize method for batch normalization",
+            "Configure resize behavior when target dimensions differ from source",
+            "Set the strategy for scaling images to the target size",
+        ],
+        'vulgar': [
+            "Resize mode. Fit = polite cropping. Fill = aggressive cropping. Stretch = war crimes against aspect ratios.",
+            "How to resize. 'Fit' keeps proportions. 'Stretch' does not. 'None' is for commitment-phobes.",
+            "Scaling strategy. Fit, fill, stretch, or none. Like dating options but for pixels.",
+            "Resize method. Stretch makes everything look drunk. Fit is classy. Fill is somewhere in between.",
+            "Pick how resizing works. 'Fit' preserves sanity. 'Stretch' preserves nothing. Choose wisely.",
+        ],
+        'dumbed-down': [
+            "How images get resized. 'Fit' keeps proportions, 'Fill' crops to fill, 'Stretch' forces the size, 'None' skips resizing.",
+            "Choose the resize method. 'Fit' is usually best — it scales without distortion.",
+        ],
+    },
+    'bn_output_format': {
+        'normal': [
+            "Select the output image format (PNG, JPEG, WEBP, TIFF)",
+            "Choose which file format to save normalized images as",
+            "Set the target format for batch output files",
+            "Pick the output file type for normalized textures",
+        ],
+        'vulgar': [
+            "Output format. PNG for lossless perfection, JPEG for 'good enough,' WEBP for hipsters, TIFF for dinosaurs.",
+            "File format picker. PNG = safe. JPEG = lossy but small. WEBP = cool and modern. TIFF = why though?",
+            "Choose a format. PNG is king. JPEG is acceptable. WEBP is the cool new kid. TIFF is… still here somehow.",
+            "Export format. Like choosing your weapon: PNG (sword), JPEG (dagger), WEBP (laser), TIFF (trebuchet).",
+            "Pick the output format. All roads lead to pixels, but some roads are lossier than others.",
+        ],
+        'dumbed-down': [
+            "Pick the file type to save as. PNG keeps all quality, JPEG is smaller but loses some, WEBP is a good balance.",
+            "Choose your output format. PNG is best for quality, JPEG for smaller files.",
+        ],
+    },
+    'bn_quality': {
+        'normal': [
+            "Set output quality for JPEG/WebP formats (50-100)",
+            "Adjust compression quality for lossy formats",
+            "Control the quality-to-filesize tradeoff",
+            "Configure the compression level for output files",
+        ],
+        'vulgar': [
+            "Quality slider. 100 = pixel perfection. 50 = JPEG artifact hellscape. Find your comfort zone.",
+            "Compression quality. Crank it up for beauty, dial it down for tiny files. The eternal tradeoff.",
+            "Quality setting. Higher = prettier. Lower = smaller. It's like the attractiveness vs. rent analogy.",
+            "JPEG/WebP quality. 95+ is chef's kiss. Below 70 is a cry for help. You've been warned.",
+            "Quality control. This slider determines if your textures look professional or like they were faxed.",
+        ],
+        'dumbed-down': [
+            "Controls how much quality is kept when saving as JPEG or WEBP. Higher is better looking but bigger files.",
+            "Slide right for better quality, left for smaller files. Only affects JPEG and WEBP formats.",
+        ],
+    },
+    'bn_padding': {
+        'normal': [
+            "Choose padding fill method when resizing with 'fit' mode",
+            "Select what fills the empty space when image doesn't fill target dimensions",
+            "Configure the padding type for resized images",
+            "Set the border fill strategy for padded areas",
+        ],
+        'vulgar': [
+            "Padding mode. What fills the gaps when your image doesn't fit. Transparent, black, white, blur, or edge magic.",
+            "Fill the void! When images don't fit the target size, this picks what goes in the empty space. Existential padding.",
+            "Padding type. Transparent = honest. Black = dramatic. White = clean. Blur = artistic. Edge extend = sneaky.",
+            "What goes in the borders? Transparent for layering, black for drama, blur for 'I meant to do that' vibes.",
+            "Padding selector. Because empty space needs filling. Like your schedule. And your fridge. But for pixels.",
+        ],
+        'dumbed-down': [
+            "When an image is resized smaller than the target, this fills the remaining space. Transparent is usually best.",
+            "Picks what color or effect fills empty borders. Try 'transparent' for layering or 'blur' for a smooth look.",
+        ],
+    },
 
     # ── Line Art Converter Panel ───────────────────────────────────
     'la_convert': {
@@ -4060,6 +4174,63 @@ _PANDA_TOOLTIPS = {
         'dumbed-down': [
             "Pick a style for the line art. Each one gives a different look — try them to see which you like!",
             "Choose what kind of line art you want. Options include sketch, manga, blueprint, and more.",
+        ],
+    },
+    'la_mode': {
+        'normal': [
+            "Select the line art conversion algorithm",
+            "Choose between different conversion methods: pure black, threshold, edge detect, etc.",
+            "Pick the conversion mode that best suits your input images",
+            "Configure the core algorithm for line extraction",
+        ],
+        'vulgar': [
+            "Conversion mode. Pure black, threshold, edge detect, adaptive, sketch — pick your weapon of line extraction.",
+            "Algorithm picker. Each mode converts differently. 'Pure black' is aggressive. 'Sketch' is artsy. Both valid.",
+            "Mode dropdown. It's like choosing between a scalpel and a chainsaw for extracting lines. Both work, differently.",
+            "Line art mode. 'Edge detect' for technical stuff. 'Sketch' for pretending you're an artist. No judgment.",
+            "Pick your conversion flavor. Threshold is reliable, adaptive is smart, sketch is fancy. Try them all, you coward.",
+        ],
+        'dumbed-down': [
+            "Choose how the image gets converted to lines. 'Pure black' is simple, 'Edge detect' finds outlines, 'Sketch' is artistic.",
+            "Pick a conversion mode — each one produces a different kind of line art. Try a few to see what you like!",
+        ],
+    },
+    'la_contrast': {
+        'normal': [
+            "Boost contrast before conversion to strengthen line edges",
+            "Increase image contrast to improve line art quality",
+            "Enhance contrast for cleaner, more defined lines",
+            "Pre-process contrast adjustment for better edge detection",
+        ],
+        'vulgar': [
+            "Contrast boost. Crank it up to make lines POP. Leave it at 1.0 if you're boring. 3.0 is for the brave.",
+            "Pre-conversion contrast. Like adding espresso to your lines — makes everything more intense. Too much? Jittery pixels.",
+            "Contrast slider. Higher = bolder lines. Lower = subtler. 1.0 = 'I don't want to commit to anything.'",
+            "Boost that contrast. Make your lines thicc and defined. Or keep it chill. The panda supports both lifestyles.",
+            "Contrast adjuster. The difference between 'elegant line art' and 'bold graphic novel.' Both cool, different vibes.",
+        ],
+        'dumbed-down': [
+            "Makes lines stronger or weaker. 1.0 is normal, higher makes bolder lines, lower makes softer ones.",
+            "Adjusts contrast before converting. Slide right for stronger, more visible lines.",
+        ],
+    },
+    'la_morphology': {
+        'normal': [
+            "Apply morphology operations to thicken or thin lines",
+            "Use dilate/erode to adjust line thickness after conversion",
+            "Post-process lines with morphological transformations",
+            "Fine-tune line weight using mathematical morphology",
+        ],
+        'vulgar': [
+            "Morphology. Dilate = fatten those lines. Erode = slim them down. Like a gym membership for pixels.",
+            "Line thickness control via math magic. Dilate adds bulk. Erode trims fat. Close fills gaps. Open removes specks.",
+            "Morphology ops. Sounds fancy. It's just making lines thicker or thinner. Don't overthink it.",
+            "Post-processing for line weight. 'Dilate' for chunky lines. 'Erode' for delicate ones. 'None' for lazy.",
+            "Morphological operations. Big words for simple concepts: make lines fatter, thinner, or fill in gaps.",
+        ],
+        'dumbed-down': [
+            "Changes line thickness after conversion. 'Dilate' makes lines thicker, 'Erode' makes them thinner, 'None' leaves them as-is.",
+            "Adjusts the weight of the lines. Try 'dilate' if lines are too thin, or 'erode' if they're too thick.",
         ],
     },
 

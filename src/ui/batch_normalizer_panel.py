@@ -219,12 +219,13 @@ class BatchNormalizerPanel(ctk.CTkFrame):
         ctk.CTkLabel(resize_frame, text="Resize Mode:").pack(side="left", padx=5)
         
         self.resize_mode_var = ctk.StringVar(value="fit")
-        ctk.CTkOptionMenu(
+        self.resize_mode_menu = ctk.CTkOptionMenu(
             resize_frame,
             variable=self.resize_mode_var,
             values=["fit", "fill", "stretch", "none"],
             width=120
-        ).pack(side="left", padx=5)
+        )
+        self.resize_mode_menu.pack(side="left", padx=5)
         
         # Padding mode
         padding_frame = ctk.CTkFrame(size_frame)
@@ -233,12 +234,13 @@ class BatchNormalizerPanel(ctk.CTkFrame):
         ctk.CTkLabel(padding_frame, text="Padding:").pack(side="left", padx=5)
         
         self.padding_mode_var = ctk.StringVar(value="transparent")
-        ctk.CTkOptionMenu(
+        self.padding_mode_menu = ctk.CTkOptionMenu(
             padding_frame,
             variable=self.padding_mode_var,
             values=["transparent", "black", "white", "blur", "edge_extend"],
             width=120
-        ).pack(side="left", padx=5)
+        )
+        self.padding_mode_menu.pack(side="left", padx=5)
         
         # Center subject
         self.center_subject_var = ctk.BooleanVar(value=True)
@@ -262,12 +264,13 @@ class BatchNormalizerPanel(ctk.CTkFrame):
         ctk.CTkLabel(out_format_frame, text="Output Format:").pack(side="left", padx=5)
         
         self.output_format_var = ctk.StringVar(value="PNG")
-        ctk.CTkOptionMenu(
+        self.output_format_menu = ctk.CTkOptionMenu(
             out_format_frame,
             variable=self.output_format_var,
             values=["PNG", "JPEG", "WEBP", "TIFF"],
             width=100
-        ).pack(side="left", padx=5)
+        )
+        self.output_format_menu.pack(side="left", padx=5)
         
         # Quality settings (for JPEG/WebP)
         quality_frame = ctk.CTkFrame(format_frame)
@@ -276,18 +279,18 @@ class BatchNormalizerPanel(ctk.CTkFrame):
         ctk.CTkLabel(quality_frame, text="Quality (JPEG/WebP):").pack(side="left", padx=5)
         
         self.quality_var = ctk.IntVar(value=95)
-        quality_slider = ctk.CTkSlider(
+        self.quality_slider = ctk.CTkSlider(
             quality_frame,
             from_=50,
             to=100,
             variable=self.quality_var,
             number_of_steps=50
         )
-        quality_slider.pack(side="left", fill="x", expand=True, padx=5)
+        self.quality_slider.pack(side="left", fill="x", expand=True, padx=5)
         
         self.quality_label = ctk.CTkLabel(quality_frame, text="95")
         self.quality_label.pack(side="left", padx=5)
-        quality_slider.configure(command=lambda v: self.quality_label.configure(text=f"{int(v)}"))
+        self.quality_slider.configure(command=lambda v: self.quality_label.configure(text=f"{int(v)}"))
         
         # Alpha settings
         self.preserve_alpha_var = ctk.BooleanVar(value=True)
@@ -531,5 +534,25 @@ class BatchNormalizerPanel(ctk.CTkFrame):
                     self.normalize_button,
                     _tt('bn_normalize', "Normalize textures to a consistent format, resolution, and color space"),
                     widget_id='bn_normalize', tooltip_manager=tm))
+            if hasattr(self, 'resize_mode_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.resize_mode_menu,
+                    _tt('bn_resize_mode', "Choose how images are resized: fit, fill, stretch, or none"),
+                    widget_id='bn_resize_mode', tooltip_manager=tm))
+            if hasattr(self, 'output_format_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.output_format_menu,
+                    _tt('bn_output_format', "Select the output image format (PNG, JPEG, WEBP, TIFF)"),
+                    widget_id='bn_output_format', tooltip_manager=tm))
+            if hasattr(self, 'quality_slider'):
+                self._tooltips.append(WidgetTooltip(
+                    self.quality_slider,
+                    _tt('bn_quality', "Set output quality for JPEG/WebP formats (50-100)"),
+                    widget_id='bn_quality', tooltip_manager=tm))
+            if hasattr(self, 'padding_mode_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.padding_mode_menu,
+                    _tt('bn_padding', "Choose padding fill method when resizing with 'fit' mode"),
+                    widget_id='bn_padding', tooltip_manager=tm))
         except Exception as e:
             logger.error(f"Error adding tooltips to Batch Normalizer Panel: {e}")

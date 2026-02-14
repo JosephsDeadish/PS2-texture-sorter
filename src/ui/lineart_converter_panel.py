@@ -197,12 +197,13 @@ class LineArtConverterPanel(ctk.CTkFrame):
         ctk.CTkLabel(mode_frame, text="Mode:").pack(side="left", padx=5)
         
         self.mode_var = ctk.StringVar(value="pure_black")
-        ctk.CTkOptionMenu(
+        self.mode_menu = ctk.CTkOptionMenu(
             mode_frame,
             variable=self.mode_var,
             values=["pure_black", "threshold", "stencil_1bit", "edge_detect", "adaptive", "sketch"],
             width=140
-        ).pack(side="left", padx=5)
+        )
+        self.mode_menu.pack(side="left", padx=5)
         
         # Threshold
         threshold_frame = ctk.CTkFrame(conv_frame)
@@ -211,18 +212,18 @@ class LineArtConverterPanel(ctk.CTkFrame):
         ctk.CTkLabel(threshold_frame, text="Threshold:").pack(side="left", padx=5)
         
         self.threshold_var = ctk.IntVar(value=128)
-        threshold_slider = ctk.CTkSlider(
+        self.threshold_slider = ctk.CTkSlider(
             threshold_frame,
             from_=0,
             to=255,
             variable=self.threshold_var,
             number_of_steps=255
         )
-        threshold_slider.pack(side="left", fill="x", expand=True, padx=5)
+        self.threshold_slider.pack(side="left", fill="x", expand=True, padx=5)
         
         self.threshold_label = ctk.CTkLabel(threshold_frame, text="128")
         self.threshold_label.pack(side="left", padx=5)
-        threshold_slider.configure(command=lambda v: self.threshold_label.configure(text=f"{int(v)}"))
+        self.threshold_slider.configure(command=lambda v: self.threshold_label.configure(text=f"{int(v)}"))
         
         # Auto threshold
         self.auto_threshold_var = ctk.BooleanVar(value=False)
@@ -296,18 +297,18 @@ class LineArtConverterPanel(ctk.CTkFrame):
         ctk.CTkLabel(contrast_frame, text="Contrast Boost:").pack(side="left", padx=5)
         
         self.contrast_var = ctk.DoubleVar(value=1.0)
-        contrast_slider = ctk.CTkSlider(
+        self.contrast_slider = ctk.CTkSlider(
             contrast_frame,
             from_=0.5,
             to=3.0,
             variable=self.contrast_var,
             number_of_steps=25
         )
-        contrast_slider.pack(side="left", fill="x", expand=True, padx=5)
+        self.contrast_slider.pack(side="left", fill="x", expand=True, padx=5)
         
         self.contrast_label = ctk.CTkLabel(contrast_frame, text="1.0")
         self.contrast_label.pack(side="left", padx=5)
-        contrast_slider.configure(command=lambda v: self.contrast_label.configure(text=f"{v:.1f}"))
+        self.contrast_slider.configure(command=lambda v: self.contrast_label.configure(text=f"{v:.1f}"))
         
         # Sharpen
         self.sharpen_var = ctk.BooleanVar(value=False)
@@ -344,12 +345,13 @@ class LineArtConverterPanel(ctk.CTkFrame):
         ctk.CTkLabel(morph_frame, text="Morphology:").pack(side="left", padx=5)
         
         self.morphology_var = ctk.StringVar(value="none")
-        ctk.CTkOptionMenu(
+        self.morphology_menu = ctk.CTkOptionMenu(
             morph_frame,
             variable=self.morphology_var,
             values=["none", "dilate", "erode", "close", "open"],
             width=100
-        ).pack(side="left", padx=5)
+        )
+        self.morphology_menu.pack(side="left", padx=5)
         
         # Morphology iterations
         iter_frame = ctk.CTkFrame(line_frame)
@@ -614,5 +616,25 @@ class LineArtConverterPanel(ctk.CTkFrame):
                     self.convert_button,
                     _tt('la_convert', "Convert images to clean line art renditions"),
                     widget_id='la_convert', tooltip_manager=tm))
+            if hasattr(self, 'mode_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.mode_menu,
+                    _tt('la_mode', "Select the line art conversion algorithm"),
+                    widget_id='la_mode', tooltip_manager=tm))
+            if hasattr(self, 'threshold_slider'):
+                self._tooltips.append(WidgetTooltip(
+                    self.threshold_slider,
+                    _tt('la_threshold', "Set the brightness threshold for black/white separation (0-255)"),
+                    widget_id='la_threshold', tooltip_manager=tm))
+            if hasattr(self, 'contrast_slider'):
+                self._tooltips.append(WidgetTooltip(
+                    self.contrast_slider,
+                    _tt('la_contrast', "Boost contrast before conversion to strengthen line edges"),
+                    widget_id='la_contrast', tooltip_manager=tm))
+            if hasattr(self, 'morphology_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.morphology_menu,
+                    _tt('la_morphology', "Apply morphology operations to thicken or thin lines"),
+                    widget_id='la_morphology', tooltip_manager=tm))
         except Exception as e:
             logger.error(f"Error adding tooltips to Line Art Converter Panel: {e}")

@@ -365,5 +365,15 @@ class QualityCheckerPanel(ctk.CTkFrame):
                     self.results_text,
                     _tt('qc_results', "View quality analysis results and recommendations"),
                     widget_id='qc_results', tooltip_manager=tm))
+            if hasattr(self, 'export_button'):
+                self._tooltips.append(WidgetTooltip(
+                    self.export_button,
+                    _tt('qc_export', "Export quality report to a text file"),
+                    widget_id='qc_export', tooltip_manager=tm))
+            if hasattr(self, 'dpi_menu'):
+                self._tooltips.append(WidgetTooltip(
+                    self.dpi_menu,
+                    _tt('qc_dpi', "Set the target DPI for quality analysis (72=screen, 300=print)"),
+                    widget_id='qc_dpi', tooltip_manager=tm))
         except Exception as e:
             logger.error(f"Error adding tooltips to Quality Checker Panel: {e}")
