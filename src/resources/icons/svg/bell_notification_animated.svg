@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Bell -->
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    <!-- Notification dot -->
+    <circle cx="18" cy="8" r="2" fill="currentColor">
+      <animate attributeName="r" values="2;2.5;2" dur="1s" repeatCount="indefinite" />
+      <animate attributeName="opacity" values="0.5;1;0.5" dur="1s" repeatCount="indefinite" />
+    </circle>
+    <!-- Ringing animation -->
+    <g transform-origin="12 8">
+      <animateTransform attributeName="transform" type="rotate" values="0 12 8;-15 12 8;15 12 8;-15 12 8;0 12 8" dur="2s" repeatCount="indefinite" />
+    </g>
+  </g>
+</svg>

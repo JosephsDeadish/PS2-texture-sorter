@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Flag pole -->
+    <line x1="4" y1="2" x2="4" y2="22"/>
+    <!-- Flag waving -->
+    <path d="M4 4h16l-2 4 2 4H4z">
+      <animate attributeName="d" values="M4 4h16l-2 4 2 4H4z;M4 4h16l-4 4 0 4H4z;M4 4h16l-2 4 2 4H4z" dur="2s" repeatCount="indefinite" />
+    </path>
+  </g>
+</svg>

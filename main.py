@@ -64,6 +64,69 @@ except ImportError:
     print("Warning: UI customization panel not available.")
 
 try:
+    from src.ui.background_remover_panel import BackgroundRemoverPanel
+    BACKGROUND_REMOVER_AVAILABLE = True
+except ImportError:
+    BACKGROUND_REMOVER_AVAILABLE = False
+    print("Warning: Background remover panel not available.")
+
+try:
+    from src.ui.quality_checker_panel import QualityCheckerPanel
+    QUALITY_CHECKER_AVAILABLE = True
+except ImportError:
+    QUALITY_CHECKER_AVAILABLE = False
+    print("Warning: Quality checker panel not available.")
+
+try:
+    from src.ui.batch_normalizer_panel import BatchNormalizerPanel
+    BATCH_NORMALIZER_AVAILABLE = True
+except ImportError:
+    BATCH_NORMALIZER_AVAILABLE = False
+    print("Warning: Batch normalizer panel not available.")
+
+try:
+    from src.ui.lineart_converter_panel import LineArtConverterPanel
+    LINEART_CONVERTER_AVAILABLE = True
+except ImportError:
+    LINEART_CONVERTER_AVAILABLE = False
+    print("Warning: Line art converter panel not available.")
+
+try:
+    from src.ui.batch_rename_panel import BatchRenamePanel
+    BATCH_RENAME_AVAILABLE = True
+except ImportError:
+    BATCH_RENAME_AVAILABLE = False
+    print("Warning: Batch rename panel not available.")
+
+try:
+    from src.ui.color_correction_panel import ColorCorrectionPanel
+    COLOR_CORRECTION_AVAILABLE = True
+except ImportError:
+    COLOR_CORRECTION_AVAILABLE = False
+    print("Warning: Color correction panel not available.")
+
+try:
+    from src.ui.image_repair_panel import ImageRepairPanel
+    IMAGE_REPAIR_AVAILABLE = True
+except ImportError:
+    IMAGE_REPAIR_AVAILABLE = False
+    print("Warning: Image repair panel not available.")
+
+try:
+    from src.ui.performance_dashboard import PerformanceDashboard
+    PERFORMANCE_DASHBOARD_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_DASHBOARD_AVAILABLE = False
+    print("Warning: Performance dashboard not available.")
+
+try:
+    from src.features.auto_backup import AutoBackupSystem, BackupConfig
+    AUTO_BACKUP_AVAILABLE = True
+except ImportError:
+    AUTO_BACKUP_AVAILABLE = False
+    print("Warning: Auto backup system not available.")
+
+try:
     from src.features.panda_character import PandaCharacter, PandaGender
     PANDA_CHARACTER_AVAILABLE = True
 except ImportError:
@@ -91,6 +154,13 @@ try:
 except ImportError:
     UNLOCKABLES_AVAILABLE = False
     print("Warning: Unlockables system not available.")
+
+try:
+    from src.ui.scrollable_tabview import ScrollableTabView
+    SCROLLABLE_TABVIEW_AVAILABLE = True
+except ImportError:
+    SCROLLABLE_TABVIEW_AVAILABLE = False
+    print("Warning: Scrollable tabview not available.")
 
 try:
     from src.features.statistics import StatisticsTracker
@@ -442,6 +512,23 @@ class GameTextureSorter(ctk.CTk):
         self.file_handler = FileHandler(create_backup=config.get('file_handling', 'create_backup', default=True))
         self.database = None  # Will be initialized when needed
         
+        # Initialize auto backup system
+        self.backup_system = None
+        if AUTO_BACKUP_AVAILABLE:
+            try:
+                app_dir = get_app_dir()
+                backup_config = BackupConfig(
+                    enabled=config.get('backup', 'enabled', default=True),
+                    interval_seconds=config.get('backup', 'interval_seconds', default=300),
+                    max_backups=config.get('backup', 'max_backups', default=10),
+                )
+                self.backup_system = AutoBackupSystem(app_dir, backup_config)
+                self.backup_system.start()
+                logger.info("Auto Backup System initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Auto Backup System: {e}")
+                self.backup_system = None
+        
         # Initialize AI incremental learner for feedback-based learning
         self.learner = None
         try:
@@ -636,6 +723,14 @@ class GameTextureSorter(ctk.CTk):
                 from src.ui.goodbye_splash import INITIAL_PROGRESS
                 splash = show_goodbye_splash(self)
                 splash.update_status("Saving configuration...", INITIAL_PROGRESS)
+            
+            # Stop auto backup system
+            if self.backup_system:
+                try:
+                    self.backup_system.stop()
+                    logger.info("Auto backup system stopped")
+                except Exception as e:
+                    logger.warning(f"Error stopping backup system: {e}")
             
             # Close tutorial if active
             if self.tutorial_manager and self.tutorial_manager.tutorial_active:
@@ -857,8 +952,11 @@ class GameTextureSorter(ctk.CTk):
         self.tools_category = self.category_tabview.add("🔧 Tools")
         self.features_category = self.category_tabview.add("🐼 Panda & Features")
         
-        # Tools tabview (nested)
-        self.tabview = ctk.CTkTabview(self.tools_category)
+        # Tools tabview (nested) - use scrollable if available
+        if SCROLLABLE_TABVIEW_AVAILABLE:
+            self.tabview = ScrollableTabView(self.tools_category)
+        else:
+            self.tabview = ctk.CTkTabview(self.tools_category)
         self.tabview.pack(fill="both", expand=True)
         
         self.tab_sort = self.tabview.add("🐼 Sort Textures")
@@ -868,10 +966,23 @@ class GameTextureSorter(ctk.CTk):
         self.tab_profiles = self.tabview.add("🎮 Game Profiles")
         self.tab_notepad = self.tabview.add("📝 Notepad")
         self.tab_upscaler = self.tabview.add("🔍 Image Upscaler")
+        if BACKGROUND_REMOVER_AVAILABLE:
+            self.tab_bg_remover = self.tabview.add("🎭 Background Remover")
+        self.tab_quality_checker = self.tabview.add("🔍 Quality Checker")
+        self.tab_batch_normalizer = self.tabview.add("📏 Batch Normalizer")
+        self.tab_lineart_converter = self.tabview.add("✏️ Line Art")
+        self.tab_batch_rename = self.tabview.add("📝 Batch Rename")
+        self.tab_color_correction = self.tabview.add("🎨 Color Correction")
+        self.tab_image_repair = self.tabview.add("🔧 Image Repair")
+        if PERFORMANCE_DASHBOARD_AVAILABLE:
+            self.tab_performance = self.tabview.add("📊 Performance")
         self.tab_about = self.tabview.add("ℹ️ About")
         
-        # Features tabview (nested)
-        self.features_tabview = ctk.CTkTabview(self.features_category)
+        # Features tabview (nested) - use scrollable if available
+        if SCROLLABLE_TABVIEW_AVAILABLE:
+            self.features_tabview = ScrollableTabView(self.features_category)
+        else:
+            self.features_tabview = ctk.CTkTabview(self.features_category)
         self.features_tabview.pack(fill="both", expand=True)
         
         self.tab_shop = self.features_tabview.add("🛒 Shop")
@@ -917,11 +1028,30 @@ class GameTextureSorter(ctk.CTk):
             self.create_profiles_tab,
             self.create_notepad_tab,
             self.create_upscaler_tab,
+        ]
+        
+        # Conditionally add background remover tab if available
+        if BACKGROUND_REMOVER_AVAILABLE:
+            _all_tab_creators.append(self.create_bg_remover_tab)
+        
+        # Add new tool tabs
+        _all_tab_creators.extend([
+            self.create_quality_checker_tab,
+            self.create_batch_normalizer_tab,
+            self.create_lineart_converter_tab,
+            self.create_batch_rename_tab,
+            self.create_color_correction_tab,
+            self.create_image_repair_tab,
+            self.create_performance_tab,
+        ])
+        
+        # Add remaining tabs
+        _all_tab_creators.extend([
             self.create_about_tab,
             self.create_shop_tab,
             self.create_rewards_tab,
             self.create_achievements_tab,
-        ]
+        ])
         if PANDA_CLOSET_AVAILABLE and self.panda_closet:
             _all_tab_creators.append(self.create_closet_tab)
         _all_tab_creators += [
@@ -7749,6 +7879,194 @@ class GameTextureSorter(ctk.CTk):
                     self.save_all_notes()
             else:
                 self.note_textboxes[current_tab].delete("1.0", "end")
+    
+    def create_bg_remover_tab(self):
+        """Create background remover tab with comprehensive features"""
+        try:
+            if BACKGROUND_REMOVER_AVAILABLE:
+                # Create the BackgroundRemoverPanel
+                panel = BackgroundRemoverPanel(
+                    self.tab_bg_remover, 
+                    unlockables_system=self.unlockables_system if UNLOCKABLES_AVAILABLE else None
+                )
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Background Remover tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_bg_remover,
+                    text="Background Remover not available.\nInstall dependencies with: pip install rembg",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating background remover tab: {e}")
+            ctk.CTkLabel(
+                self.tab_bg_remover,
+                text=f"Error loading Background Remover:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_quality_checker_tab(self):
+        """Create quality checker tab for image analysis"""
+        try:
+            if QUALITY_CHECKER_AVAILABLE:
+                panel = QualityCheckerPanel(self.tab_quality_checker)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Quality Checker tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_quality_checker,
+                    text="Quality Checker not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating quality checker tab: {e}")
+            ctk.CTkLabel(
+                self.tab_quality_checker,
+                text=f"Error loading Quality Checker:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_batch_normalizer_tab(self):
+        """Create batch normalizer tab for format standardization"""
+        try:
+            if BATCH_NORMALIZER_AVAILABLE:
+                panel = BatchNormalizerPanel(self.tab_batch_normalizer)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Batch Normalizer tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_batch_normalizer,
+                    text="Batch Normalizer not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating batch normalizer tab: {e}")
+            ctk.CTkLabel(
+                self.tab_batch_normalizer,
+                text=f"Error loading Batch Normalizer:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_lineart_converter_tab(self):
+        """Create line art converter tab for stencil generation"""
+        try:
+            if LINEART_CONVERTER_AVAILABLE:
+                panel = LineArtConverterPanel(self.tab_lineart_converter)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Line Art Converter tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_lineart_converter,
+                    text="Line Art Converter not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating line art converter tab: {e}")
+            ctk.CTkLabel(
+                self.tab_lineart_converter,
+                text=f"Error loading Line Art Converter:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_batch_rename_tab(self):
+        """Create batch rename tab for file renaming with patterns"""
+        try:
+            if BATCH_RENAME_AVAILABLE:
+                panel = BatchRenamePanel(self.tab_batch_rename, unlockables_system=self.unlockables_system)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Batch Rename tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_batch_rename,
+                    text="Batch Rename not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating batch rename tab: {e}")
+            ctk.CTkLabel(
+                self.tab_batch_rename,
+                text=f"Error loading Batch Rename:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_color_correction_tab(self):
+        """Create color correction tab for image enhancement"""
+        try:
+            if COLOR_CORRECTION_AVAILABLE:
+                panel = ColorCorrectionPanel(self.tab_color_correction, unlockables_system=self.unlockables_system)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Color Correction tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_color_correction,
+                    text="Color Correction not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating color correction tab: {e}")
+            ctk.CTkLabel(
+                self.tab_color_correction,
+                text=f"Error loading Color Correction:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_image_repair_tab(self):
+        """Create image repair tab for fixing corrupted files"""
+        try:
+            if IMAGE_REPAIR_AVAILABLE:
+                panel = ImageRepairPanel(self.tab_image_repair, unlockables_system=self.unlockables_system)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Image Repair tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_image_repair,
+                    text="Image Repair not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating image repair tab: {e}")
+            ctk.CTkLabel(
+                self.tab_image_repair,
+                text=f"Error loading Image Repair:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
+    
+    def create_performance_tab(self):
+        """Create performance dashboard tab for monitoring"""
+        try:
+            if PERFORMANCE_DASHBOARD_AVAILABLE:
+                panel = PerformanceDashboard(self.tab_performance, unlockables_system=self.unlockables_system)
+                panel.pack(fill="both", expand=True, padx=10, pady=10)
+                logger.info("Performance Dashboard tab created successfully")
+            else:
+                ctk.CTkLabel(
+                    self.tab_performance,
+                    text="Performance Dashboard not available",
+                    font=("Arial", 14),
+                    text_color="red"
+                ).pack(pady=20)
+        except Exception as e:
+            logger.error(f"Error creating performance dashboard tab: {e}")
+            ctk.CTkLabel(
+                self.tab_performance,
+                text=f"Error loading Performance Dashboard:\n{str(e)}",
+                font=("Arial", 12),
+                text_color="red"
+            ).pack(pady=20)
     
     def create_about_tab(self):
         """Create comprehensive about tab with hotkeys, features, and panda info"""
