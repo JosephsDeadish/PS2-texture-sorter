@@ -205,113 +205,6 @@ Some test files (test_panda_*.py, test_barrel_roll_*.py, etc.) still import depr
 These tests are for the **deprecated canvas version** and may not work without installing Tkinter separately.
 
 ## Installation Requirements
-- get_closet_panel()
-- get_hotkey_settings_panel()
-- get_customization_panel()
-- get_background_remover_panel()
-- get_batch_rename_panel()
-- get_lineart_converter_panel()
-- get_image_repair_panel()
-- get_minigame_panel()
-
-## Current Statistics
-
-### Before Migration Started
-- 174 `.after()` calls
-- 461 canvas references
-- 40 `update_idletasks()` calls
-
-### After Current Work
-- **97 `.after()` calls** (down 44%)
-  - 32 eliminated by new Qt panels
-  - Remaining are in deprecated fallback files
-- **382 canvas references** (down 17%)
-  - Mostly in deprecated fallback files
-- **13 `update_idletasks()`** (down 68%)
-
-### Remaining .after() Breakdown
-- panda_widget.py: 22 (deprecated - use panda_widget_gl.py)
-- batch_rename_panel.py: 14 (deprecated - use batch_rename_panel_qt.py)
-- lineart_converter_panel.py: 11 (deprecated - use lineart_converter_panel_qt.py)
-- quality_checker_panel.py: 7 (deprecated - use quality_checker_panel_qt.py)
-- batch_normalizer_panel.py: 6 (deprecated - use batch_normalizer_panel_qt.py)
-- minigame_panel.py: 6 (deprecated - use minigame_panel_qt.py)
-- alpha_fixer_panel.py: 6 (deprecated - use alpha_fixer_panel_qt.py)
-- enemy_widget.py: 4 (deprecated - use qt_enemy_widget.py)
-- color_correction_panel.py: 4 (deprecated - use color_correction_panel_qt.py)
-- achievement_display_qt_animated.py: 4 (Qt file, uses QTimer appropriately)
-- achievement_display_simple.py: 2 (UNUSED - not imported)
-- performance_utils.py: 2 (deprecated - use performance_utils_qt.py)
-- travel_animation_simple.py: 1 (UNUSED - not imported)
-- performance_dashboard.py: 1 (Tkinter fallback)
-- background_remover_panel.py: 1 (deprecated - use background_remover_panel_qt.py)
-- live_preview_widget.py: 1 (deprecated - use live_preview_qt.py)
-
-## What main.py Uses
-
-main.py correctly uses the loader system and prefers Qt versions:
-- Uses `panda_widget_loader.get_panda_widget_info()` - returns OpenGL version when available
-- Uses `qt_panel_loader` functions when Qt panels are needed
-- Has Qt-first, Tkinter-fallback pattern throughout
-
-## Architecture
-
-### Qt Layer (UI)
-- Buttons, tabs, sliders, text inputs, checkboxes
-- Layout management (QVBoxLayout, QHBoxLayout, QGridLayout)
-- Event handling (mouse, keyboard, widget interactions)
-- Animation state control via QTimer
-
-### OpenGL Layer (Rendering)
-- Hardware-accelerated 3D graphics
-- Panda character with skeletal animations
-- Real-time lighting, shadows, physics
-- 60 FPS rendering via paintGL()
-
-### Pattern
-```
-QTimer.timeout → Update State → self.update() → paintGL() → OpenGL Renders
-```
-
-## Recommendations
-
-1. **Remove Unused Files** (if safe):
-   - achievement_display_simple.py (not imported)
-   - travel_animation_simple.py (not imported)
-
-2. **Add Deprecation Warnings** to fallback files:
-   - Add warnings when Tkinter versions are loaded
-   - Guide users to install PyQt6
-
-3. **Document in README**:
-   - List PyQt6 as recommended dependency
-   - Note that Tkinter versions are deprecated
-
-4. **Future Work**:
-   - Consider removing deprecated files in next major version
-   - Keep only panda_widget_loader for backward compatibility
-   - Document migration guide for external users
-
-## Success Metrics
-
-✅ All major panels have Qt versions
-✅ All loaders prefer Qt versions  
-✅ OpenGL used for 3D rendering instead of canvas
-✅ QThread used for background operations
-✅ QTimer used instead of .after()
-✅ No blocking UI operations
-✅ All new code is Qt-based
-
-## Migration is Essentially Complete
-
-The migration is functionally complete:
-- All user-facing panels have Qt versions
-- All are integrated through loaders
-- Remaining Tkinter code is fallback only
-- New development should use Qt versions only
-
-
-## Installation Requirements
 
 ### Required Dependencies
 ```bash
@@ -325,7 +218,7 @@ pip install PyOpenGL-accelerate>=3.1.7
 pip install -r requirements.txt
 ```
 
-## Migration Benefits
+## Migration Benefits## Migration Benefits
 
 ### Performance
 - **60-80% less CPU usage** - GPU rendering instead of CPU
@@ -341,6 +234,26 @@ pip install -r requirements.txt
 - **No framework mixing** - Pure Qt/OpenGL architecture
 - **Modern APIs** - Qt6 latest features
 - **Better threading** - QThread instead of .after()
+
+## Architecture Pattern
+
+### Qt for UI
+- Tabs: QTabWidget
+- Buttons: QPushButton
+- Layout: QVBoxLayout, QHBoxLayout, QGridLayout  
+- Events: Qt signal/slot system
+- Timers: QTimer for state updates
+
+### OpenGL for 3D
+- Widget: QOpenGLWidget
+- Rendering: paintGL() callback at 60 FPS
+- Animation: QTimer triggers state updates → update() → paintGL()
+- Physics: Calculated in Python, rendered in OpenGL
+
+### Flow
+```
+User Input → Qt Event → Update State → QTimer → update() → paintGL() → OpenGL Renders
+```
 
 ## Success Metrics
 

@@ -4,7 +4,7 @@
 
 The migration from Canvas/Tkinter to Qt/OpenGL has been successfully completed as requested in the problem statement:
 
-> "please help me migrate no more canvas or tinktr. qt is for ui, tabs, buttons, layout, events open gl is for panda rendering and skeletal animations and qt timer/ state system for animation sate contro"
+> "please help me migrate no more canvas or tinktr [sic]. qt is for ui, tabs, buttons, layout, events open gl is for panda rendering and skeletal animations and qt timer/ state system for animation sate contro [sic]"
 
 ## Changes Made
 
