@@ -2893,12 +2893,25 @@ class GameTextureSorter(ctk.CTk):
 
             # Save with format-specific options
             save_kwargs = {}
+            preserve_alpha = self.upscale_alpha_var.get()
+            
             if export_fmt == 'jpeg':
                 save_kwargs['quality'] = 95
+                # Only convert to RGB if user doesn't want alpha preserved
                 if result.mode == 'RGBA':
-                    result = result.convert('RGB')
+                    if not preserve_alpha:
+                        result = result.convert('RGB')
+                    else:
+                        # User wants alpha but chose JPEG - warn and change to PNG
+                        filepath = filepath.rsplit('.', 1)[0] + '.png'
+                        export_fmt = 'png'
+                        save_kwargs = {}
+                        self._upscale_log(f"ℹ️ Changed to PNG format to preserve alpha channel")
             elif export_fmt == 'webp':
                 save_kwargs['quality'] = 95
+                # WebP supports alpha, only convert if user doesn't want it
+                if not preserve_alpha and result.mode == 'RGBA':
+                    result = result.convert('RGB')
 
             result.save(filepath, **save_kwargs)
             self._upscale_log(f"💾 Exported: {filepath} ({result.size[0]}×{result.size[1]})")
@@ -3296,12 +3309,31 @@ class GameTextureSorter(ctk.CTk):
                             
                             # Prepare save kwargs
                             save_kwargs = {}
+                            
+                            # Handle format-specific requirements
+                            # JPEG doesn't support alpha, so we need to handle this carefully
                             if export_fmt == "jpeg":
                                 save_kwargs["quality"] = 95
+                                # Only convert to RGB if:
+                                # 1. Image has alpha, AND
+                                # 2. User didn't explicitly request to preserve alpha
+                                # If user wants alpha preserved, keep as PNG instead
                                 if result.mode == "RGBA":
-                                    result = result.convert("RGB")
+                                    if not preserve_alpha:
+                                        # User doesn't care about alpha, safe to convert
+                                        result = result.convert("RGB")
+                                    else:
+                                        # User wants alpha but chose JPEG - change to PNG
+                                        export_fmt = "png"
+                                        self._upscale_log(f"  ℹ️ [{file_idx}/{total_files}] {fpath.name}: Changed to PNG to preserve alpha")
+                                        save_kwargs = {}  # PNG doesn't need quality param
+                                        # Update output path
+                                        out_file = out_file.with_suffix(".png")
                             elif export_fmt == "webp":
                                 save_kwargs["quality"] = 95
+                                # WebP supports alpha, so preserve it if requested
+                                if not preserve_alpha and result.mode == "RGBA":
+                                    result = result.convert("RGB")
                             
                             # Determine if we should preserve metadata
                             should_preserve_metadata = preserve_metadata and metadata_handler and source_metadata
