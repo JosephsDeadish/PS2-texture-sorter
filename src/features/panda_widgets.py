@@ -1,5 +1,12 @@
 """
 Panda Widget System - Interactive toys and food for the panda
+
+Items (toys, food, accessories) are now rendered in 3D using OpenGL
+with hardware-accelerated physics, realistic lighting, and shadows.
+
+The 3D renderer (panda_widget_gl.py) handles all visual representation.
+This module only defines the properties and behavior of items.
+
 Author: Dead On The Inside / JosephsDeadish
 """
 
@@ -31,7 +38,12 @@ class WidgetRarity(Enum):
 
 @dataclass
 class ItemPhysics:
-    """Physics properties for draggable items."""
+    """
+    Physics properties for 3D interactive items.
+    
+    These properties are used by the OpenGL physics engine to simulate
+    realistic item behavior with hardware acceleration.
+    """
     friction: float = 0.92
     gravity: float = 1.5
     bounce_damping: float = 0.6
