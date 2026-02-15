@@ -27,6 +27,9 @@ except ImportError:
     QOpenGLWidget = object
     QState = object
     QStateMachine = object
+    QMouseEvent = object  # Type hint fallback
+    QTimer = object
+    pyqtSignal = lambda *args: None  # Dummy signal
 
 logger = logging.getLogger(__name__)
 
