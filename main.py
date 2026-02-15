@@ -2137,7 +2137,7 @@ class GameTextureSorter(ctk.CTk):
                         # Raster to SVG conversion
                         result = self.file_handler.convert_raster_to_svg(file_path, target_path)
                         if not result:
-                            raise RuntimeError("Raster-to-SVG conversion failed (native extension may not be available)")
+                            raise RuntimeError("Raster-to-SVG conversion failed (install OpenCV or build Rust extension)")
                     else:
                         # Generic conversion via PIL
                         from PIL import Image
