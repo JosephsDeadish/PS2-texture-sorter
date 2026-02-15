@@ -300,9 +300,11 @@ Author: {APP_AUTHOR}
             # Map CLI style names to organization style classes
             # - by_category: Simple category-based organization (minimalist)
             # - by_type: Module-based organization (modular: characters/vehicles/environment)
-            # - by_size: Single-level flat organization (flat)
-            # - flat: Direct flat organization without deep hierarchy
+            # - by_size: Flat organization optimized for size-based sorting
+            # - flat: Direct flat organization without deep hierarchy (same as by_size)
             # - custom: User-defined custom hierarchy
+            # Note: 'by_size' and 'flat' both map to 'flat' style - this overlap is intentional
+            #       to provide intuitive CLI options for users
             style_map = {
                 'by_category': 'minimalist',
                 'by_type': 'modular',

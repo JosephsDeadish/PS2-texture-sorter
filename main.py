@@ -143,6 +143,7 @@ class TextureSorterMainWindow(QMainWindow):
         
         # Create splitter: main content | panda widget
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)  # Prevent panels from being completely collapsed
         main_layout.addWidget(splitter)
         
         # Left side: Main content area
