@@ -217,8 +217,11 @@ pip install numpy>=1.24.0
 
 ### Optional (for background removal)
 ```bash
-pip install rembg>=2.0.50
-pip install onnxruntime>=1.16.0
+# Install with CPU backend (includes onnxruntime)
+pip install "rembg[cpu]>=2.0.50"
+
+# Or for GPU (NVIDIA/CUDA)
+pip install "rembg[gpu]>=2.0.50"
 ```
 
 ## Benefits
