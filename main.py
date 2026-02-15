@@ -395,8 +395,9 @@ class TextureSorterMainWindow(QMainWindow):
         try:
             self.classifier = TextureClassifier(config=config)
             self.lod_detector = LODDetector()
-            self.file_handler = FileHandler(create_backup=True)
-            self.organizer = OrganizationEngine(config)
+            self.file_handler = FileHandler(create_backup=True, config=config)
+            # Note: OrganizationEngine requires output_dir and will be created when needed
+            # during sorting operations
             self.log("✅ Core components initialized")
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)

@@ -288,14 +288,33 @@ Author: {APP_AUTHOR}
         try:
             # Import processing modules
             from ..classifier import TextureClassifier
-            from ..organizer import OrganizationEngine
+            from ..organizer import OrganizationEngine, ORGANIZATION_STYLES
             from ..file_handler import FileHandler
             
             # Initialize components
             logger.info("Initializing processing components...")
             classifier = TextureClassifier()
-            organizer = OrganizationEngine()
             file_handler = FileHandler()
+            
+            # Map CLI style names to organization style classes
+            style_map = {
+                'by_category': 'minimalist',
+                'by_type': 'modular',
+                'by_size': 'flat',
+                'flat': 'flat',
+                'custom': 'custom'
+            }
+            
+            # Get the appropriate style class
+            style_key = style_map.get(args.style, 'flat')
+            style_class = ORGANIZATION_STYLES.get(style_key, ORGANIZATION_STYLES['flat'])
+            
+            # Initialize organizer with proper parameters
+            organizer = OrganizationEngine(
+                style_class=style_class,
+                output_dir=str(output_path),
+                dry_run=args.dry_run
+            )
             
             # Scan for textures
             logger.info(f"Scanning for textures in {input_path}...")
