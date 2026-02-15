@@ -16,11 +16,19 @@
 # CORE DEPENDENCIES (Required for basic functionality)
 # ============================================================================
 
-# UI Framework - Qt/PyQt6 (REQUIRED - ONLY SUPPORTED UI)
-# The application uses Qt6 exclusively. Tkinter/CustomTkinter are NOT supported.
-PyQt6>=6.6.0  # Qt6 framework for UI (tabs, buttons, layouts, events) - REQUIRED
-PyOpenGL>=3.1.7  # OpenGL for 3D rendering (panda, skeletal animations) - REQUIRED
-PyOpenGL-accelerate>=3.1.7  # Performance optimizations for PyOpenGL - REQUIRED
+# ============================================================================
+# UI FRAMEWORK (REQUIRED - ONLY SUPPORTED UI)
+# ============================================================================
+# Qt6/PyQt6 is the ONLY supported UI framework. No tkinter, no canvas, no legacy UI.
+# All UI components (tabs, buttons, layouts, events) use Qt6 widgets.
+# 3D rendering and animations use OpenGL for hardware acceleration.
+PyQt6>=6.6.0  # Qt6 framework - native UI widgets, event system, state machine
+PyOpenGL>=3.1.7  # OpenGL for 3D rendering and skeletal animations
+PyOpenGL-accelerate>=3.1.7  # Hardware acceleration for PyOpenGL
+
+# ============================================================================
+# IMAGE PROCESSING & CORE DEPENDENCIES
+# ============================================================================
 
 # Image Processing
 pillow>=10.0.0  # Image loading and processing

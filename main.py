@@ -11,7 +11,9 @@ import os
 import logging
 from pathlib import Path
 
-# Add src directory to path
+# CRITICAL: Add src directory to sys.path BEFORE any src imports
+# This ensures that all imports from src/ work correctly, particularly config.py
+# Without this, you'll get "ModuleNotFoundError: No module named 'config'"
 src_dir = Path(__file__).parent / 'src'
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
@@ -30,7 +32,7 @@ from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import configuration
+# Import configuration (now that src is in path)
 from config import config, APP_NAME, APP_VERSION
 
 # Import core modules
