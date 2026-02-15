@@ -97,8 +97,9 @@ def validate_dependencies() -> Tuple[bool, str, List[str]]:
     
     # Check critical dependencies
     critical_imports = [
-        ('tkinter', 'Tkinter (GUI framework)'),
+        ('PyQt6', 'PyQt6 (Qt6 GUI framework)'),
         ('PIL', 'Pillow (Image processing)'),
+        ('OpenGL', 'PyOpenGL (3D rendering)'),
     ]
     
     for module_name, description in critical_imports:
@@ -135,14 +136,14 @@ def show_error_message(title: str, message: str):
         except Exception:
             pass
     
-    # Try tkinter message box
+    # Try PyQt6 message box
     try:
-        import tkinter as tk
-        from tkinter import messagebox
-        root = tk.Tk()
-        root.withdraw()
-        messagebox.showerror(title, message)
-        root.destroy()
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        import sys
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(sys.argv)
+        QMessageBox.critical(None, title, message)
         return
     except Exception:
         pass

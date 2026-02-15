@@ -27,21 +27,38 @@ APP_EMAIL = 'josephsdeadish@example.com'  # Update with actual email if availabl
 
 # Core dependencies (always required)
 INSTALL_REQUIRES = [
-    'customtkinter>=5.2.0',
+    # UI Framework - Qt/PyQt6 (REQUIRED - ONLY SUPPORTED UI)
+    'PyQt6>=6.6.0',  # Qt6 framework for UI (tabs, buttons, layouts, events)
+    'PyOpenGL>=3.1.7',  # OpenGL for 3D rendering (panda, skeletal animations)
+    'PyOpenGL-accelerate>=3.1.7',  # Performance optimizations for PyOpenGL
+    
+    # Image Processing
     'pillow>=10.0.0',  # NOTE: 12.1.1+ recommended for latest security fixes
     'darkdetect>=0.8.0',
     'opencv-python>=4.8.1.78',  # >= 4.8.1.78 for libwebp CVE fix
     'numpy>=1.24.0',
     'scikit-image>=0.21.0',
+    
+    # Machine Learning
     'scikit-learn>=1.3.0',
+    
+    # File Operations
     'send2trash>=1.8.2',
     'watchdog>=3.0.0',
+    
+    # Performance
     'psutil>=5.9.5',
     'tqdm>=4.66.0',
     'xxhash>=3.4.0',
+    
+    # Archive Support
     'py7zr>=0.20.1',
     'rarfile>=4.0',
+    
+    # Hotkeys
     'pynput>=1.7.6',
+    
+    # Utilities
     'colorama>=0.4.6',
     'pyyaml>=6.0',
     'requests>=2.31.0',
