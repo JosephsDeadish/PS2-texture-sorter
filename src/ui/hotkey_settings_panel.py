@@ -55,28 +55,20 @@ class HotkeySettingsPanel(ctk.CTkFrame if ctk else tk.Frame):
         )
         header.grid(row=0, column=0, padx=20, pady=10, sticky="w")
         
-        # Scrollable frame for hotkeys
+        # Scrollable frame for hotkeys - NO CANVAS
         if ctk:
             self.scrollable_frame = ctk.CTkScrollableFrame(self)
-        else:
-            # Fallback for regular tkinter
-            canvas = tk.Canvas(self)
-            scrollbar = tk.Scrollbar(self, orient="vertical", command=canvas.yview)
-            self.scrollable_frame = tk.Frame(canvas)
-            
-            self.scrollable_frame.bind(
-                "<Configure>",
-                lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-            )
-            
-            canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-            canvas.configure(yscrollcommand=scrollbar.set)
-            
-            canvas.grid(row=1, column=0, sticky="nsew", padx=20)
-            scrollbar.grid(row=1, column=1, sticky="ns")
-        
-        if ctk:
             self.scrollable_frame.grid(row=1, column=0, sticky="nsew", padx=20, pady=10)
+        else:
+            # NO CANVAS - use basic Frame, Qt wrapper handles scrolling
+            scroll_container = tk.Frame(self)
+            scroll_container.grid(row=1, column=0, sticky="nsew", padx=20)
+            
+            self.scrollable_frame = tk.Frame(scroll_container)
+            self.scrollable_frame.pack(fill="both", expand=True)
+            
+            # Qt QScrollArea wrapper will provide scrolling
+        
         
         # Button frame
         button_frame = ctk.CTkFrame(self) if ctk else tk.Frame(self)
