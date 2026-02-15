@@ -12,10 +12,11 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 import json
 
-from ..config import APP_NAME, APP_VERSION, APP_AUTHOR
+from ..config import APP_NAME, APP_VERSION, APP_AUTHOR, config
 from .config_loader import ConfigLoader
 
 logger = logging.getLogger(__name__)
+
 
 
 class CLIInterface:
@@ -288,14 +289,40 @@ Author: {APP_AUTHOR}
         try:
             # Import processing modules
             from ..classifier import TextureClassifier
-            from ..organizer import OrganizationEngine
+            from ..organizer import OrganizationEngine, ORGANIZATION_STYLES
             from ..file_handler import FileHandler
             
             # Initialize components
             logger.info("Initializing processing components...")
-            classifier = TextureClassifier()
-            organizer = OrganizationEngine()
-            file_handler = FileHandler()
+            classifier = TextureClassifier(config=config)
+            file_handler = FileHandler(config=config)
+            
+            # Map CLI style names to organization style classes
+            # - by_category: Simple category-based organization (minimalist)
+            # - by_type: Module-based organization (modular: characters/vehicles/environment)
+            # - by_size: Flat organization optimized for size-based sorting
+            # - flat: Direct flat organization without deep hierarchy (same as by_size)
+            # - custom: User-defined custom hierarchy
+            # Note: 'by_size' and 'flat' both map to 'flat' style - this overlap is intentional
+            #       to provide intuitive CLI options for users
+            style_map = {
+                'by_category': 'minimalist',
+                'by_type': 'modular',
+                'by_size': 'flat',
+                'flat': 'flat',
+                'custom': 'custom'
+            }
+            
+            # Get the appropriate style class
+            style_key = style_map.get(args.style, 'flat')
+            style_class = ORGANIZATION_STYLES.get(style_key, ORGANIZATION_STYLES['flat'])
+            
+            # Initialize organizer with proper parameters
+            organizer = OrganizationEngine(
+                style_class=style_class,
+                output_dir=str(output_path),
+                dry_run=args.dry_run
+            )
             
             # Scan for textures
             logger.info(f"Scanning for textures in {input_path}...")
