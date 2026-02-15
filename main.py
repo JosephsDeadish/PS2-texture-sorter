@@ -7,6 +7,40 @@ dumps with advanced AI classification and massive-scale support
 (200,000+ textures).
 """
 
+# ============================================================================
+# STARTUP VALIDATION - Run before any other imports
+# This validates extraction and provides user-friendly error messages
+# ============================================================================
+import sys
+import os
+from pathlib import Path
+
+# Add src directory to path first
+src_dir = Path(__file__).parent / 'src'
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
+# Run startup validation for PyInstaller bundles
+try:
+    from startup_validation import run_startup_validation, optimize_memory
+    
+    if not run_startup_validation():
+        # Validation failed, error message already shown to user
+        sys.exit(1)
+    
+    # Optimize memory usage during startup
+    optimize_memory()
+except ImportError:
+    # Startup validation module not available (development mode)
+    pass
+except Exception as e:
+    # Unexpected error during validation
+    print(f"Warning: Startup validation failed: {e}")
+
+# ============================================================================
+# NORMAL IMPORTS - After validation passes
+# ============================================================================
+
 # Set Windows taskbar icon BEFORE any GUI imports
 import ctypes
 try:
@@ -15,27 +49,19 @@ try:
 except (AttributeError, OSError):
     pass  # Not Windows or no windll
 
-import sys
-import os
 import time
 import shutil
 import threading
 import logging
 import gc
 from collections import OrderedDict
-from pathlib import Path
 from types import SimpleNamespace
 from datetime import datetime
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
-# Add src directory to path
-src_dir = Path(__file__).parent
-if str(src_dir) not in sys.path:
-    sys.path.insert(0, str(src_dir))
-
-# Import configuration first
+# Import configuration
 from src.config import config, APP_NAME, APP_VERSION, APP_AUTHOR, CONFIG_DIR, LOGS_DIR, CACHE_DIR, get_app_dir
 
 # Flag to check if GUI libraries are available
@@ -56,40 +82,90 @@ from src.file_handler import FileHandler
 from src.database import TextureDatabase
 from src.organizer import OrganizationEngine, ORGANIZATION_STYLES, TextureInfo
 
+# Import performance utilities
+try:
+    from src.utils.performance import LazyLoader, JobScheduler, get_optimal_worker_count
+    from src.utils.memory_cleanup import get_memory_manager
+    PERFORMANCE_UTILS_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_UTILS_AVAILABLE = False
+    print("Warning: Performance utilities not available.")
+
+# Global performance objects (initialized later)
+_job_scheduler = None
+_memory_manager = None
+_ai_model_loader = None
+_incremental_learner_loader = None
+
 # Import UI customization
 try:
     from src.ui.customization_panel import open_customization_dialog
+    # Try to use Qt version if available
+    try:
+        from src.ui.qt_panel_loader import get_customization_panel
+        USE_QT_CUSTOMIZATION = True
+    except ImportError:
+        USE_QT_CUSTOMIZATION = False
     CUSTOMIZATION_AVAILABLE = True
 except ImportError:
     CUSTOMIZATION_AVAILABLE = False
     print("Warning: UI customization panel not available.")
 
 try:
-    from src.ui.background_remover_panel import BackgroundRemoverPanel
+    # Try Qt version first
+    from src.ui.background_remover_panel_qt import BackgroundRemoverPanelQt as BackgroundRemoverPanel
     BACKGROUND_REMOVER_AVAILABLE = True
+    BACKGROUND_REMOVER_IS_QT = True
 except ImportError:
-    BACKGROUND_REMOVER_AVAILABLE = False
-    print("Warning: Background remover panel not available.")
+    try:
+        # Fallback to Tkinter version
+        from src.ui.background_remover_panel import BackgroundRemoverPanel
+        BACKGROUND_REMOVER_AVAILABLE = True
+        BACKGROUND_REMOVER_IS_QT = False
+    except ImportError:
+        BACKGROUND_REMOVER_AVAILABLE = False
+        BACKGROUND_REMOVER_IS_QT = False
+        print("Warning: Background remover panel not available.")
 
 try:
-    from src.ui.quality_checker_panel import QualityCheckerPanel
+    # Try Qt version first
+    from src.ui.quality_checker_panel_qt import QualityCheckerPanelQt as QualityCheckerPanel
     QUALITY_CHECKER_AVAILABLE = True
-except ImportError as e:
-    QUALITY_CHECKER_AVAILABLE = False
-    print(f"Warning: Quality checker panel not available: {e}")
-except Exception as e:
-    QUALITY_CHECKER_AVAILABLE = False
-    print(f"Warning: Quality checker panel error: {e}")
+    QUALITY_CHECKER_IS_QT = True
+except ImportError:
+    try:
+        # Fallback to Tkinter version
+        from src.ui.quality_checker_panel import QualityCheckerPanel
+        QUALITY_CHECKER_AVAILABLE = True
+        QUALITY_CHECKER_IS_QT = False
+    except ImportError as e:
+        QUALITY_CHECKER_AVAILABLE = False
+        QUALITY_CHECKER_IS_QT = False
+        print(f"Warning: Quality checker panel not available: {e}")
+    except Exception as e:
+        QUALITY_CHECKER_AVAILABLE = False
+        QUALITY_CHECKER_IS_QT = False
+        print(f"Warning: Quality checker panel error: {e}")
 
 try:
-    from src.ui.batch_normalizer_panel import BatchNormalizerPanel
+    # Try Qt version first
+    from src.ui.batch_normalizer_panel_qt import BatchNormalizerPanelQt as BatchNormalizerPanel
     BATCH_NORMALIZER_AVAILABLE = True
-except ImportError as e:
-    BATCH_NORMALIZER_AVAILABLE = False
-    print(f"Warning: Batch normalizer panel not available: {e}")
-except Exception as e:
-    BATCH_NORMALIZER_AVAILABLE = False
-    print(f"Warning: Batch normalizer panel error: {e}")
+    BATCH_NORMALIZER_IS_QT = True
+except ImportError:
+    try:
+        # Fallback to Tkinter version
+        from src.ui.batch_normalizer_panel import BatchNormalizerPanel
+        BATCH_NORMALIZER_AVAILABLE = True
+        BATCH_NORMALIZER_IS_QT = False
+    except ImportError as e:
+        BATCH_NORMALIZER_AVAILABLE = False
+        BATCH_NORMALIZER_IS_QT = False
+        print(f"Warning: Batch normalizer panel not available: {e}")
+    except Exception as e:
+        BATCH_NORMALIZER_AVAILABLE = False
+        BATCH_NORMALIZER_IS_QT = False
+        print(f"Warning: Batch normalizer panel error: {e}")
 
 try:
     from src.ui.lineart_converter_panel import LineArtConverterPanel
@@ -112,11 +188,20 @@ except Exception as e:
     print(f"Warning: Batch rename panel error: {e}")
 
 try:
-    from src.ui.color_correction_panel import ColorCorrectionPanel
+    # Try Qt version first
+    from src.ui.color_correction_panel_qt import ColorCorrectionPanelQt as ColorCorrectionPanel
     COLOR_CORRECTION_AVAILABLE = True
+    COLOR_CORRECTION_IS_QT = True
 except ImportError:
-    COLOR_CORRECTION_AVAILABLE = False
-    print("Warning: Color correction panel not available.")
+    try:
+        # Fallback to Tkinter version
+        from src.ui.color_correction_panel import ColorCorrectionPanel
+        COLOR_CORRECTION_AVAILABLE = True
+        COLOR_CORRECTION_IS_QT = False
+    except ImportError:
+        COLOR_CORRECTION_AVAILABLE = False
+        COLOR_CORRECTION_IS_QT = False
+        print("Warning: Color correction panel not available.")
 
 try:
     from src.ui.image_repair_panel import ImageRepairPanel
@@ -198,10 +283,19 @@ except ImportError:
     print("Warning: Tutorial system not available.")
 
 try:
-    from src.features.preview_viewer import PreviewViewer
-    PREVIEW_AVAILABLE = True
+    # Try Qt version first
+    try:
+        from src.features.preview_viewer_qt import PreviewViewerQt as PreviewViewer
+        PREVIEW_AVAILABLE = True
+        PREVIEW_IS_QT = True
+    except ImportError:
+        # Fall back to Tkinter version
+        from src.features.preview_viewer import PreviewViewer
+        PREVIEW_AVAILABLE = True
+        PREVIEW_IS_QT = False
 except ImportError:
     PREVIEW_AVAILABLE = False
+    PREVIEW_IS_QT = False
     print("Warning: Preview viewer not available.")
 
 try:
@@ -226,18 +320,37 @@ except ImportError:
     print("Warning: Shop system not available.")
 
 try:
-    from src.ui.panda_widget import PandaWidget
+    # Use OpenGL widget loader for automatic hardware-accelerated 3D rendering
+    # Falls back to canvas if OpenGL not available
+    from src.ui.panda_widget_loader import PandaWidget, get_panda_widget_info
     PANDA_WIDGET_AVAILABLE = True
-except ImportError:
+    
+    # Log which widget type is being used
+    widget_info = get_panda_widget_info()
+    print(f"Panda widget: {widget_info['widget_type']} ({widget_info['description']})")
+    if widget_info['widget_type'] == 'opengl':
+        print("✅ Hardware-accelerated 3D OpenGL rendering enabled!")
+        print(f"   - 60 FPS animations: {widget_info.get('60_fps', False)}")
+        print(f"   - Real-time lighting: {widget_info.get('realtime_lighting', False)}")
+        print(f"   - Dynamic shadows: {widget_info.get('shadows', False)}")
+except ImportError as e:
     PANDA_WIDGET_AVAILABLE = False
-    print("Warning: Panda widget not available.")
+    print(f"Warning: Panda widget not available: {e}")
 
 try:
     from src.features.panda_closet import PandaCloset
-    from src.ui.closet_panel import ClosetPanel
+    # Use Qt panel loader for dynamic Qt/Tkinter selection
+    try:
+        from src.ui.qt_panel_loader import get_closet_panel
+        ClosetPanel = None  # Will use loader function instead
+        USE_QT_PANELS = True
+    except ImportError:
+        from src.ui.closet_panel import ClosetPanel
+        USE_QT_PANELS = False
     PANDA_CLOSET_AVAILABLE = True
 except ImportError:
     PANDA_CLOSET_AVAILABLE = False
+    USE_QT_PANELS = False
     print("Warning: Panda closet not available.")
 
 try:
@@ -512,21 +625,44 @@ class GameTextureSorter(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         
         # Initialize core components
-        # Initialize model manager for AI
+        # Initialize lazy loaders for heavy resources (deferred loading)
+        global _ai_model_loader, _incremental_learner_loader, _job_scheduler, _memory_manager
+        
         self.model_manager = None
-        if config.get('ai', 'offline', 'enabled', default=True) or config.get('ai', 'online', 'enabled', default=False):
-            try:
+        if PERFORMANCE_UTILS_AVAILABLE:
+            # Use lazy loading for AI models (don't load until first use)
+            def _load_model_manager():
                 from src.ai.model_manager import ModelManager
-                self.model_manager = ModelManager.create_default(config.settings.get('ai', {}))
-                logger.info("AI Model Manager initialized successfully")
-            except Exception as e:
-                logger.warning(f"Failed to initialize AI Model Manager: {e}")
-                self.model_manager = None
+                return ModelManager.create_default(config.settings.get('ai', {}))
+            
+            _ai_model_loader = LazyLoader(_load_model_manager, name="AI Model Manager")
+            logger.info("AI Model Manager set up for lazy loading (will load on first use)")
+        else:
+            # Fallback: load immediately if performance utils not available
+            if config.get('ai', 'offline', 'enabled', default=True) or config.get('ai', 'online', 'enabled', default=False):
+                try:
+                    from src.ai.model_manager import ModelManager
+                    self.model_manager = ModelManager.create_default(config.settings.get('ai', {}))
+                    logger.info("AI Model Manager initialized successfully")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize AI Model Manager: {e}")
+                    self.model_manager = None
         
         self.classifier = TextureClassifier(config=config, model_manager=self.model_manager)
         self.lod_detector = LODDetector()
         self.file_handler = FileHandler(create_backup=config.get('file_handling', 'create_backup', default=True))
         self.database = None  # Will be initialized when needed
+        
+        # Initialize job scheduler for batch processing (CPU-aware)
+        if PERFORMANCE_UTILS_AVAILABLE:
+            _job_scheduler = JobScheduler()
+            logger.info(f"Job Scheduler initialized with {_job_scheduler.max_workers} workers")
+        
+        # Initialize memory manager for periodic cleanup
+        if PERFORMANCE_UTILS_AVAILABLE:
+            _memory_manager = get_memory_manager()
+            _memory_manager.start_periodic_cleanup(interval_seconds=300)  # Every 5 minutes
+            logger.info("Memory Manager initialized with periodic cleanup")
         
         # Initialize auto backup system
         self.backup_system = None
@@ -547,12 +683,22 @@ class GameTextureSorter(ctk.CTk):
         
         # Initialize AI incremental learner for feedback-based learning
         self.learner = None
-        try:
-            from src.ai.training import IncrementalLearner
-            self.learner = IncrementalLearner()
-            logger.info("AI IncrementalLearner initialized successfully")
-        except Exception as e:
-            logger.warning(f"Failed to initialize IncrementalLearner: {e}")
+        if PERFORMANCE_UTILS_AVAILABLE:
+            # Use lazy loading for incremental learner
+            def _load_incremental_learner():
+                from src.ai.training import IncrementalLearner
+                return IncrementalLearner()
+            
+            _incremental_learner_loader = LazyLoader(_load_incremental_learner, name="Incremental Learner")
+            logger.info("AI Incremental Learner set up for lazy loading")
+        else:
+            # Fallback: load immediately if performance utils not available
+            try:
+                from src.ai.training import IncrementalLearner
+                self.learner = IncrementalLearner()
+                logger.info("AI IncrementalLearner initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize IncrementalLearner: {e}")
             self.learner = None
         
         # Initialize profile manager for game identification
@@ -747,6 +893,29 @@ class GameTextureSorter(ctk.CTk):
                     logger.info("Auto backup system stopped")
                 except Exception as e:
                     logger.warning(f"Error stopping backup system: {e}")
+            
+            # Cleanup performance utilities
+            global _ai_model_loader, _incremental_learner_loader, _job_scheduler, _memory_manager
+            if PERFORMANCE_UTILS_AVAILABLE:
+                try:
+                    # Unload lazy-loaded resources
+                    if _ai_model_loader:
+                        _ai_model_loader.unload()
+                    if _incremental_learner_loader:
+                        _incremental_learner_loader.unload()
+                    
+                    # Shutdown job scheduler
+                    if _job_scheduler:
+                        _job_scheduler.shutdown()
+                    
+                    # Final memory cleanup
+                    if _memory_manager:
+                        _memory_manager.stop_periodic_cleanup()
+                        _memory_manager.full_cleanup()
+                    
+                    logger.info("Performance utilities cleaned up")
+                except Exception as e:
+                    logger.warning(f"Error cleaning up performance utilities: {e}")
             
             # Close tutorial if active
             if self.tutorial_manager and self.tutorial_manager.tutorial_active:
@@ -5300,6 +5469,17 @@ class GameTextureSorter(ctk.CTk):
         """Open UI customization dialog"""
         if CUSTOMIZATION_AVAILABLE:
             try:
+                # Try Qt version first if available
+                if USE_QT_CUSTOMIZATION:
+                    try:
+                        panel = get_customization_panel(parent=self, on_settings_change=self._on_customization_change)
+                        logger.info("Using Qt CustomizationPanel")
+                        self.log("✅ Opened UI Customization panel (Qt version)")
+                        return
+                    except Exception as e:
+                        logger.warning(f"Qt customization failed, using Tkinter: {e}")
+                
+                # Fall back to Tkinter version
                 open_customization_dialog(parent=self, on_settings_change=self._on_customization_change)
                 self.log("✅ Opened UI Customization panel")
             except Exception as e:
@@ -6260,13 +6440,24 @@ class GameTextureSorter(ctk.CTk):
                        variable=global_hotkey_var).pack(anchor="w", padx=20, pady=3)
         
         try:
-            from src.ui.hotkey_settings_panel import HotkeySettingsPanel
-            if not hasattr(self, 'hotkey_manager') or self.hotkey_manager is None:
-                from src.features.hotkey_manager import HotkeyManager
-                self.hotkey_manager = HotkeyManager()
-            
-            hotkey_panel = HotkeySettingsPanel(controls_scroll, self.hotkey_manager)
-            hotkey_panel.pack(fill="both", expand=True, padx=10, pady=5)
+            # Try Qt panel loader first
+            try:
+                from src.ui.qt_panel_loader import get_hotkey_settings_panel
+                if not hasattr(self, 'hotkey_manager') or self.hotkey_manager is None:
+                    from src.features.hotkey_manager import HotkeyManager
+                    self.hotkey_manager = HotkeyManager()
+                
+                hotkey_panel = get_hotkey_settings_panel(controls_scroll, self.hotkey_manager)
+                hotkey_panel.pack(fill="both", expand=True, padx=10, pady=5)
+            except ImportError:
+                # Fall back to Tkinter version
+                from src.ui.hotkey_settings_panel import HotkeySettingsPanel
+                if not hasattr(self, 'hotkey_manager') or self.hotkey_manager is None:
+                    from src.features.hotkey_manager import HotkeyManager
+                    self.hotkey_manager = HotkeyManager()
+                
+                hotkey_panel = HotkeySettingsPanel(controls_scroll, self.hotkey_manager)
+                hotkey_panel.pack(fill="both", expand=True, padx=10, pady=5)
         except Exception as e:
             logger.error(f"Failed to load hotkey panel: {e}", exc_info=True)
             ctk.CTkLabel(controls_scroll, text=f"⚠️ Could not load hotkey panel: {e}",
@@ -7306,60 +7497,11 @@ class GameTextureSorter(ctk.CTk):
             ry = root.winfo_rooty() + 20
             popup.geometry(f"{popup_w}x{popup_h}+{rx}+{ry}")
 
-            canvas = tk.Canvas(popup, width=popup_w, height=popup_h,
-                               highlightthickness=0, bd=0, bg='#2b2b2b')
-            canvas.pack(fill='both', expand=True)
-
-            # Rounded rect background
-            r = 12
-            canvas.create_polygon(
-                r, 0, popup_w - r, 0, popup_w, 0, popup_w, r,
-                popup_w, popup_h - r, popup_w, popup_h,
-                popup_w - r, popup_h, r, popup_h, 0, popup_h,
-                0, popup_h - r, 0, r, 0, 0,
-                fill='#1e1e2e', outline=accent_color, width=2, smooth=True
-            )
-
-            # Left accent bar
-            canvas.create_rectangle(0, 8, 5, popup_h - 8, fill=bg_color, outline='')
-
-            # Trophy icon
-            canvas.create_text(30, 35, text=achievement.icon,
-                               font=('Arial', 24), fill='white', anchor='w')
-
-            # Title
-            canvas.create_text(65, 22, text='Achievement Unlocked!',
-                               font=('Arial', 10, 'bold'), fill=bg_color, anchor='w')
-
-            # Achievement name
-            name_text = achievement.name
-            if len(name_text) > 32:
-                name_text = name_text[:30] + '…'
-            canvas.create_text(65, 42, text=name_text,
-                               font=('Arial', 13, 'bold'), fill='white', anchor='w')
-
-            # Description
-            desc_text = achievement.description
-            if len(desc_text) > 42:
-                desc_text = desc_text[:40] + '…'
-            canvas.create_text(65, 62, text=desc_text,
-                               font=('Arial', 9), fill='#aaaaaa', anchor='w')
-
-            # Reward line
-            reward_text = ''
-            if achievement.reward:
-                reward_text = f"🎁 {achievement.reward.get('description', '')}"
-                if len(reward_text) > 45:
-                    reward_text = reward_text[:43] + '…'
-            if reward_text:
-                canvas.create_text(65, 82, text=reward_text,
-                                   font=('Arial', 9, 'italic'), fill=bg_color, anchor='w')
-
-            # Tier badge
-            canvas.create_oval(popup_w - 35, 10, popup_w - 10, 35,
-                               fill=bg_color, outline=accent_color, width=1)
-            canvas.create_text(popup_w - 22, 22, text=tier_name[0].upper() if tier_name else '?',
-                               font=('Arial', 10, 'bold'), fill='#1e1e2e')
+            # Use improved achievement display (Tkinter-based, no canvas drawing)
+            from src.ui.achievement_display_simple import show_achievement_simple
+            popup.destroy()  # Close the basic popup
+            show_achievement_simple(root, achievement, accent_color, bg_color)
+            return  # Exit early since popup is handled
 
             # Auto-close after 5 seconds with fade
             def _fade_out(alpha=1.0):
@@ -7957,12 +8099,22 @@ class GameTextureSorter(ctk.CTk):
                          font=("Arial", 14)).pack(pady=50)
             return
         
-        closet_panel = ClosetPanel(
-            self.tab_closet,
-            self.panda_closet,
-            panda_character=self.panda,
-            panda_preview_callback=self.panda_widget
-        )
+        # Use Qt panel loader if available
+        if USE_QT_PANELS:
+            from src.ui.qt_panel_loader import get_closet_panel
+            closet_panel = get_closet_panel(
+                self.tab_closet,
+                self.panda_closet,
+                panda_character=self.panda,
+                panda_preview=self.panda_widget
+            )
+        else:
+            closet_panel = ClosetPanel(
+                self.tab_closet,
+                self.panda_closet,
+                panda_character=self.panda,
+                panda_preview_callback=self.panda_widget
+            )
         closet_panel.pack(fill="both", expand=True, padx=10, pady=10)
         
         # Store reference so we can refresh after shop purchases
@@ -8187,12 +8339,16 @@ class GameTextureSorter(ctk.CTk):
             return
         try:
             if BACKGROUND_REMOVER_AVAILABLE:
-                # Create the BackgroundRemoverPanel
+                # Qt or Tkinter version loaded based on availability
                 panel = BackgroundRemoverPanel(
                     self.tab_bg_remover, 
                     unlockables_system=self.unlockables_system if UNLOCKABLES_AVAILABLE else None,
                     tooltip_manager=self.tooltip_manager
                 )
+                if BACKGROUND_REMOVER_IS_QT:
+                    logger.info("Using Qt BackgroundRemoverPanel")
+                else:
+                    logger.info("Using Tkinter BackgroundRemoverPanel")
                 panel.pack(fill="both", expand=True, padx=10, pady=10)
                 logger.info("Background Remover tab created successfully")
             else:
@@ -9216,25 +9372,16 @@ Built with:
         except Exception:
             pass
 
-        # ═══════════════════ Panda Preview (compact) ═══════════════════
-        preview_frame = ctk.CTkFrame(scrollable_frame)
-        preview_frame.pack(fill="x", padx=10, pady=5)
-        preview_header = ctk.CTkFrame(preview_frame, fg_color="transparent")
-        preview_header.pack(fill="x", padx=10, pady=(5, 0))
-        ctk.CTkLabel(preview_header, text="🐼 Panda Preview",
-                     font=("Arial Bold", 16)).pack(side="left")
-
-        import tkinter as _tk
-        preview_canvas = _tk.Canvas(preview_frame, width=120, height=140,
-                                    bg="#2b2b2b", highlightthickness=0)
-        preview_canvas.pack(pady=(5, 5))
-        self._draw_static_panda(preview_canvas, 120, 140)
-
+        # ═══════════════════ Current Animation Display ═══════════════════
+        # Canvas preview removed - use OpenGL panda widget for 3D visualization
+        anim_frame = ctk.CTkFrame(scrollable_frame)
+        anim_frame.pack(fill="x", padx=10, pady=10)
+        
         anim_name = self.panda_widget.current_animation if hasattr(self, 'panda_widget') and self.panda_widget else 'idle'
         self._stats_labels['animation'] = ctk.CTkLabel(
-            preview_frame, text=f"Current animation: {anim_name}",
-            font=("Arial", 11), text_color="#aaaaaa")
-        self._stats_labels['animation'].pack(pady=(0, 5))
+            anim_frame, text=f"🐼 Current Animation: {anim_name}",
+            font=("Arial Bold", 14))
+        self._stats_labels['animation'].pack(pady=10)
 
         # ═══════════════════ Statistics Tabview ═══════════════════
         stats = self.panda.get_statistics()
@@ -9603,7 +9750,8 @@ Built with:
         """Open a new window with the integrated dungeon system."""
         try:
             from src.features.integrated_dungeon import IntegratedDungeon
-            from src.ui.enhanced_dungeon_renderer import EnhancedDungeonRenderer
+            # Use PyQt QGraphicsView instead of Tkinter canvas
+            from src.ui.dungeon_qt_bridge import create_dungeon_renderer
             import tkinter as tk
             
             # Create toplevel window
@@ -9632,15 +9780,12 @@ Built with:
             main_frame = ctk.CTkFrame(dungeon_window)
             main_frame.pack(fill="both", expand=True, padx=5, pady=5)
             
-            # Canvas for dungeon rendering
-            canvas_frame = ctk.CTkFrame(main_frame)
-            canvas_frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
+            # PyQt QGraphicsView for dungeon rendering (NO CANVAS!)
+            dungeon_frame = ctk.CTkFrame(main_frame)
+            dungeon_frame.pack(side="left", fill="both", expand=True, padx=5, pady=5)
             
-            canvas = tk.Canvas(canvas_frame, width=800, height=600, bg="#1a1a1a", highlightthickness=0)
-            canvas.pack(fill="both", expand=True)
-            
-            # Create renderer
-            renderer = EnhancedDungeonRenderer(canvas, dungeon.dungeon)
+            # Create PyQt-based renderer (no canvas mixing!)
+            renderer = create_dungeon_renderer(dungeon_frame, dungeon.dungeon)
             renderer.set_floor(0)
             renderer.center_camera_on_tile(player_x, player_y)
             
@@ -9947,25 +10092,13 @@ Built with:
         if self.current_enemy and self.current_enemy.is_alive():
             enemy = self.current_enemy
             
-            # Enemy visual canvas
+            # Enemy visual display (using simple widget instead of canvas drawing)
             enemy_canvas_frame = ctk.CTkFrame(combat_frame)
             enemy_canvas_frame.pack(pady=5)
             
-            # Canvas dimensions for enemy display
-            ENEMY_CANVAS_WIDTH = 200
-            ENEMY_CANVAS_HEIGHT = 200
-            
-            # Create canvas for animated enemy display
-            enemy_canvas = tk.Canvas(enemy_canvas_frame, 
-                                    width=ENEMY_CANVAS_WIDTH, 
-                                    height=ENEMY_CANVAS_HEIGHT, 
-                                    bg='#2b2b2b', highlightthickness=0)
-            enemy_canvas.pack()
-            
-            # Draw animated enemy
-            self._draw_enemy_on_canvas(enemy_canvas, enemy, 
-                                      ENEMY_CANVAS_WIDTH // 2, 
-                                      ENEMY_CANVAS_HEIGHT // 2)
+            from src.ui.enemy_display_simple import create_enemy_display
+            enemy_display = create_enemy_display(enemy_canvas_frame, enemy)
+            enemy_display.pack()
             
             # Enemy name and stats
             ctk.CTkLabel(combat_frame, text=f"{enemy.icon} {enemy.name}",
@@ -10148,246 +10281,6 @@ Built with:
             widget.destroy()
         self.create_battle_arena_tab()
     
-    def _draw_enemy_on_canvas(self, canvas: tk.Canvas, enemy, cx: int, cy: int):
-        """Draw an animated enemy on the canvas.
-        
-        Args:
-            canvas: Canvas to draw on
-            enemy: Enemy instance to draw
-            cx, cy: Center coordinates for the enemy
-        """
-        import math
-        import time
-        
-        # Animation phase based on time
-        phase = (time.time() * 2) % (2 * math.pi)
-        
-        # Colors based on enemy type
-        from src.features.enemy_system import EnemyType
-        
-        color_map = {
-            EnemyType.SLIME: '#00FF00',
-            EnemyType.GOBLIN: '#8B4513',
-            EnemyType.SKELETON: '#F0F0F0',
-            EnemyType.WOLF: '#808080',
-            EnemyType.ORC: '#228B22',
-            EnemyType.DRAGON: '#8B0000',
-            EnemyType.BOSS: '#4B0082'
-        }
-        
-        enemy_color = color_map.get(enemy.template.enemy_type, '#666666')
-        
-        # Draw based on enemy type
-        if enemy.template.enemy_type == EnemyType.SLIME:
-            # Bouncing slime blob
-            bounce = int(5 * math.sin(phase))
-            cy_adj = cy + bounce
-            
-            # Body - oval that squishes
-            squish = 1.0 + 0.1 * math.sin(phase * 2)
-            canvas.create_oval(
-                cx - 30, cy_adj - int(25 * squish),
-                cx + 30, cy_adj + int(25 / squish),
-                fill=enemy_color, outline='#006400', width=2,
-                tags="enemy")
-            
-            # Eyes
-            eye_y = cy_adj - 5
-            canvas.create_oval(cx - 12, eye_y - 5, cx - 6, eye_y + 5,
-                             fill='#000000', tags="enemy")
-            canvas.create_oval(cx + 6, eye_y - 5, cx + 12, eye_y + 5,
-                             fill='#000000', tags="enemy")
-        
-        elif enemy.template.enemy_type == EnemyType.WOLF:
-            # Wolf shape
-            sway = int(3 * math.sin(phase))
-            
-            # Body
-            canvas.create_oval(cx - 35, cy - 20, cx + 25, cy + 20,
-                             fill=enemy_color, outline='#404040', width=2,
-                             tags="enemy")
-            
-            # Head
-            head_x = cx + 25 + sway
-            canvas.create_oval(head_x - 15, cy - 25, head_x + 15, cy + 5,
-                             fill=enemy_color, outline='#404040', width=2,
-                             tags="enemy")
-            
-            # Ears
-            canvas.create_polygon(
-                head_x - 8, cy - 25,
-                head_x - 12, cy - 35,
-                head_x - 4, cy - 25,
-                fill=enemy_color, outline='#404040', tags="enemy")
-            canvas.create_polygon(
-                head_x + 4, cy - 25,
-                head_x + 12, cy - 35,
-                head_x + 8, cy - 25,
-                fill=enemy_color, outline='#404040', tags="enemy")
-            
-            # Eyes (glowing)
-            canvas.create_oval(head_x - 8, cy - 15, head_x - 4, cy - 11,
-                             fill='#FF0000', tags="enemy")
-            canvas.create_oval(head_x + 4, cy - 15, head_x + 8, cy - 11,
-                             fill='#FF0000', tags="enemy")
-            
-            # Legs
-            for leg_offset in [-25, -10, 10, 25]:
-                leg_x = cx + leg_offset
-                canvas.create_line(leg_x, cy + 20, leg_x, cy + 35,
-                                 fill=enemy_color, width=4, tags="enemy")
-        
-        elif enemy.template.enemy_type == EnemyType.SKELETON:
-            # Skeleton
-            sway = int(2 * math.sin(phase))
-            
-            # Skull
-            canvas.create_oval(cx - 20, cy - 40, cx + 20, cy - 10,
-                             fill='#F5F5DC', outline='#000000', width=2,
-                             tags="enemy")
-            
-            # Eye sockets
-            canvas.create_oval(cx - 12, cy - 32, cx - 6, cy - 26,
-                             fill='#000000', tags="enemy")
-            canvas.create_oval(cx + 6, cy - 32, cx + 12, cy - 26,
-                             fill='#000000', tags="enemy")
-            
-            # Jaw
-            canvas.create_arc(cx - 10, cy - 20, cx + 10, cy - 5,
-                            start=200, extent=140, style='arc',
-                            outline='#000000', width=2, tags="enemy")
-            
-            # Spine/body
-            spine_x = cx + sway
-            canvas.create_line(spine_x, cy - 10, spine_x, cy + 30,
-                             fill='#F5F5DC', width=6, tags="enemy")
-            
-            # Ribs
-            for rib_y in [cy, cy + 10, cy + 20]:
-                canvas.create_arc(spine_x - 15, rib_y - 5, spine_x + 15, rib_y + 5,
-                                start=0, extent=180, style='arc',
-                                outline='#F5F5DC', width=2, tags="enemy")
-            
-            # Arms
-            arm_angle = math.sin(phase) * 0.3
-            arm_end_x1 = spine_x - int(20 * math.cos(arm_angle))
-            arm_end_y1 = cy + int(20 * math.sin(arm_angle))
-            canvas.create_line(spine_x - 5, cy, arm_end_x1, arm_end_y1,
-                             fill='#F5F5DC', width=4, tags="enemy")
-            
-            arm_end_x2 = spine_x + int(20 * math.cos(arm_angle))
-            arm_end_y2 = cy + int(20 * math.sin(arm_angle))
-            canvas.create_line(spine_x + 5, cy, arm_end_x2, arm_end_y2,
-                             fill='#F5F5DC', width=4, tags="enemy")
-        
-        elif enemy.template.enemy_type in [EnemyType.GOBLIN, EnemyType.ORC]:
-            # Goblin/Orc humanoid
-            sway = int(2 * math.sin(phase))
-            
-            # Body
-            canvas.create_rectangle(cx - 20, cy - 10, cx + 20, cy + 25,
-                                  fill=enemy_color, outline='#000000', width=2,
-                                  tags="enemy")
-            
-            # Head
-            head_y = cy - 30
-            canvas.create_oval(cx - 18, head_y - 15, cx + 18, head_y + 15,
-                             fill=enemy_color, outline='#000000', width=2,
-                             tags="enemy")
-            
-            # Eyes (angry)
-            canvas.create_oval(cx - 10, head_y - 5, cx - 4, head_y + 1,
-                             fill='#FFFF00', outline='#000000', tags="enemy")
-            canvas.create_oval(cx + 4, head_y - 5, cx + 10, head_y + 1,
-                             fill='#FFFF00', outline='#000000', tags="enemy")
-            canvas.create_oval(cx - 8, head_y - 3, cx - 6, head_y - 1,
-                             fill='#000000', tags="enemy")
-            canvas.create_oval(cx + 6, head_y - 3, cx + 8, head_y - 1,
-                             fill='#000000', tags="enemy")
-            
-            # Mouth (grimace)
-            canvas.create_arc(cx - 8, head_y + 3, cx + 8, head_y + 12,
-                            start=180, extent=180, style='arc',
-                            outline='#000000', width=2, tags="enemy")
-            
-            # Arms (one raised aggressively)
-            arm_x = cx + 20 + sway
-            canvas.create_line(cx + 20, cy, arm_x, cy - 20,
-                             fill=enemy_color, width=6, tags="enemy")
-            canvas.create_line(cx - 20, cy, cx - 30, cy + 10,
-                             fill=enemy_color, width=6, tags="enemy")
-            
-            # Weapon in raised hand
-            canvas.create_line(arm_x, cy - 20, arm_x + 5, cy - 35,
-                             fill='#808080', width=3, tags="enemy")
-        
-        elif enemy.template.enemy_type == EnemyType.DRAGON:
-            # Dragon - large and intimidating
-            wing_flap = math.sin(phase * 3)
-            
-            # Body
-            canvas.create_oval(cx - 40, cy - 30, cx + 40, cy + 30,
-                             fill=enemy_color, outline='#000000', width=3,
-                             tags="enemy")
-            
-            # Wings
-            wing_y = cy - 20 + int(wing_flap * 10)
-            # Left wing
-            canvas.create_polygon(
-                cx - 40, cy - 10,
-                cx - 60, wing_y - 20,
-                cx - 50, cy + 10,
-                fill='#8B0000', outline='#000000', width=2,
-                tags="enemy")
-            # Right wing
-            canvas.create_polygon(
-                cx + 40, cy - 10,
-                cx + 60, wing_y - 20,
-                cx + 50, cy + 10,
-                fill='#8B0000', outline='#000000', width=2,
-                tags="enemy")
-            
-            # Head/neck
-            head_x = cx + 35
-            head_y = cy - 40
-            canvas.create_oval(head_x - 20, head_y - 15, head_x + 20, head_y + 15,
-                             fill=enemy_color, outline='#000000', width=2,
-                             tags="enemy")
-            
-            # Horns
-            canvas.create_polygon(
-                head_x - 15, head_y - 15,
-                head_x - 20, head_y - 30,
-                head_x - 10, head_y - 15,
-                fill='#000000', tags="enemy")
-            canvas.create_polygon(
-                head_x + 10, head_y - 15,
-                head_x + 20, head_y - 30,
-                head_x + 15, head_y - 15,
-                fill='#000000', tags="enemy")
-            
-            # Eye (glowing)
-            canvas.create_oval(head_x + 5, head_y - 5, head_x + 12, head_y + 2,
-                             fill='#FFD700', outline='#FF0000', width=2,
-                             tags="enemy")
-            
-            # Fire breath effect (occasional - triggered during specific phase window)
-            breath_phase = (time.time() * 2) % 6.0  # 6 second cycle
-            if 1.0 < breath_phase < 1.5:  # Only show during 0.5s window every 6 seconds
-                for i in range(3):
-                    fire_x = head_x + 20 + i * 10
-                    fire_y = head_y + i * 3
-                    canvas.create_text(fire_x, fire_y, text='🔥',
-                                     font=('Arial', 12), tags="enemy")
-        
-        else:
-            # Default enemy shape
-            canvas.create_oval(cx - 30, cy - 30, cx + 30, cy + 30,
-                             fill=enemy_color, outline='#000000', width=2,
-                             tags="enemy")
-            canvas.create_text(cx, cy, text=enemy.icon,
-                             font=('Arial', 40), tags="enemy")
-
     def create_travel_hub_tab(self):
         """Create travel hub tab for selecting and entering dungeons."""
         header_frame = ctk.CTkFrame(self.tab_travel_hub)
@@ -10470,174 +10363,24 @@ Built with:
 
     def _play_travel_animation(self, scenes, location_id: str):
         """Play driving animation scenes in the travel hub tab."""
-        import tkinter as tk
-
         # Clear tab for animation
         for widget in self.tab_travel_hub.winfo_children():
             widget.destroy()
 
-        anim_frame = ctk.CTkFrame(self.tab_travel_hub)
-        anim_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Use simple widget-based animation instead of canvas
+        from src.ui.travel_animation_simple import TravelAnimationWidget
+        
+        def on_complete():
+            # Animation done – rebuild the hub
+            for widget in self.tab_travel_hub.winfo_children():
+                widget.destroy()
+            self.create_travel_hub_tab()
+        
+        anim = TravelAnimationWidget(self.tab_travel_hub, scenes, on_complete)
 
-        # Canvas for the travel scene
-        canvas = tk.Canvas(anim_frame, width=500, height=300, highlightthickness=0)
-        canvas.pack(pady=10)
-
-        # Description label
-        desc_label = ctk.CTkLabel(anim_frame, text="", font=("Arial Bold", 16))
-        desc_label.pack(pady=10)
-
-        scene_state = {'index': 0}
-
-        def show_scene(index):
-            if index >= len(scenes):
-                # Animation done – rebuild the hub
-                for widget in self.tab_travel_hub.winfo_children():
-                    widget.destroy()
-                self.create_travel_hub_tab()
-                return
-
-            scene = scenes[index]
-            canvas.delete("all")
-
-            # Draw sky
-            canvas.configure(bg=scene.sky_color)
-
-            # Draw ground
-            canvas.create_rectangle(0, 200, 500, 300, fill=scene.ground_color, outline="")
-
-            # Draw road
-            canvas.create_rectangle(0, 220, 500, 270, fill=scene.road_color, outline="")
-
-            # Draw road dashes
-            for rx in range(0, 500, 60):
-                canvas.create_rectangle(rx + 10, 243, rx + 40, 247, fill="#FFFFFF", outline="")
-
-            # Draw detail emojis along the road
-            for dx in range(50, 500, 120):
-                canvas.create_text(dx, 195, text=scene.detail_emoji, font=("Arial", 20))
-
-            # Draw car / panda
-            if scene.scene_type.value == "walk_to_car":
-                canvas.create_text(350, 230, text="🚗", font=("Arial", 36))
-                canvas.create_text(200, 230, text="🐼", font=("Arial", 30))
-            elif scene.scene_type.value == "get_in_car":
-                canvas.create_text(350, 230, text="🚗", font=("Arial", 36))
-                canvas.create_text(340, 220, text="🐼", font=("Arial", 20))
-            elif scene.scene_type.value == "arrive":
-                canvas.create_text(250, 230, text="🚗", font=("Arial", 36))
-                canvas.create_text(250, 170, text=scene.detail_emoji, font=("Arial", 40))
-            else:
-                # Driving scene
-                canvas.create_text(250, 230, text="🚗", font=("Arial", 36))
-
-            desc_label.configure(text=scene.description)
-
-            scene_state['index'] = index + 1
-            self.tab_travel_hub.after(scene.duration_ms, lambda: show_scene(scene_state['index']))
-
-        show_scene(0)
-
-    def _draw_static_panda(self, canvas, w, h):
-        """Draw a static panda on a preview canvas matching the live panda_widget style."""
-        cx = w // 2
-        sx = w / 220.0
-        sy = h / 270.0
-        black = "#1a1a1a"
-        white = "#F5F5F5"
-        pink = "#FFB6C1"
-
-        # Legs (behind body)
-        leg_top = int(145 * sy)
-        leg_len = int(30 * sy)
-        for lx in [cx - int(25 * sx), cx + int(25 * sx)]:
-            canvas.create_oval(lx - int(12 * sx), leg_top,
-                               lx + int(12 * sx), leg_top + leg_len,
-                               fill=black, outline=black)
-            # Foot pad
-            canvas.create_oval(lx - int(10 * sx), leg_top + leg_len - int(8 * sy),
-                               lx + int(10 * sx), leg_top + leg_len + int(4 * sy),
-                               fill=white, outline=black, width=1)
-
-        # Body (white belly)
-        body_top = int(75 * sy)
-        body_bot = int(160 * sy)
-        body_rx = int(42 * sx)
-        canvas.create_oval(cx - body_rx, body_top, cx + body_rx, body_bot,
-                           fill=white, outline=black, width=2)
-        # Inner belly patch
-        belly_rx = int(28 * sx)
-        canvas.create_oval(cx - belly_rx, body_top + int(15 * sy),
-                           cx + belly_rx, body_bot - int(10 * sy),
-                           fill="#FAFAFA", outline="")
-
-        # Arms
-        arm_top = int(95 * sy)
-        arm_len = int(35 * sy)
-        canvas.create_oval(cx - int(55 * sx), arm_top,
-                           cx - int(30 * sx), arm_top + arm_len,
-                           fill=black, outline=black)
-        canvas.create_oval(cx + int(30 * sx), arm_top,
-                           cx + int(55 * sx), arm_top + arm_len,
-                           fill=black, outline=black)
-
-        # Head
-        head_cy = int(52 * sy)
-        head_rx = int(36 * sx)
-        head_ry = int(32 * sy)
-        canvas.create_oval(cx - head_rx, head_cy - head_ry,
-                           cx + head_rx, head_cy + head_ry,
-                           fill=white, outline=black, width=2)
-
-        # Ears
-        ear_y = head_cy - head_ry + int(5 * sy)
-        ear_w = int(22 * sx)
-        canvas.create_oval(cx - head_rx - int(2 * sx), ear_y - int(16 * sy),
-                           cx - head_rx + ear_w, ear_y + int(8 * sy),
-                           fill=black, outline=black)
-        canvas.create_oval(cx - head_rx + int(4 * sx), ear_y - int(10 * sy),
-                           cx - head_rx + int(16 * sx), ear_y + int(2 * sy),
-                           fill=pink, outline="")
-        canvas.create_oval(cx + head_rx - ear_w, ear_y - int(16 * sy),
-                           cx + head_rx + int(2 * sx), ear_y + int(8 * sy),
-                           fill=black, outline=black)
-        canvas.create_oval(cx + head_rx - int(16 * sx), ear_y - int(10 * sy),
-                           cx + head_rx - int(4 * sx), ear_y + int(2 * sy),
-                           fill=pink, outline="")
-
-        # Eye patches
-        eye_y = head_cy - int(4 * sy)
-        patch_rx = int(14 * sx)
-        patch_ry = int(11 * sy)
-        eye_offset = int(24 * sx)
-        for dx in [-eye_offset, eye_offset]:
-            canvas.create_oval(cx + dx - patch_rx, eye_y - patch_ry,
-                               cx + dx + patch_rx, eye_y + patch_ry,
-                               fill=black, outline="")
-
-        # Eyes (white with pupils)
-        es = int(6 * sx)
-        ps = int(3 * sx)
-        for dx in [-eye_offset, eye_offset]:
-            ex = cx + dx
-            canvas.create_oval(ex - es, eye_y - es, ex + es, eye_y + es,
-                               fill="white", outline="")
-            canvas.create_oval(ex - ps, eye_y - ps, ex + ps, eye_y + ps,
-                               fill="#222222", outline="")
-
-        # Nose
-        nose_y = head_cy + int(8 * sy)
-        canvas.create_oval(cx - int(5 * sx), nose_y - int(3 * sy),
-                           cx + int(5 * sx), nose_y + int(4 * sy),
-                           fill=black, outline="")
-
-        # Mouth (smile arc)
-        my = nose_y + int(6 * sy)
-        canvas.create_arc(cx - int(8 * sx), my - int(4 * sy),
-                          cx + int(8 * sx), my + int(6 * sy),
-                          start=200, extent=140, style="arc",
-                          outline=black, width=max(1, int(1.5 * sx)))
-
+    # _draw_static_panda removed - Canvas preview no longer needed
+    # Use OpenGL panda widget for live 3D visualization instead
+    
     def _refresh_panda_stats(self):
         """Refresh panda stats display by rebuilding the tab content"""
         # Cancel existing auto-refresh timer before rebuilding

@@ -1,5 +1,14 @@
 """
 Weapon Positioning Helper - Handles weapon positioning and orientation
+
+DEPRECATED: Canvas-based drawing functions in this file are deprecated.
+For PyQt6 applications, use: src/ui/weapon_positioning_qt.py
+
+The canvas drawing functions (draw_melee_weapon, draw_ranged_weapon) use tk.Canvas
+which is being replaced with PyQt6 QGraphicsView/QGraphicsScene.
+
+This file remains for Tkinter fallback compatibility.
+
 Author: Dead On The Inside / JosephsDeadish
 """
 

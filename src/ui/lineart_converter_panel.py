@@ -15,6 +15,7 @@ from src.tools.lineart_converter import (
     LineArtConverter, LineArtSettings,
     ConversionMode, BackgroundMode, MorphologyOperation
 )
+from src.ui.performance_utils import OptimizedScrollableFrame, DebouncedCallback
 
 # Live preview widget with slider/zoom/pan
 try:
@@ -44,95 +45,161 @@ logger = logging.getLogger(__name__)
 
 IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp'}
 
-# ── 10 most-common line-art presets (most popular first) ──────────────
+# ── Improved line-art presets with optimized parameters ──────────────
+# Each preset is carefully tuned for its specific artistic purpose
 LINEART_PRESETS = {
     "⭐ Clean Ink Lines": {
         "desc": "Crisp black ink lines — the go-to for most art & game textures",
-        "mode": "pure_black", "threshold": 128, "auto_threshold": False,
+        "mode": "pure_black", "threshold": 135, "auto_threshold": False,
         "background": "transparent", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 200, "contrast": 1.5, "sharpen": True,
-        "sharpen_amount": 1.2, "morphology": "none", "morph_iter": 1,
+        "midtone_threshold": 210, "contrast": 1.6, "sharpen": True,
+        "sharpen_amount": 1.3, "morphology": "close", "morph_iter": 1,
         "kernel": 3, "denoise": True, "denoise_size": 2,
     },
     "✏️ Pencil Sketch": {
-        "desc": "Soft graphite pencil look with tonal gradation",
-        "mode": "sketch", "threshold": 128, "auto_threshold": False,
+        "desc": "Soft graphite pencil look with natural tonal gradation",
+        "mode": "sketch", "threshold": 140, "auto_threshold": False,
         "background": "white", "invert": False, "remove_midtones": False,
-        "midtone_threshold": 200, "contrast": 1.2, "sharpen": False,
+        "midtone_threshold": 200, "contrast": 1.1, "sharpen": False,
         "sharpen_amount": 1.0, "morphology": "none", "morph_iter": 1,
-        "kernel": 3, "denoise": False, "denoise_size": 2,
+        "kernel": 3, "denoise": False, "denoise_size": 1,
     },
     "🖊️ Bold Outlines": {
         "desc": "Thick, punchy outlines — great for stickers or cartoon style",
-        "mode": "pure_black", "threshold": 140, "auto_threshold": False,
+        "mode": "pure_black", "threshold": 145, "auto_threshold": False,
         "background": "transparent", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 180, "contrast": 2.0, "sharpen": True,
-        "sharpen_amount": 1.5, "morphology": "dilate", "morph_iter": 2,
-        "kernel": 3, "denoise": True, "denoise_size": 3,
+        "midtone_threshold": 170, "contrast": 2.2, "sharpen": True,
+        "sharpen_amount": 1.6, "morphology": "dilate", "morph_iter": 3,
+        "kernel": 5, "denoise": True, "denoise_size": 4,
     },
     "🔍 Fine Detail Lines": {
         "desc": "Thin, delicate lines preserving intricate detail",
-        "mode": "adaptive", "threshold": 128, "auto_threshold": False,
+        "mode": "adaptive", "threshold": 125, "auto_threshold": False,
         "background": "transparent", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 220, "contrast": 1.8, "sharpen": True,
-        "sharpen_amount": 2.0, "morphology": "erode", "morph_iter": 1,
+        "midtone_threshold": 230, "contrast": 1.9, "sharpen": True,
+        "sharpen_amount": 2.2, "morphology": "erode", "morph_iter": 1,
         "kernel": 3, "denoise": True, "denoise_size": 1,
     },
     "💥 Comic Book Inks": {
         "desc": "High-contrast inks like professional comic book art",
-        "mode": "pure_black", "threshold": 120, "auto_threshold": False,
+        "mode": "pure_black", "threshold": 115, "auto_threshold": False,
         "background": "white", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 190, "contrast": 2.5, "sharpen": True,
-        "sharpen_amount": 1.8, "morphology": "close", "morph_iter": 1,
+        "midtone_threshold": 185, "contrast": 2.7, "sharpen": True,
+        "sharpen_amount": 2.0, "morphology": "close", "morph_iter": 2,
         "kernel": 3, "denoise": True, "denoise_size": 3,
     },
     "📖 Manga Lines": {
         "desc": "Clean adaptive lines suited for manga / anime styles",
-        "mode": "adaptive", "threshold": 128, "auto_threshold": False,
+        "mode": "adaptive", "threshold": 130, "auto_threshold": False,
         "background": "white", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 210, "contrast": 1.6, "sharpen": True,
-        "sharpen_amount": 1.4, "morphology": "none", "morph_iter": 1,
+        "midtone_threshold": 215, "contrast": 1.7, "sharpen": True,
+        "sharpen_amount": 1.5, "morphology": "close", "morph_iter": 1,
         "kernel": 3, "denoise": True, "denoise_size": 2,
     },
     "🖍️ Coloring Book": {
         "desc": "Thick clean outlines with no inner detail — ready to color in",
         "mode": "edge_detect", "threshold": 128, "auto_threshold": False,
         "background": "white", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 200, "contrast": 1.4, "sharpen": False,
-        "sharpen_amount": 1.0, "morphology": "dilate", "morph_iter": 3,
-        "kernel": 5, "denoise": True, "denoise_size": 4,
+        "midtone_threshold": 200, "contrast": 1.5, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "dilate", "morph_iter": 4,
+        "kernel": 7, "denoise": True, "denoise_size": 5,
     },
     "📐 Blueprint / Technical": {
         "desc": "Precise edge-detected lines for technical / architectural art",
         "mode": "edge_detect", "threshold": 128, "auto_threshold": False,
         "background": "white", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 200, "contrast": 1.0, "sharpen": True,
-        "sharpen_amount": 1.5, "morphology": "none", "morph_iter": 1,
-        "kernel": 3, "denoise": True, "denoise_size": 2,
+        "midtone_threshold": 200, "contrast": 1.2, "sharpen": True,
+        "sharpen_amount": 1.8, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 1,
     },
     "✂️ Stencil / Vinyl Cut": {
         "desc": "High-contrast 1-bit shapes — perfect for stencils & vinyl cutters",
         "mode": "stencil_1bit", "threshold": 128, "auto_threshold": True,
         "background": "white", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 200, "contrast": 2.0, "sharpen": False,
-        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 2,
-        "kernel": 5, "denoise": True, "denoise_size": 5,
+        "midtone_threshold": 200, "contrast": 2.3, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 3,
+        "kernel": 5, "denoise": True, "denoise_size": 6,
     },
     "🪵 Woodcut / Linocut": {
         "desc": "Bold simplified shapes evoking hand-carved block prints",
-        "mode": "threshold", "threshold": 100, "auto_threshold": False,
+        "mode": "threshold", "threshold": 95, "auto_threshold": False,
         "background": "white", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 180, "contrast": 2.8, "sharpen": False,
-        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 2,
-        "kernel": 7, "denoise": True, "denoise_size": 6,
+        "midtone_threshold": 175, "contrast": 3.0, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 3,
+        "kernel": 7, "denoise": True, "denoise_size": 7,
     },
     "🖋️ Tattoo Stencil": {
-        "desc": "High-contrast smooth outlines optimised for tattoo transfer stencils",
-        "mode": "pure_black", "threshold": 135, "auto_threshold": False,
+        "desc": "High-contrast smooth outlines optimized for tattoo transfer stencils",
+        "mode": "pure_black", "threshold": 132, "auto_threshold": False,
         "background": "transparent", "invert": False, "remove_midtones": True,
-        "midtone_threshold": 195, "contrast": 2.2, "sharpen": True,
-        "sharpen_amount": 1.6, "morphology": "close", "morph_iter": 2,
+        "midtone_threshold": 192, "contrast": 2.4, "sharpen": True,
+        "sharpen_amount": 1.7, "morphology": "close", "morph_iter": 2,
+        "kernel": 3, "denoise": True, "denoise_size": 4,
+    },
+    # ── New specialized presets for additional artistic styles ──────────────
+    "🎨 Watercolor Lines": {
+        "desc": "Soft, flowing lines that complement watercolor paintings",
+        "mode": "sketch", "threshold": 150, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": False,
+        "midtone_threshold": 200, "contrast": 1.0, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": False, "denoise_size": 1,
+    },
+    "✍️ Handdrawn / Natural": {
+        "desc": "Organic, hand-drawn appearance with slight imperfections",
+        "mode": "adaptive", "threshold": 128, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": False,
+        "midtone_threshold": 190, "contrast": 1.3, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": False, "denoise_size": 2,
+    },
+    "🏛️ Engraving / Crosshatch": {
+        "desc": "Fine parallel lines creating shading like traditional engravings",
+        "mode": "edge_detect", "threshold": 128, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": False,
+        "midtone_threshold": 180, "contrast": 1.4, "sharpen": True,
+        "sharpen_amount": 2.5, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": False, "denoise_size": 1,
+    },
+    "🎭 Screen Print / Posterize": {
+        "desc": "Bold flat shapes perfect for screen printing or poster art",
+        "mode": "threshold", "threshold": 110, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 160, "contrast": 2.8, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "close", "morph_iter": 4,
+        "kernel": 7, "denoise": True, "denoise_size": 8,
+    },
+    "📸 Photo to Sketch": {
+        "desc": "Convert photos to realistic pencil sketch appearance",
+        "mode": "sketch", "threshold": 135, "auto_threshold": True,
+        "background": "white", "invert": False, "remove_midtones": False,
+        "midtone_threshold": 200, "contrast": 1.25, "sharpen": False,
+        "sharpen_amount": 1.0, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": False, "denoise_size": 2,
+    },
+    "🖼️ Art Nouveau Lines": {
+        "desc": "Flowing, decorative lines characteristic of Art Nouveau style",
+        "mode": "adaptive", "threshold": 135, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 205, "contrast": 1.5, "sharpen": True,
+        "sharpen_amount": 1.4, "morphology": "none", "morph_iter": 1,
+        "kernel": 3, "denoise": True, "denoise_size": 2,
+    },
+    "⚫ High Contrast B&W": {
+        "desc": "Stark black and white with no grays — maximum contrast",
+        "mode": "stencil_1bit", "threshold": 128, "auto_threshold": False,
+        "background": "white", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 128, "contrast": 3.5, "sharpen": True,
+        "sharpen_amount": 1.5, "morphology": "none", "morph_iter": 1,
         "kernel": 3, "denoise": True, "denoise_size": 3,
+    },
+    "🔥 Graffiti / Street Art": {
+        "desc": "Bold urban style with thick outlines and high contrast",
+        "mode": "pure_black", "threshold": 140, "auto_threshold": False,
+        "background": "transparent", "invert": False, "remove_midtones": True,
+        "midtone_threshold": 165, "contrast": 2.5, "sharpen": True,
+        "sharpen_amount": 1.8, "morphology": "dilate", "morph_iter": 4,
+        "kernel": 7, "denoise": True, "denoise_size": 5,
     },
 }
 
@@ -156,6 +223,9 @@ class LineArtConverterPanel(ctk.CTkFrame):
         self.preview_image = None
         self._last_preview_result = None
         self._debounce_id = None  # for debounced live preview updates
+        self._preview_running = False  # Flag to prevent concurrent preview operations
+        self._preview_cancelled = False  # Flag to cancel in-flight previews
+        # Note: _cached_images removed - photo cleanup handled by live_preview widget
         
         self._tooltips = []
         self._create_widgets()
@@ -199,8 +269,8 @@ class LineArtConverterPanel(ctk.CTkFrame):
         main_container = ctk.CTkFrame(self)
         main_container.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Left side - Settings (scrollable)
-        left_frame = ctk.CTkScrollableFrame(main_container, width=400)
+        # Left side - Settings (scrollable with optimization)
+        left_frame = OptimizedScrollableFrame(main_container, width=400, scroll_speed=25)
         left_frame.pack(side="left", fill="both", expand=True, padx=(0, 5))
         
         # File selection
@@ -208,6 +278,9 @@ class LineArtConverterPanel(ctk.CTkFrame):
         
         # Conversion settings
         self._create_conversion_settings(left_frame)
+        
+        # Advanced settings (collapsible)
+        self._create_advanced_settings(left_frame)
         
         # Line modification settings
         self._create_line_modification_settings(left_frame)
@@ -453,6 +526,201 @@ class LineArtConverterPanel(ctk.CTkFrame):
         self.midtone_label.pack(side="left", padx=5)
         self.midtone_slider.configure(command=lambda v: self.midtone_label.configure(text=f"{int(v)}"))
     
+    def _create_advanced_settings(self, parent):
+        """Create advanced settings section."""
+        adv_frame = ctk.CTkFrame(parent)
+        adv_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Header with toggle
+        header_frame = ctk.CTkFrame(adv_frame)
+        header_frame.pack(fill="x", pady=5)
+        
+        self.advanced_visible = ctk.BooleanVar(value=False)
+        self.advanced_toggle = ctk.CTkCheckBox(
+            header_frame,
+            text="⚙️ Advanced Settings",
+            variable=self.advanced_visible,
+            command=self._toggle_advanced_settings,
+            font=("Arial Bold", 14)
+        )
+        self.advanced_toggle.pack(side="left", padx=5)
+        
+        # Container for advanced controls (initially hidden)
+        self.advanced_controls = ctk.CTkFrame(adv_frame)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Edge Detection Controls
+        # ══════════════════════════════════════════════════════════════
+        edge_section = ctk.CTkFrame(self.advanced_controls)
+        edge_section.pack(fill="x", pady=5, padx=10)
+        
+        ctk.CTkLabel(edge_section, text="🔍 Edge Detection (Canny)", 
+                    font=("Arial Bold", 12)).pack(pady=5, anchor="w")
+        
+        # Low threshold
+        low_thresh_frame = ctk.CTkFrame(edge_section)
+        low_thresh_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(low_thresh_frame, text="Low Threshold:").pack(side="left", padx=5)
+        
+        self.edge_low_var = ctk.IntVar(value=50)
+        self.edge_low_slider = ctk.CTkSlider(
+            low_thresh_frame,
+            from_=0,
+            to=255,
+            variable=self.edge_low_var,
+            number_of_steps=255
+        )
+        self.edge_low_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.edge_low_label = ctk.CTkLabel(low_thresh_frame, text="50")
+        self.edge_low_label.pack(side="left", padx=5)
+        self.edge_low_slider.configure(command=lambda v: self.edge_low_label.configure(text=f"{int(v)}"))
+        
+        # High threshold
+        high_thresh_frame = ctk.CTkFrame(edge_section)
+        high_thresh_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(high_thresh_frame, text="High Threshold:").pack(side="left", padx=5)
+        
+        self.edge_high_var = ctk.IntVar(value=150)
+        self.edge_high_slider = ctk.CTkSlider(
+            high_thresh_frame,
+            from_=0,
+            to=255,
+            variable=self.edge_high_var,
+            number_of_steps=255
+        )
+        self.edge_high_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.edge_high_label = ctk.CTkLabel(high_thresh_frame, text="150")
+        self.edge_high_label.pack(side="left", padx=5)
+        self.edge_high_slider.configure(command=lambda v: self.edge_high_label.configure(text=f"{int(v)}"))
+        
+        # Aperture size
+        aperture_frame = ctk.CTkFrame(edge_section)
+        aperture_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(aperture_frame, text="Aperture Size:").pack(side="left", padx=5)
+        
+        self.edge_aperture_var = ctk.IntVar(value=3)
+        self.edge_aperture_menu = ctk.CTkOptionMenu(
+            aperture_frame,
+            variable=self.edge_aperture_var,
+            values=["3", "5", "7"],
+            width=80
+        )
+        self.edge_aperture_menu.pack(side="left", padx=5)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Adaptive Threshold Controls
+        # ══════════════════════════════════════════════════════════════
+        adaptive_section = ctk.CTkFrame(self.advanced_controls)
+        adaptive_section.pack(fill="x", pady=5, padx=10)
+        
+        ctk.CTkLabel(adaptive_section, text="📊 Adaptive Thresholding", 
+                    font=("Arial Bold", 12)).pack(pady=5, anchor="w")
+        
+        # Block size
+        block_frame = ctk.CTkFrame(adaptive_section)
+        block_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(block_frame, text="Block Size:").pack(side="left", padx=5)
+        
+        self.adaptive_block_var = ctk.IntVar(value=11)
+        self.adaptive_block_slider = ctk.CTkSlider(
+            block_frame,
+            from_=3,
+            to=51,
+            variable=self.adaptive_block_var,
+            number_of_steps=24
+        )
+        self.adaptive_block_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.adaptive_block_label = ctk.CTkLabel(block_frame, text="11")
+        self.adaptive_block_label.pack(side="left", padx=5)
+        self.adaptive_block_slider.configure(command=lambda v: self.adaptive_block_label.configure(text=f"{int(v)}"))
+        
+        # C constant
+        c_frame = ctk.CTkFrame(adaptive_section)
+        c_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(c_frame, text="C Constant:").pack(side="left", padx=5)
+        
+        self.adaptive_c_var = ctk.IntVar(value=2)
+        self.adaptive_c_slider = ctk.CTkSlider(
+            c_frame,
+            from_=-10,
+            to=10,
+            variable=self.adaptive_c_var,
+            number_of_steps=20
+        )
+        self.adaptive_c_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.adaptive_c_label = ctk.CTkLabel(c_frame, text="2")
+        self.adaptive_c_label.pack(side="left", padx=5)
+        self.adaptive_c_slider.configure(command=lambda v: self.adaptive_c_label.configure(text=f"{int(v)}"))
+        
+        # Method
+        method_frame = ctk.CTkFrame(adaptive_section)
+        method_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(method_frame, text="Method:").pack(side="left", padx=5)
+        
+        self.adaptive_method_var = ctk.StringVar(value="gaussian")
+        self.adaptive_method_menu = ctk.CTkOptionMenu(
+            method_frame,
+            variable=self.adaptive_method_var,
+            values=["gaussian", "mean"],
+            width=120
+        )
+        self.adaptive_method_menu.pack(side="left", padx=5)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Post-Processing Controls
+        # ══════════════════════════════════════════════════════════════
+        post_section = ctk.CTkFrame(self.advanced_controls)
+        post_section.pack(fill="x", pady=5, padx=10)
+        
+        ctk.CTkLabel(post_section, text="✨ Post-Processing", 
+                    font=("Arial Bold", 12)).pack(pady=5, anchor="w")
+        
+        # Smooth lines
+        self.smooth_lines_var = ctk.BooleanVar(value=False)
+        self.smooth_lines_checkbox = ctk.CTkCheckBox(
+            post_section,
+            text="Smooth Lines (bilateral filter)",
+            variable=self.smooth_lines_var
+        )
+        self.smooth_lines_checkbox.pack(pady=3, padx=10, anchor="w")
+        
+        # Smooth amount
+        smooth_frame = ctk.CTkFrame(post_section)
+        smooth_frame.pack(fill="x", pady=3, padx=10)
+        
+        ctk.CTkLabel(smooth_frame, text="Smooth Amount:").pack(side="left", padx=5)
+        
+        self.smooth_amount_var = ctk.DoubleVar(value=1.0)
+        self.smooth_slider = ctk.CTkSlider(
+            smooth_frame,
+            from_=0.5,
+            to=3.0,
+            variable=self.smooth_amount_var,
+            number_of_steps=25
+        )
+        self.smooth_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.smooth_label = ctk.CTkLabel(smooth_frame, text="1.0")
+        self.smooth_label.pack(side="left", padx=5)
+        self.smooth_slider.configure(command=lambda v: self.smooth_label.configure(text=f"{v:.1f}"))
+    
+    def _toggle_advanced_settings(self):
+        """Toggle visibility of advanced settings."""
+        if self.advanced_visible.get():
+            self.advanced_controls.pack(fill="x", pady=5)
+        else:
+            self.advanced_controls.pack_forget()
+    
     def _create_line_modification_settings(self, parent):
         """Create line modification settings."""
         line_frame = ctk.CTkFrame(parent)
@@ -557,6 +825,35 @@ class LineArtConverterPanel(ctk.CTkFrame):
             width=80
         )
         self.kernel_size_menu.pack(side="left", padx=5)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Quick Line Weight Adjusters
+        # ══════════════════════════════════════════════════════════════
+        quick_frame = ctk.CTkFrame(line_frame)
+        quick_frame.pack(fill="x", pady=(10, 5), padx=10)
+        
+        ctk.CTkLabel(quick_frame, text="⚡ Quick Adjustments:", 
+                    font=("Arial Bold", 12)).pack(side="left", padx=5)
+        
+        self.thicker_btn = ctk.CTkButton(
+            quick_frame,
+            text="➕ Make Thicker",
+            command=self._make_lines_thicker,
+            width=120,
+            fg_color="#2B7A0B",
+            hover_color="#368B14"
+        )
+        self.thicker_btn.pack(side="left", padx=3)
+        
+        self.thinner_btn = ctk.CTkButton(
+            quick_frame,
+            text="➖ Make Thinner",
+            command=self._make_lines_thinner,
+            width=120,
+            fg_color="#7A0B2B",
+            hover_color="#8B1436"
+        )
+        self.thinner_btn.pack(side="left", padx=3)
     
     def _create_cleanup_settings(self, parent):
         """Create cleanup settings."""
@@ -772,26 +1069,100 @@ class LineArtConverterPanel(ctk.CTkFrame):
             sharpen=self.sharpen_var.get(),
             sharpen_amount=self.sharpen_amount_var.get(),
             contrast_boost=self.contrast_var.get(),
-            auto_threshold=self.auto_threshold_var.get()
+            auto_threshold=self.auto_threshold_var.get(),
+            # Advanced edge detection parameters
+            edge_low_threshold=self.edge_low_var.get(),
+            edge_high_threshold=self.edge_high_var.get(),
+            edge_aperture_size=self.edge_aperture_var.get(),
+            # Advanced adaptive threshold parameters
+            adaptive_block_size=self.adaptive_block_var.get(),
+            adaptive_c_constant=self.adaptive_c_var.get(),
+            adaptive_method=self.adaptive_method_var.get(),
+            # Post-processing
+            smooth_lines=self.smooth_lines_var.get(),
+            smooth_amount=self.smooth_amount_var.get()
         )
     
     def _schedule_live_update(self, *_args):
-        """Debounced live preview: schedules an update 500ms after the last setting change."""
+        """Debounced live preview: schedules an update after the last setting change."""
         if not self.preview_image:
             return
+        
+        # Cancel any pending debounced update
         if self._debounce_id is not None:
             self.after_cancel(self._debounce_id)
-        self._debounce_id = self.after(500, self._update_preview)
+        
+        # Cancel any running preview operation
+        self._preview_cancelled = True
+        
+        # Increased debounce time from 500ms to 800ms for better stability
+        # This reduces the chance of multiple rapid updates overwhelming the system
+        self._debounce_id = self.after(800, self._update_preview)
+    
+    def _make_lines_thicker(self):
+        """Quick adjustment to make lines thicker."""
+        # Set morphology to dilate if not already set
+        if self.morphology_var.get() == "none":
+            self.morphology_var.set("dilate")
+            self.morphology_iterations_var.set(2)
+            self.iter_label.configure(text="2")
+        else:
+            # Increase iterations
+            current = self.morphology_iterations_var.get()
+            if current < 10:
+                new_val = current + 1
+                self.morphology_iterations_var.set(new_val)
+                self.iter_label.configure(text=str(new_val))
+        
+        # Optionally increase kernel size
+        current_kernel = int(self.kernel_size_var.get())
+        if current_kernel < 7:
+            self.kernel_size_var.set(current_kernel + 2)
+        
+        # Trigger preview update
+        self._schedule_live_update()
+    
+    def _make_lines_thinner(self):
+        """Quick adjustment to make lines thinner."""
+        # Set morphology to erode if not already set
+        if self.morphology_var.get() == "none":
+            self.morphology_var.set("erode")
+            self.morphology_iterations_var.set(1)
+            self.iter_label.configure(text="1")
+        else:
+            # Increase iterations if already eroding, or switch to erode
+            if self.morphology_var.get() != "erode":
+                self.morphology_var.set("erode")
+                self.morphology_iterations_var.set(1)
+                self.iter_label.configure(text="1")
+            else:
+                current = self.morphology_iterations_var.get()
+                if current < 10:
+                    new_val = current + 1
+                    self.morphology_iterations_var.set(new_val)
+                    self.iter_label.configure(text=str(new_val))
+        
+        # Trigger preview update
+        self._schedule_live_update()
 
     def _update_preview(self):
         """Update preview with current settings (runs in background thread)."""
         self._debounce_id = None
+        
+        # Prevent concurrent preview operations
+        if self._preview_running:
+            return
+        
         if not self.preview_image and self.selected_files:
             self.preview_image = self.selected_files[0]
         
         if not self.preview_image:
             messagebox.showwarning("No Image", "Please select an image for preview")
             return
+        
+        # Mark preview as running and reset cancellation flag
+        self._preview_running = True
+        self._preview_cancelled = False
         
         # Store original button text and disable button during processing
         original_btn_text = "Update Preview"
@@ -809,13 +1180,29 @@ class LineArtConverterPanel(ctk.CTkFrame):
         def generate_preview():
             processed = None
             try:
+                # Check if cancelled before starting
+                if self._preview_cancelled:
+                    return
+                
                 settings = self._get_settings()
                 with Image.open(preview_path) as original:
                     # Make copies so we can close the file
                     original_copy = original.copy()
                 
+                # Check if cancelled before processing
+                if self._preview_cancelled:
+                    return
+                
                 # preview_settings returns a new image, not a file handle
                 processed = self.converter.preview_settings(preview_path, settings)
+                
+                # Check if cancelled before storing result
+                if self._preview_cancelled:
+                    # Clean up processed image if operation was cancelled
+                    if processed:
+                        processed.close()
+                    original_copy.close()
+                    return
 
                 # Store full-resolution result for export
                 self._last_preview_result = processed.copy()
@@ -827,12 +1214,22 @@ class LineArtConverterPanel(ctk.CTkFrame):
                 logger.error(f"Error updating preview: {e}", exc_info=True)
                 self.after(0, lambda: messagebox.showerror("Error", f"Failed to update preview: {e}"))
             finally:
-                # Re-enable button on main thread
+                # Reset running flag and re-enable button on main thread
+                self._preview_running = False
                 if hasattr(self, 'update_preview_btn'):
                     self.after(0, lambda: self.update_preview_btn.configure(state="normal", text=original_btn_text))
+                
+                # Explicit garbage collection after preview to free memory
+                self.after(0, self._cleanup_memory)
         
         # Start background thread
         threading.Thread(target=generate_preview, daemon=True).start()
+    
+    def _cleanup_memory(self):
+        """Clean up old image references to free memory."""
+        import gc
+        # Force garbage collection to free up memory from old preview images
+        gc.collect()
     
     def _display_preview(self, original, processed):
         """Display preview images (must be called on main thread)."""

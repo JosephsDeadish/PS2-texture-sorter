@@ -55,27 +55,22 @@ class PandaMood(Enum):
 class PandaCharacter:
     """Manages the panda companion character - always present.
     
-    The panda is rendered as a canvas-drawn character in panda_widget.py.
-    Animation states listed here are used by the canvas drawing system to
-    determine body motion, eye styles, mouth styles, and visual extras.
+    The panda is rendered in 3D using OpenGL hardware acceleration (panda_widget_gl.py).
+    Animation states listed here are used by the 3D rendering system to determine
+    body motion, limb positions, rotations, and visual effects.
+    
+    For backwards compatibility, the old canvas-based renderer (panda_widget.py)
+    is still available but deprecated.
     """
     
     # Configuration constants
     RAGE_CLICK_THRESHOLD = 10  # Number of clicks to trigger rage mode
     
-    # Body part region boundaries (relative Y position 0.0-1.0)
-    # Calibrated to the 220×380 canvas (sx=W/160, sy=H/200) with
-    # PANDA_DRAW_Y_OFFSET = 20. Actual pixel Y = base_y * sy + offset,
-    # so rel_y ≈ base_y/200 + 0.053.
-    # Ears (base 9-33)  → rel 0.10-0.22
-    # Head (base 20-84) → rel 0.15-0.47
-    # Eyes (base ~48)   → rel ~0.29
-    # Nose (base ~60)   → rel ~0.35
-    # Arms (base 95-130)→ rel 0.53-0.70
-    # Body (base 75-160)→ rel 0.43-0.85
-    # Legs (base 145-175)→ rel 0.78-0.93
+    # Body part region boundaries (relative position 0.0-1.0 in 3D space)
+    # These define clickable regions for body part interactions in both 2D and 3D modes.
+    # In 3D OpenGL mode, these are used for ray-casting hit detection.
     HEAD_BOUNDARY = 0.43
-    EAR_BOUNDARY = 0.22       # Ears extend to rel_y ~0.22
+    EAR_BOUNDARY = 0.22
     EYE_BOUNDARY_TOP = 0.22
     EYE_BOUNDARY_BOTTOM = 0.34
     NOSE_BOUNDARY_TOP = 0.30
@@ -83,7 +78,7 @@ class PandaCharacter:
     BODY_BOUNDARY = 0.72
     BUTT_BOUNDARY = 0.78
     
-    # Valid animation state names used by the canvas-drawn panda
+    # Valid animation state names used by the 3D panda renderer
     ANIMATION_STATES = [
         'idle', 'working', 'celebrating', 'rage', 'sarcastic', 'drunk',
         'playing', 'eating', 'customizing', 'sleeping', 'laying_down',

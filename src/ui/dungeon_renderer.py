@@ -1,4 +1,11 @@
 """
+DEPRECATED: This module uses tk.Canvas which is being replaced with PyQt6.
+
+Use the PyQt6 version instead: src/ui/dungeon_graphics_view.py
+
+This file will be removed in a future version.
+Canvas-based rendering is deprecated in favor of QGraphicsView.
+
 Dungeon Renderer for visualizing procedurally generated dungeons.
 Renders tiles, walls, floors, stairs, and entities.
 """
