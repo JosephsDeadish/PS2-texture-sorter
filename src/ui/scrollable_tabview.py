@@ -56,17 +56,8 @@ class ScrollableTabView(ctk.CTkFrame):
         tab_frame = ctk.CTkFrame(self.content_frame)
         self.tabs[name] = tab_frame
 
-        btn = ctk.CTkButton(
-            self.row1,
-            text=name,
-            command=lambda n=name: self.set(n),
-            height=28,
-            corner_radius=6,
-            font=("Arial", 11),
-            fg_color=["gray75", "gray25"],
-            hover_color=["gray70", "gray30"],
-        )
-        self.tab_buttons[name] = btn
+        # Store button config, actual button will be created in _rebalance_rows
+        self.tab_buttons[name] = None
 
         # Re-balance rows whenever total count changes
         self._rebalance_rows()
@@ -86,7 +77,7 @@ class ScrollableTabView(ctk.CTkFrame):
         # Deselect previous
         if self.current_tab and self.current_tab in self.tabs:
             self.tabs[self.current_tab].pack_forget()
-            if self.current_tab in self.tab_buttons:
+            if self.current_tab in self.tab_buttons and self.tab_buttons[self.current_tab] is not None:
                 self.tab_buttons[self.current_tab].configure(
                     fg_color=["gray75", "gray25"],
                     hover_color=["gray70", "gray30"],
@@ -95,7 +86,7 @@ class ScrollableTabView(ctk.CTkFrame):
         # Select new
         self.current_tab = name
         self.tabs[name].pack(fill="both", expand=True)
-        if name in self.tab_buttons:
+        if name in self.tab_buttons and self.tab_buttons[name] is not None:
             self.tab_buttons[name].configure(
                 fg_color=["#3B8ED0", "#1F6AA5"],
                 hover_color=["#36719F", "#144870"],
@@ -125,7 +116,8 @@ class ScrollableTabView(ctk.CTkFrame):
         self.tabs[name].destroy()
         del self.tabs[name]
         if name in self.tab_buttons:
-            self.tab_buttons[name].destroy()
+            if self.tab_buttons[name] is not None:
+                self.tab_buttons[name].destroy()
             del self.tab_buttons[name]
         self._rebalance_rows()
 
@@ -135,12 +127,30 @@ class ScrollableTabView(ctk.CTkFrame):
         names = list(self.tabs.keys())
         half = math.ceil(len(names) / 2)
 
+        # Destroy all existing buttons
         for btn in self.tab_buttons.values():
-            btn.pack_forget()
+            if btn is not None:
+                btn.destroy()
 
+        # Recreate buttons in the correct parent frames
         for i, name in enumerate(names):
             parent = self.row1 if i < half else self.row2
-            self.tab_buttons[name].pack(in_=parent, side="left", padx=2, pady=1)
+            
+            # Determine if this is the current tab
+            is_current = (name == self.current_tab)
+            
+            btn = ctk.CTkButton(
+                parent,
+                text=name,
+                command=lambda n=name: self.set(n),
+                height=28,
+                corner_radius=6,
+                font=("Arial", 11),
+                fg_color=["#3B8ED0", "#1F6AA5"] if is_current else ["gray75", "gray25"],
+                hover_color=["#36719F", "#144870"] if is_current else ["gray70", "gray30"],
+            )
+            btn.pack(side="left", padx=2, pady=1)
+            self.tab_buttons[name] = btn
 
 
 class CompactTabView(ctk.CTkFrame):
