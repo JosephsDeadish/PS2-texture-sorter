@@ -1,0 +1,824 @@
+"""
+OpenGL Panda Widget - Hardware-accelerated 3D panda companion
+Replaces canvas-drawn panda with Qt OpenGL rendering for smooth 60fps animation,
+real lighting, shadows, and 3D interactions.
+Author: Dead On The Inside / JosephsDeadish
+"""
+
+import logging
+import math
+import random
+import time
+from typing import Optional, Callable, Tuple, List
+from enum import Enum
+
+try:
+    from PyQt6.QtWidgets import QWidget, QOpenGLWidget, QApplication
+    from PyQt6.QtCore import QTimer, Qt, QPoint, pyqtSignal
+    from PyQt6.QtGui import QMouseEvent, QSurfaceFormat
+    from OpenGL.GL import *
+    from OpenGL.GLU import *
+    import numpy as np
+    QT_AVAILABLE = True
+except ImportError:
+    QT_AVAILABLE = False
+    QWidget = object
+    QOpenGLWidget = object
+
+logger = logging.getLogger(__name__)
+
+
+class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
+    """
+    Hardware-accelerated 3D panda widget using Qt OpenGL.
+    
+    Features:
+    - Real-time 3D rendering at 60 FPS
+    - Dynamic lighting with directional and ambient light
+    - Real-time shadow mapping
+    - Smooth animations with procedural 3D geometry
+    - Physics-based interactions
+    - Hardware acceleration via OpenGL
+    """
+    
+    # Signals for communication with main app
+    clicked = pyqtSignal() if QT_AVAILABLE else None
+    mood_changed = pyqtSignal(str) if QT_AVAILABLE else None
+    animation_changed = pyqtSignal(str) if QT_AVAILABLE else None
+    
+    # Animation constants
+    TARGET_FPS = 60
+    FRAME_TIME = 1.0 / TARGET_FPS  # 16.67ms per frame
+    
+    # Panda dimensions (3D units)
+    HEAD_RADIUS = 0.4
+    BODY_WIDTH = 0.5
+    BODY_HEIGHT = 0.6
+    ARM_LENGTH = 0.4
+    LEG_LENGTH = 0.35
+    EAR_SIZE = 0.15
+    
+    # Physics constants
+    GRAVITY = 9.8
+    BOUNCE_DAMPING = 0.6
+    FRICTION = 0.92
+    
+    def __init__(self, panda_character=None, parent=None):
+        """
+        Initialize OpenGL panda widget.
+        
+        Args:
+            panda_character: PandaCharacter instance for state management
+            parent: Parent Qt widget
+        """
+        if not QT_AVAILABLE:
+            raise ImportError("PyQt6 and PyOpenGL are required for OpenGL panda widget")
+        
+        super().__init__(parent)
+        
+        # Set OpenGL surface format for optimal rendering
+        fmt = QSurfaceFormat()
+        fmt.setVersion(3, 3)  # OpenGL 3.3
+        fmt.setProfile(QSurfaceFormat.OpenGLContextProfile.CoreProfile)
+        fmt.setSamples(4)  # 4x MSAA for antialiasing
+        fmt.setDepthBufferSize(24)
+        fmt.setStencilBufferSize(8)
+        self.setFormat(fmt)
+        
+        # Panda state
+        self.panda = panda_character
+        
+        # Animation state
+        self.animation_frame = 0
+        self.animation_state = 'idle'
+        self.facing = 'front'
+        
+        # Position and rotation (in 3D space)
+        self.panda_x = 0.0
+        self.panda_y = 0.0
+        self.panda_z = 0.0
+        self.rotation_x = 0.0
+        self.rotation_y = 0.0
+        self.rotation_z = 0.0
+        
+        # Velocity for physics
+        self.velocity_x = 0.0
+        self.velocity_y = 0.0
+        self.velocity_z = 0.0
+        self.angular_velocity = 0.0
+        
+        # Camera settings
+        self.camera_distance = 3.0
+        self.camera_angle_x = 20.0
+        self.camera_angle_y = 0.0
+        
+        # Lighting
+        self.light_position = [2.0, 3.0, 2.0, 1.0]
+        self.ambient_light = [0.3, 0.3, 0.3, 1.0]
+        self.diffuse_light = [0.8, 0.8, 0.8, 1.0]
+        self.specular_light = [1.0, 1.0, 1.0, 1.0]
+        
+        # Shadow mapping
+        self.shadow_map_size = 1024
+        self.shadow_fbo = None
+        self.shadow_texture = None
+        
+        # Mouse interaction
+        self.last_mouse_pos = None
+        self.is_dragging = False
+        self.drag_start_pos = None
+        
+        # Items (toys, food, clothes)
+        self.items_3d = []  # List of 3D items in the scene
+        
+        # Animation timer (60 FPS)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._update_animation)
+        self.timer.start(int(self.FRAME_TIME * 1000))  # Convert to ms
+        
+        # Frame timing for FPS cap
+        self.last_frame_time = time.time()
+        
+        # OpenGL initialization flag
+        self.gl_initialized = False
+        
+        logger.info("OpenGL panda widget initialized with hardware acceleration")
+    
+    def initializeGL(self):
+        """Initialize OpenGL settings."""
+        # Enable depth testing for 3D
+        glEnable(GL_DEPTH_TEST)
+        glDepthFunc(GL_LEQUAL)
+        
+        # Enable face culling for performance
+        glEnable(GL_CULL_FACE)
+        glCullFace(GL_BACK)
+        
+        # Enable smooth shading
+        glShadeModel(GL_SMOOTH)
+        
+        # Enable antialiasing
+        glEnable(GL_MULTISAMPLE)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
+        
+        # Enable blending for transparency
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        # Set background color (transparent or light color)
+        glClearColor(0.95, 0.95, 0.98, 1.0)
+        
+        # Setup lighting
+        glEnable(GL_LIGHTING)
+        glEnable(GL_LIGHT0)
+        glEnable(GL_COLOR_MATERIAL)
+        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
+        
+        # Set light properties
+        glLightfv(GL_LIGHT0, GL_POSITION, self.light_position)
+        glLightfv(GL_LIGHT0, GL_AMBIENT, self.ambient_light)
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, self.diffuse_light)
+        glLightfv(GL_LIGHT0, GL_SPECULAR, self.specular_light)
+        
+        # Material properties for specular highlights
+        glMaterialfv(GL_FRONT, GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
+        glMaterialf(GL_FRONT, GL_SHININESS, 50.0)
+        
+        # Initialize shadow mapping
+        self._init_shadow_mapping()
+        
+        self.gl_initialized = True
+        logger.info("OpenGL initialized successfully")
+    
+    def _init_shadow_mapping(self):
+        """Initialize shadow mapping framebuffer and texture."""
+        try:
+            # Create shadow map texture
+            self.shadow_texture = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, self.shadow_texture)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 
+                        self.shadow_map_size, self.shadow_map_size, 
+                        0, GL_DEPTH_COMPONENT, GL_FLOAT, None)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+            
+            # Create framebuffer for shadow rendering
+            self.shadow_fbo = glGenFramebuffers(1)
+            glBindFramebuffer(GL_FRAMEBUFFER, self.shadow_fbo)
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+                                  GL_TEXTURE_2D, self.shadow_texture, 0)
+            glDrawBuffer(GL_NONE)
+            glReadBuffer(GL_NONE)
+            
+            # Check framebuffer status
+            if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
+                logger.warning("Shadow framebuffer not complete, shadows may not work")
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            logger.info("Shadow mapping initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize shadow mapping: {e}")
+            self.shadow_fbo = None
+            self.shadow_texture = None
+    
+    def resizeGL(self, width, height):
+        """Handle window resize."""
+        if height == 0:
+            height = 1
+        
+        glViewport(0, 0, width, height)
+        
+        # Setup projection matrix
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        aspect = width / height
+        gluPerspective(45.0, aspect, 0.1, 100.0)
+        glMatrixMode(GL_MODELVIEW)
+    
+    def paintGL(self):
+        """Render the 3D scene."""
+        # FPS limiting
+        current_time = time.time()
+        elapsed = current_time - self.last_frame_time
+        if elapsed < self.FRAME_TIME:
+            return  # Skip frame to maintain 60 FPS cap
+        self.last_frame_time = current_time
+        
+        # Clear buffers
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        
+        # Render shadows first (if supported)
+        if self.shadow_fbo:
+            self._render_shadows()
+        
+        # Setup camera
+        glLoadIdentity()
+        glTranslatef(0.0, -0.5, -self.camera_distance)
+        glRotatef(self.camera_angle_x, 1.0, 0.0, 0.0)
+        glRotatef(self.camera_angle_y, 0.0, 1.0, 0.0)
+        
+        # Update light position relative to camera
+        glLightfv(GL_LIGHT0, GL_POSITION, self.light_position)
+        
+        # Draw ground plane (for shadow reference)
+        self._draw_ground()
+        
+        # Apply panda position and rotation
+        glPushMatrix()
+        glTranslatef(self.panda_x, self.panda_y, self.panda_z)
+        glRotatef(self.rotation_y, 0.0, 1.0, 0.0)  # Y rotation (turning)
+        glRotatef(self.rotation_x, 1.0, 0.0, 0.0)  # X rotation (pitching)
+        glRotatef(self.rotation_z, 0.0, 0.0, 1.0)  # Z rotation (rolling)
+        
+        # Draw panda body
+        self._draw_panda()
+        
+        glPopMatrix()
+        
+        # Draw items (toys, food, clothes)
+        for item in self.items_3d:
+            self._draw_item_3d(item)
+    
+    def _render_shadows(self):
+        """Render shadow map from light's perspective."""
+        if not self.shadow_fbo:
+            return
+        
+        # Save current viewport
+        viewport = glGetIntegerv(GL_VIEWPORT)
+        
+        # Bind shadow framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, self.shadow_fbo)
+        glViewport(0, 0, self.shadow_map_size, self.shadow_map_size)
+        glClear(GL_DEPTH_BUFFER_BIT)
+        
+        # Setup light's view matrix
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        glOrtho(-3, 3, -3, 3, 0.1, 10.0)
+        
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+        gluLookAt(
+            self.light_position[0], self.light_position[1], self.light_position[2],
+            0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0
+        )
+        
+        # Disable lighting for shadow pass
+        glDisable(GL_LIGHTING)
+        
+        # Render scene geometry (depth only)
+        glPushMatrix()
+        glTranslatef(self.panda_x, self.panda_y, self.panda_z)
+        glRotatef(self.rotation_y, 0.0, 1.0, 0.0)
+        self._draw_panda_geometry_only()
+        glPopMatrix()
+        
+        # Restore state
+        glEnable(GL_LIGHTING)
+        glPopMatrix()
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        
+        # Restore framebuffer and viewport
+        glBindFramebuffer(GL_FRAMEBUFFER, 0)
+        glViewport(*viewport)
+    
+    def _draw_ground(self):
+        """Draw ground plane for spatial reference."""
+        glDisable(GL_LIGHTING)
+        glColor4f(0.85, 0.85, 0.85, 0.5)
+        
+        glBegin(GL_QUADS)
+        size = 5.0
+        glVertex3f(-size, -1.0, -size)
+        glVertex3f(size, -1.0, -size)
+        glVertex3f(size, -1.0, size)
+        glVertex3f(-size, -1.0, size)
+        glEnd()
+        
+        glEnable(GL_LIGHTING)
+    
+    def _draw_panda(self):
+        """Draw 3D panda character with all body parts."""
+        # Get animation-specific offsets
+        bob_offset = self._get_body_bob()
+        limb_offsets = self._get_limb_positions()
+        
+        # Body (torso) - main oval shape
+        glPushMatrix()
+        glTranslatef(0.0, 0.3 + bob_offset, 0.0)
+        glColor3f(1.0, 1.0, 1.0)  # White
+        glPushMatrix()
+        glScalef(self.BODY_WIDTH, self.BODY_HEIGHT, self.BODY_WIDTH * 0.8)
+        self._draw_sphere(1.0, 20, 20)
+        glPopMatrix()
+        glPopMatrix()
+        
+        # Head
+        glPushMatrix()
+        glTranslatef(0.0, 0.9 + bob_offset, 0.0)
+        glColor3f(1.0, 1.0, 1.0)  # White
+        self._draw_sphere(self.HEAD_RADIUS, 20, 20)
+        
+        # Ears
+        self._draw_panda_ears(bob_offset)
+        
+        # Eyes (black patches)
+        self._draw_panda_eyes()
+        
+        # Nose
+        glPushMatrix()
+        glTranslatef(0.0, -0.05, self.HEAD_RADIUS * 0.8)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        self._draw_sphere(0.06, 12, 12)
+        glPopMatrix()
+        
+        glPopMatrix()
+        
+        # Arms
+        self._draw_panda_arms(limb_offsets, bob_offset)
+        
+        # Legs
+        self._draw_panda_legs(limb_offsets, bob_offset)
+    
+    def _draw_panda_geometry_only(self):
+        """Draw panda geometry without colors (for shadow mapping)."""
+        # Simplified geometry for shadow pass
+        glPushMatrix()
+        glTranslatef(0.0, 0.3, 0.0)
+        glScalef(self.BODY_WIDTH, self.BODY_HEIGHT, self.BODY_WIDTH * 0.8)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+        
+        glPushMatrix()
+        glTranslatef(0.0, 0.9, 0.0)
+        self._draw_sphere(self.HEAD_RADIUS, 12, 12)
+        glPopMatrix()
+    
+    def _draw_panda_ears(self, bob_offset):
+        """Draw panda ears."""
+        ear_y = 0.3
+        ear_x = 0.25
+        
+        # Left ear
+        glPushMatrix()
+        glTranslatef(-ear_x, ear_y, 0.0)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        self._draw_sphere(self.EAR_SIZE, 12, 12)
+        glPopMatrix()
+        
+        # Right ear
+        glPushMatrix()
+        glTranslatef(ear_x, ear_y, 0.0)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        self._draw_sphere(self.EAR_SIZE, 12, 12)
+        glPopMatrix()
+    
+    def _draw_panda_eyes(self):
+        """Draw panda eyes with black patches."""
+        eye_y = 0.05
+        eye_x = 0.15
+        eye_z = self.HEAD_RADIUS * 0.7
+        
+        # Left eye patch (black)
+        glPushMatrix()
+        glTranslatef(-eye_x, eye_y, eye_z)
+        glColor3f(0.0, 0.0, 0.0)
+        self._draw_sphere(0.12, 12, 12)
+        glPopMatrix()
+        
+        # Right eye patch (black)
+        glPushMatrix()
+        glTranslatef(eye_x, eye_y, eye_z)
+        glColor3f(0.0, 0.0, 0.0)
+        self._draw_sphere(0.12, 12, 12)
+        glPopMatrix()
+        
+        # Left eyeball (white)
+        glPushMatrix()
+        glTranslatef(-eye_x, eye_y, eye_z + 0.05)
+        glColor3f(1.0, 1.0, 1.0)
+        self._draw_sphere(0.06, 12, 12)
+        glPopMatrix()
+        
+        # Right eyeball (white)
+        glPushMatrix()
+        glTranslatef(eye_x, eye_y, eye_z + 0.05)
+        glColor3f(1.0, 1.0, 1.0)
+        self._draw_sphere(0.06, 12, 12)
+        glPopMatrix()
+        
+        # Pupils (black)
+        pupil_offset = 0.02
+        glPushMatrix()
+        glTranslatef(-eye_x + pupil_offset, eye_y, eye_z + 0.1)
+        glColor3f(0.0, 0.0, 0.0)
+        self._draw_sphere(0.03, 8, 8)
+        glPopMatrix()
+        
+        glPushMatrix()
+        glTranslatef(eye_x + pupil_offset, eye_y, eye_z + 0.1)
+        glColor3f(0.0, 0.0, 0.0)
+        self._draw_sphere(0.03, 8, 8)
+        glPopMatrix()
+    
+    def _draw_panda_arms(self, limb_offsets, bob_offset):
+        """Draw panda arms."""
+        arm_y = 0.3 + bob_offset
+        arm_x = self.BODY_WIDTH + 0.1
+        
+        left_arm_angle = limb_offsets.get('left_arm_angle', 0)
+        right_arm_angle = limb_offsets.get('right_arm_angle', 0)
+        
+        # Left arm
+        glPushMatrix()
+        glTranslatef(-arm_x, arm_y, 0.0)
+        glRotatef(left_arm_angle, 1.0, 0.0, 0.0)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        glPushMatrix()
+        glScalef(0.12, self.ARM_LENGTH, 0.12)
+        glTranslatef(0.0, -0.5, 0.0)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+        glPopMatrix()
+        
+        # Right arm
+        glPushMatrix()
+        glTranslatef(arm_x, arm_y, 0.0)
+        glRotatef(right_arm_angle, 1.0, 0.0, 0.0)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        glPushMatrix()
+        glScalef(0.12, self.ARM_LENGTH, 0.12)
+        glTranslatef(0.0, -0.5, 0.0)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+        glPopMatrix()
+    
+    def _draw_panda_legs(self, limb_offsets, bob_offset):
+        """Draw panda legs."""
+        leg_y = -0.1 + bob_offset
+        leg_x = 0.2
+        
+        left_leg_angle = limb_offsets.get('left_leg_angle', 0)
+        right_leg_angle = limb_offsets.get('right_leg_angle', 0)
+        
+        # Left leg
+        glPushMatrix()
+        glTranslatef(-leg_x, leg_y, 0.0)
+        glRotatef(left_leg_angle, 1.0, 0.0, 0.0)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        glPushMatrix()
+        glScalef(0.15, self.LEG_LENGTH, 0.15)
+        glTranslatef(0.0, -0.5, 0.0)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+        glPopMatrix()
+        
+        # Right leg
+        glPushMatrix()
+        glTranslatef(leg_x, leg_y, 0.0)
+        glRotatef(right_leg_angle, 1.0, 0.0, 0.0)
+        glColor3f(0.0, 0.0, 0.0)  # Black
+        glPushMatrix()
+        glScalef(0.15, self.LEG_LENGTH, 0.15)
+        glTranslatef(0.0, -0.5, 0.0)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+        glPopMatrix()
+    
+    def _draw_sphere(self, radius, slices, stacks):
+        """Draw a sphere using GLU quadrics."""
+        quad = gluNewQuadric()
+        gluQuadricNormals(quad, GLU_SMOOTH)
+        gluQuadricTexture(quad, GL_TRUE)
+        gluSphere(quad, radius, slices, stacks)
+        gluDeleteQuadric(quad)
+    
+    def _draw_item_3d(self, item):
+        """Draw a 3D item (toy, food, or clothing)."""
+        glPushMatrix()
+        glTranslatef(item['x'], item['y'], item['z'])
+        glRotatef(item.get('rotation', 0), 0.0, 1.0, 0.0)
+        
+        # Draw based on item type
+        item_type = item.get('type', 'toy')
+        if item_type == 'food':
+            self._draw_food_item(item)
+        elif item_type == 'toy':
+            self._draw_toy_item(item)
+        elif item_type == 'clothing':
+            self._draw_clothing_item(item)
+        
+        glPopMatrix()
+    
+    def _draw_food_item(self, item):
+        """Draw food item in 3D."""
+        # Example: Draw as colored sphere
+        color = item.get('color', [0.8, 0.2, 0.2])
+        glColor3f(*color)
+        self._draw_sphere(0.1, 12, 12)
+    
+    def _draw_toy_item(self, item):
+        """Draw toy item in 3D."""
+        # Example: Draw as colored cube
+        color = item.get('color', [0.2, 0.2, 0.8])
+        glColor3f(*color)
+        size = 0.15
+        self._draw_cube(size)
+    
+    def _draw_clothing_item(self, item):
+        """Draw clothing item on panda."""
+        # Clothing would be rendered as part of the panda's body
+        # This is a placeholder for future implementation
+        pass
+    
+    def _draw_cube(self, size):
+        """Draw a cube."""
+        glBegin(GL_QUADS)
+        # Front face
+        glNormal3f(0.0, 0.0, 1.0)
+        glVertex3f(-size, -size, size)
+        glVertex3f(size, -size, size)
+        glVertex3f(size, size, size)
+        glVertex3f(-size, size, size)
+        # Back face
+        glNormal3f(0.0, 0.0, -1.0)
+        glVertex3f(-size, -size, -size)
+        glVertex3f(-size, size, -size)
+        glVertex3f(size, size, -size)
+        glVertex3f(size, -size, -size)
+        # Top face
+        glNormal3f(0.0, 1.0, 0.0)
+        glVertex3f(-size, size, -size)
+        glVertex3f(-size, size, size)
+        glVertex3f(size, size, size)
+        glVertex3f(size, size, -size)
+        # Bottom face
+        glNormal3f(0.0, -1.0, 0.0)
+        glVertex3f(-size, -size, -size)
+        glVertex3f(size, -size, -size)
+        glVertex3f(size, -size, size)
+        glVertex3f(-size, -size, size)
+        # Right face
+        glNormal3f(1.0, 0.0, 0.0)
+        glVertex3f(size, -size, -size)
+        glVertex3f(size, size, -size)
+        glVertex3f(size, size, size)
+        glVertex3f(size, -size, size)
+        # Left face
+        glNormal3f(-1.0, 0.0, 0.0)
+        glVertex3f(-size, -size, -size)
+        glVertex3f(-size, -size, size)
+        glVertex3f(-size, size, size)
+        glVertex3f(-size, size, -size)
+        glEnd()
+    
+    def _get_body_bob(self):
+        """Get body bobbing offset based on animation state."""
+        if self.animation_state == 'idle':
+            # Gentle breathing animation
+            return 0.02 * math.sin(self.animation_frame * 0.05)
+        elif self.animation_state in ['walking', 'walking_left', 'walking_right']:
+            # Walking bob
+            return 0.05 * abs(math.sin(self.animation_frame * 0.2))
+        elif self.animation_state == 'jumping':
+            # Jump arc
+            phase = (self.animation_frame % 60) / 60.0
+            return 0.3 * math.sin(phase * math.pi)
+        return 0.0
+    
+    def _get_limb_positions(self):
+        """Get limb rotation angles based on animation state."""
+        positions = {
+            'left_arm_angle': 0,
+            'right_arm_angle': 0,
+            'left_leg_angle': 0,
+            'right_leg_angle': 0
+        }
+        
+        if self.animation_state in ['walking', 'walking_left', 'walking_right']:
+            # Walking animation - opposing arm/leg movement
+            swing = 30 * math.sin(self.animation_frame * 0.2)
+            positions['left_arm_angle'] = swing
+            positions['right_arm_angle'] = -swing
+            positions['left_leg_angle'] = -swing
+            positions['right_leg_angle'] = swing
+        elif self.animation_state == 'waving':
+            # Waving animation
+            positions['right_arm_angle'] = -90 + 20 * math.sin(self.animation_frame * 0.3)
+        elif self.animation_state == 'celebrating':
+            # Both arms up
+            positions['left_arm_angle'] = -120
+            positions['right_arm_angle'] = -120
+        
+        return positions
+    
+    def _update_animation(self):
+        """Update animation frame and physics."""
+        self.animation_frame += 1
+        if self.animation_frame > 10000:
+            self.animation_frame = 0
+        
+        # Update physics
+        self._update_physics()
+        
+        # Request redraw
+        self.update()
+    
+    def _update_physics(self):
+        """Update physics simulation."""
+        # Apply gravity if not on ground
+        if self.panda_y > -1.0:
+            self.velocity_y -= self.GRAVITY * 0.016  # 60 FPS delta
+        
+        # Apply velocities
+        self.panda_x += self.velocity_x * 0.016
+        self.panda_y += self.velocity_y * 0.016
+        self.panda_z += self.velocity_z * 0.016
+        self.rotation_y += self.angular_velocity * 0.016
+        
+        # Ground collision
+        if self.panda_y < -0.7:
+            self.panda_y = -0.7
+            self.velocity_y *= -self.BOUNCE_DAMPING
+            if abs(self.velocity_y) < 0.01:
+                self.velocity_y = 0
+        
+        # Apply friction
+        self.velocity_x *= self.FRICTION
+        self.velocity_z *= self.FRICTION
+        self.angular_velocity *= self.FRICTION
+        
+        # Update items physics
+        for item in self.items_3d:
+            if 'velocity_y' in item:
+                item['y'] += item['velocity_y'] * 0.016
+                item['velocity_y'] -= self.GRAVITY * 0.016
+                if item['y'] < -0.9:
+                    item['y'] = -0.9
+                    item['velocity_y'] *= -self.BOUNCE_DAMPING
+    
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse press."""
+        self.last_mouse_pos = event.pos()
+        self.drag_start_pos = event.pos()
+        self.is_dragging = False
+        
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Check if clicked on panda (simple distance check)
+            # In 3D, we'd need proper ray casting
+            self.clicked.emit()
+    
+    def mouseMoveEvent(self, event: QMouseEvent):
+        """Handle mouse drag."""
+        if self.last_mouse_pos is None:
+            return
+        
+        delta = event.pos() - self.last_mouse_pos
+        
+        # Check if dragging
+        if self.drag_start_pos:
+            total_delta = event.pos() - self.drag_start_pos
+            if total_delta.manhattanLength() > 5:
+                self.is_dragging = True
+        
+        if event.buttons() & Qt.MouseButton.LeftButton:
+            if self.is_dragging:
+                # Drag panda
+                self.panda_x += delta.x() * 0.01
+                self.panda_y -= delta.y() * 0.01
+            else:
+                # Rotate camera
+                self.camera_angle_y += delta.x() * 0.5
+                self.camera_angle_x += delta.y() * 0.5
+                self.camera_angle_x = max(-89, min(89, self.camera_angle_x))
+        
+        self.last_mouse_pos = event.pos()
+    
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        """Handle mouse release."""
+        self.last_mouse_pos = None
+        self.drag_start_pos = None
+        self.is_dragging = False
+    
+    def wheelEvent(self, event):
+        """Handle mouse wheel for zooming."""
+        delta = event.angleDelta().y()
+        self.camera_distance -= delta * 0.001
+        self.camera_distance = max(1.0, min(10.0, self.camera_distance))
+        self.update()
+    
+    def set_animation_state(self, state: str):
+        """Set animation state."""
+        self.animation_state = state
+        self.animation_changed.emit(state)
+    
+    def add_item_3d(self, item_type: str, x: float, y: float, z: float, **kwargs):
+        """Add a 3D item to the scene."""
+        item = {
+            'type': item_type,
+            'x': x,
+            'y': y,
+            'z': z,
+            'velocity_y': 0.0,
+            'rotation': 0.0,
+            **kwargs
+        }
+        self.items_3d.append(item)
+    
+    def clear_items(self):
+        """Remove all items from the scene."""
+        self.items_3d.clear()
+
+
+# Compatibility wrapper for gradual migration
+class PandaWidgetGLBridge:
+    """
+    Bridge class to allow gradual migration from canvas to OpenGL.
+    Provides compatibility with existing PandaWidget API.
+    """
+    
+    def __init__(self, panda_character=None, parent_frame=None):
+        """
+        Initialize bridge widget.
+        
+        Args:
+            panda_character: PandaCharacter instance
+            parent_frame: Parent Tkinter frame (will create Qt window)
+        """
+        if not QT_AVAILABLE:
+            raise ImportError("PyQt6 and PyOpenGL required for OpenGL panda widget")
+        
+        # Create Qt application if needed
+        if not QApplication.instance():
+            self.qt_app = QApplication([])
+        else:
+            self.qt_app = QApplication.instance()
+        
+        # Create OpenGL widget
+        self.gl_widget = PandaOpenGLWidget(panda_character)
+        self.gl_widget.setWindowTitle("Panda Companion")
+        self.gl_widget.resize(400, 500)
+        self.gl_widget.show()
+        
+        logger.info("OpenGL panda widget bridge initialized")
+    
+    def set_animation_state(self, state: str):
+        """Set animation state (compatibility method)."""
+        self.gl_widget.set_animation_state(state)
+    
+    def update_panda(self):
+        """Update panda display (compatibility method)."""
+        self.gl_widget.update()
+
+
+# Export for compatibility
+PandaWidget = PandaWidgetGLBridge if QT_AVAILABLE else None

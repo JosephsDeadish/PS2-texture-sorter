@@ -22,6 +22,11 @@ pillow>=10.0.0  # Image loading and processing (NOTE: 12.1.1+ recommended for la
 darkdetect>=0.8.0  # System dark mode detection
 tkinterdnd2>=0.3.0  # Drag-and-drop support for file inputs (optional, gracefully degrades)
 
+# Qt Framework (for OpenGL panda widget)
+PyQt6>=6.6.0  # Qt6 framework for hardware-accelerated 3D rendering
+PyOpenGL>=3.1.7  # OpenGL bindings for Python
+PyOpenGL-accelerate>=3.1.7  # Performance optimizations for PyOpenGL (optional but recommended)
+
 # Image Processing
 opencv-python>=4.8.1.78  # Computer vision (>= 4.8.1.78 for libwebp CVE fix)
 numpy>=1.24.0  # Numerical operations and array processing
