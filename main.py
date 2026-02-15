@@ -110,9 +110,9 @@ try:
         set_widget_scaling = staticmethod(set_widget_scaling)
         set_window_scaling = staticmethod(set_window_scaling)
     
-    # Compatibility aliases
-    import tkinter
-    tkinter.simpledialog = simpledialog
+    # Compatibility: Create minimal tkinter module stub for simpledialog
+    class tkinter:
+        simpledialog = simpledialog
     
     GUI_AVAILABLE = True
     print("✅ Using Qt UI (PyQt6) with CustomTkinter-compatible API")

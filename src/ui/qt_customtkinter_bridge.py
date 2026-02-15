@@ -28,6 +28,11 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+if not PYQT6_AVAILABLE:
+    # If PyQt6 is not available, don't define any widgets
+    raise ImportError("PyQt6 is required for qt_customtkinter_bridge")
+
+
 class CTk(QMainWindow):
     """Qt-based replacement for customtkinter.CTk main window."""
     
