@@ -10508,73 +10508,20 @@ Built with:
 
     def _play_travel_animation(self, scenes, location_id: str):
         """Play driving animation scenes in the travel hub tab."""
-        import tkinter as tk
-
         # Clear tab for animation
         for widget in self.tab_travel_hub.winfo_children():
             widget.destroy()
 
-        anim_frame = ctk.CTkFrame(self.tab_travel_hub)
-        anim_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Canvas for the travel scene
-        canvas = tk.Canvas(anim_frame, width=500, height=300, highlightthickness=0)
-        canvas.pack(pady=10)
-
-        # Description label
-        desc_label = ctk.CTkLabel(anim_frame, text="", font=("Arial Bold", 16))
-        desc_label.pack(pady=10)
-
-        scene_state = {'index': 0}
-
-        def show_scene(index):
-            if index >= len(scenes):
-                # Animation done – rebuild the hub
-                for widget in self.tab_travel_hub.winfo_children():
-                    widget.destroy()
-                self.create_travel_hub_tab()
-                return
-
-            scene = scenes[index]
-            canvas.delete("all")
-
-            # Draw sky
-            canvas.configure(bg=scene.sky_color)
-
-            # Draw ground
-            canvas.create_rectangle(0, 200, 500, 300, fill=scene.ground_color, outline="")
-
-            # Draw road
-            canvas.create_rectangle(0, 220, 500, 270, fill=scene.road_color, outline="")
-
-            # Draw road dashes
-            for rx in range(0, 500, 60):
-                canvas.create_rectangle(rx + 10, 243, rx + 40, 247, fill="#FFFFFF", outline="")
-
-            # Draw detail emojis along the road
-            for dx in range(50, 500, 120):
-                canvas.create_text(dx, 195, text=scene.detail_emoji, font=("Arial", 20))
-
-            # Draw car / panda
-            if scene.scene_type.value == "walk_to_car":
-                canvas.create_text(350, 230, text="🚗", font=("Arial", 36))
-                canvas.create_text(200, 230, text="🐼", font=("Arial", 30))
-            elif scene.scene_type.value == "get_in_car":
-                canvas.create_text(350, 230, text="🚗", font=("Arial", 36))
-                canvas.create_text(340, 220, text="🐼", font=("Arial", 20))
-            elif scene.scene_type.value == "arrive":
-                canvas.create_text(250, 230, text="🚗", font=("Arial", 36))
-                canvas.create_text(250, 170, text=scene.detail_emoji, font=("Arial", 40))
-            else:
-                # Driving scene
-                canvas.create_text(250, 230, text="🚗", font=("Arial", 36))
-
-            desc_label.configure(text=scene.description)
-
-            scene_state['index'] = index + 1
-            self.tab_travel_hub.after(scene.duration_ms, lambda: show_scene(scene_state['index']))
-
-        show_scene(0)
+        # Use simple widget-based animation instead of canvas
+        from src.ui.travel_animation_simple import TravelAnimationWidget
+        
+        def on_complete():
+            # Animation done – rebuild the hub
+            for widget in self.tab_travel_hub.winfo_children():
+                widget.destroy()
+            self.create_travel_hub_tab()
+        
+        anim = TravelAnimationWidget(self.tab_travel_hub, scenes, on_complete)
 
     # _draw_static_panda removed - Canvas preview no longer needed
     # Use OpenGL panda widget for live 3D visualization instead
