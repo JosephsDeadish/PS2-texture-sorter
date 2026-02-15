@@ -11,7 +11,7 @@ import os
 import logging
 from pathlib import Path
 
-# Add src directory to path
+# Add src directory to path FIRST
 src_dir = Path(__file__).parent / 'src'
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
@@ -30,10 +30,8 @@ from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Import configuration
+# Import configuration and core modules (now that src is in path)
 from config import config, APP_NAME, APP_VERSION
-
-# Import core modules
 from classifier import TextureClassifier, ALL_CATEGORIES
 from lod_detector import LODDetector
 from file_handler import FileHandler

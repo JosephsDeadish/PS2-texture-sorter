@@ -6,21 +6,14 @@
 
 A professional Windows application for automatically sorting game texture dumps with advanced AI classification, massive-scale support (200,000+ textures), and a modern panda-themed UI. Distributed as a one-folder package for fast startup and easy customization.
 
-## 🎉 Recent Improvements
+## 🎉 Technical Highlights
 
-### Qt/OpenGL Migration (Latest)
-- **✨ Complete Qt6 Migration** - Migrated entire UI from tkinter/canvas to PyQt6
+### Modern Qt6 Architecture
+- **✨ Pure Qt6/PyQt6 UI** - Professional native Qt widgets (tabs, buttons, layouts, events)
 - **🎮 OpenGL 3D Rendering** - Hardware-accelerated 3D panda with 60 FPS rendering
 - **⚡ Qt State Machine** - Professional animation state control system
-- **🎨 Qt Widgets** - All UI components use native Qt widgets (tabs, buttons, layouts)
-- **🔧 No Legacy Code** - Complete replacement with no compatibility bridges
-
-### Benefits
-- Hardware-accelerated graphics
-- Smooth 60 FPS animations
-- Professional Qt UI framework
-- Real-time lighting and shadows
-- Better performance and maintainability
+- **🔧 Clean Architecture** - No legacy UI frameworks, no compatibility bridges
+- Hardware-accelerated graphics with real-time lighting and shadows
 
 ## 🌟 Features
 
