@@ -307,6 +307,9 @@ except ImportError:
 BYTES_PER_MB = 1024 * 1024
 PAUSE_CHECK_INTERVAL = 0.1  # seconds
 
+# Error message constants
+DEPENDENCY_INSTALL_MSG = "\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt"
+
 
 class SplashScreen:
     """Splash screen with animated panda logo and loading animation"""
@@ -2778,6 +2781,8 @@ class GameTextureSorter(ctk.CTk):
         # Clean up old preview images to prevent memory accumulation
         if hasattr(self, '_upscale_preview_image') and self._upscale_preview_image:
             try:
+                # Use 'is not' to check object identity - only close if it's a different image object
+                # This prevents closing the image we're about to display
                 if self._upscale_preview_image is not pil_img:
                     old_img = self._upscale_preview_image
                     self._upscale_preview_image = None
@@ -8164,7 +8169,7 @@ class GameTextureSorter(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     self.tab_quality_checker,
-                    text="Quality Checker not available.\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt",
+                    text=f"Quality Checker not available.{DEPENDENCY_INSTALL_MSG}",
                     font=("Arial", 14),
                     text_color="orange",
                     justify="center"
@@ -8190,7 +8195,7 @@ class GameTextureSorter(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     self.tab_batch_normalizer,
-                    text="Batch Normalizer not available.\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt",
+                    text=f"Batch Normalizer not available.{DEPENDENCY_INSTALL_MSG}",
                     font=("Arial", 14),
                     text_color="orange",
                     justify="center"
@@ -8216,7 +8221,7 @@ class GameTextureSorter(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     self.tab_lineart_converter,
-                    text="Line Art Converter not available.\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt",
+                    text=f"Line Art Converter not available.{DEPENDENCY_INSTALL_MSG}",
                     font=("Arial", 14),
                     text_color="orange",
                     justify="center"
@@ -8242,7 +8247,7 @@ class GameTextureSorter(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     self.tab_batch_rename,
-                    text="Batch Rename not available.\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt",
+                    text=f"Batch Rename not available.{DEPENDENCY_INSTALL_MSG}",
                     font=("Arial", 14),
                     text_color="orange",
                     justify="center"
@@ -8268,7 +8273,7 @@ class GameTextureSorter(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     self.tab_color_correction,
-                    text="Color Correction not available.\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt",
+                    text=f"Color Correction not available.{DEPENDENCY_INSTALL_MSG}",
                     font=("Arial", 14),
                     text_color="orange",
                     justify="center"
@@ -8294,7 +8299,7 @@ class GameTextureSorter(ctk.CTk):
             else:
                 ctk.CTkLabel(
                     self.tab_image_repair,
-                    text="Image Repair not available.\n\nPlease ensure all dependencies are installed:\npip install -r requirements.txt",
+                    text=f"Image Repair not available.{DEPENDENCY_INSTALL_MSG}",
                     font=("Arial", 14),
                     text_color="orange",
                     justify="center"
