@@ -100,6 +100,12 @@ _incremental_learner_loader = None
 # Import UI customization
 try:
     from src.ui.customization_panel import open_customization_dialog
+    # Try to use Qt version if available
+    try:
+        from src.ui.qt_panel_loader import get_customization_panel
+        USE_QT_CUSTOMIZATION = True
+    except ImportError:
+        USE_QT_CUSTOMIZATION = False
     CUSTOMIZATION_AVAILABLE = True
 except ImportError:
     CUSTOMIZATION_AVAILABLE = False
@@ -5431,6 +5437,17 @@ class GameTextureSorter(ctk.CTk):
         """Open UI customization dialog"""
         if CUSTOMIZATION_AVAILABLE:
             try:
+                # Try Qt version first if available
+                if USE_QT_CUSTOMIZATION:
+                    try:
+                        panel = get_customization_panel(parent=self, on_settings_change=self._on_customization_change)
+                        logger.info("Using Qt CustomizationPanel")
+                        self.log("✅ Opened UI Customization panel (Qt version)")
+                        return
+                    except Exception as e:
+                        logger.warning(f"Qt customization failed, using Tkinter: {e}")
+                
+                # Fall back to Tkinter version
                 open_customization_dialog(parent=self, on_settings_change=self._on_customization_change)
                 self.log("✅ Opened UI Customization panel")
             except Exception as e:
