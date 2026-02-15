@@ -2068,8 +2068,17 @@ class GameTextureSorter(ctk.CTk):
             
             if recursive:
                 files = list(input_path.rglob(f"*{from_format}"))
+                # Also find case-insensitive matches (e.g., .PNG, .Png)
+                if from_format != from_format.upper():
+                    seen = set(files)
+                    files += [f for f in input_path.rglob(f"*{from_format.upper()}")
+                              if f not in seen]
             else:
                 files = list(input_path.glob(f"*{from_format}"))
+                if from_format != from_format.upper():
+                    seen = set(files)
+                    files += [f for f in input_path.glob(f"*{from_format.upper()}")
+                              if f not in seen]
             
             total = len(files)
             self.convert_log(f"Found {total} {from_format.upper()} files")
@@ -2109,9 +2118,15 @@ class GameTextureSorter(ctk.CTk):
                             result = self.file_handler.convert_svg_to_png(file_path, tmp_png)
                             if result:
                                 from PIL import Image as _Img
-                                _img = _Img.open(tmp_png)
-                                _img.save(target_path)
-                                _img.close()
+                                _fmt = to_format.lstrip('.').lower()
+                                _pil_fmt = self.file_handler.FORMAT_MAP.get(_fmt, _fmt.upper())
+                                with _Img.open(tmp_png) as _img:
+                                    if _fmt in self.file_handler.NO_ALPHA_FORMATS and _img.mode in ('RGBA', 'LA'):
+                                        _bg = _Img.new('RGB', _img.size, (255, 255, 255))
+                                        _bg.paste(_img, mask=_img.split()[3 if _img.mode == 'RGBA' else 1])
+                                        _bg.save(target_path, format=_pil_fmt)
+                                    else:
+                                        _img.save(target_path, format=_pil_fmt)
                                 tmp_png.unlink(missing_ok=True)
                                 result = target_path
                             else:
@@ -2126,8 +2141,21 @@ class GameTextureSorter(ctk.CTk):
                     else:
                         # Generic conversion via PIL
                         from PIL import Image
-                        img = Image.open(file_path)
-                        img.save(target_path)
+                        fmt = to_format.lstrip('.').lower()
+                        pil_format = self.file_handler.FORMAT_MAP.get(fmt, fmt.upper())
+                        with Image.open(file_path) as img:
+                            # Handle alpha for formats that don't support it
+                            if fmt in self.file_handler.NO_ALPHA_FORMATS and img.mode in ('RGBA', 'LA'):
+                                background = Image.new('RGB', img.size, (255, 255, 255))
+                                alpha = img.split()[3] if img.mode == 'RGBA' else img.split()[1]
+                                background.paste(img, mask=alpha)
+                                background.save(target_path, format=pil_format)
+                            else:
+                                # Ensure compatible mode for PNG
+                                save_img = img
+                                if pil_format == 'PNG' and img.mode not in ('RGB', 'RGBA', 'L', 'LA', 'P'):
+                                    save_img = img.convert('RGBA')
+                                save_img.save(target_path, format=pil_format)
                     
                     converted += 1
                     
