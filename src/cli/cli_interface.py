@@ -298,6 +298,11 @@ Author: {APP_AUTHOR}
             file_handler = FileHandler(config=config)
             
             # Map CLI style names to organization style classes
+            # - by_category: Simple category-based organization (minimalist)
+            # - by_type: Module-based organization (modular: characters/vehicles/environment)
+            # - by_size: Single-level flat organization (flat)
+            # - flat: Direct flat organization without deep hierarchy
+            # - custom: User-defined custom hierarchy
             style_map = {
                 'by_category': 'minimalist',
                 'by_type': 'modular',
