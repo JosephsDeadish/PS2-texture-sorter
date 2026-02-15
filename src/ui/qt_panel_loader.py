@@ -213,3 +213,27 @@ def get_image_repair_panel(parent, unlockables_system=None, tooltip_manager=None
     from src.ui.image_repair_panel import ImageRepairPanel
     logger.info("Using Tkinter image repair panel")
     return ImageRepairPanel(parent, unlockables_system, tooltip_manager)
+
+
+def get_minigame_panel(parent, minigame_manager=None):
+    """
+    Get minigame panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        minigame_manager: MiniGameManager instance
+        
+    Returns:
+        MiniGamePanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.minigame_panel_qt import MiniGamePanelQt
+            logger.info("Using Qt minigame panel")
+            return MiniGamePanelQt(parent, minigame_manager)
+        except Exception as e:
+            logger.warning(f"Failed to load Qt minigame panel: {e}, falling back to Tkinter")
+    
+    from src.ui.minigame_panel import MiniGamePanel
+    logger.info("Using Tkinter minigame panel")
+    return MiniGamePanel(parent, minigame_manager)
