@@ -31,9 +31,9 @@ def get_widgets_panel(parent, widget_collection, panda_callback=None):
     """
     if PYQT6_AVAILABLE:
         try:
-            from src.ui.widgets_display_qt import WidgetsDisplayQt
+            from src.ui.widgets_panel_qt import WidgetsPanelQt
             logger.info("Using Qt widgets panel")
-            return WidgetsDisplayQt(parent)
+            return WidgetsPanelQt(widget_collection, panda_callback, parent)
         except Exception as e:
             logger.warning(f"Failed to load Qt widgets panel: {e}, falling back to Tkinter")
     
@@ -106,15 +106,35 @@ def get_customization_panel(parent, panda_closet, panda_character=None):
     """
     if PYQT6_AVAILABLE:
         try:
-            from src.ui.color_picker_qt import ColorPickerQt
-            from src.ui.trail_preview_qt import TrailPreviewQt
-            logger.info("Using Qt customization panel components")
-            # For now, return a container with both components
-            # TODO: Create full CustomizationPanelQt wrapper
-            return None  # Placeholder
+            from src.ui.customization_panel_qt import CustomizationPanelQt
+            logger.info("Using Qt customization panel")
+            return CustomizationPanelQt(panda_character, panda_closet, parent)
         except Exception as e:
             logger.warning(f"Failed to load Qt customization panel: {e}, falling back to Tkinter")
     
     from src.ui.customization_panel import CustomizationPanel
     logger.info("Using Tkinter customization panel")
     return CustomizationPanel(parent, panda_closet, panda_character)
+
+
+def get_background_remover_panel(parent):
+    """
+    Get background remover panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        
+    Returns:
+        BackgroundRemoverPanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.background_remover_panel_qt import BackgroundRemoverPanelQt
+            logger.info("Using Qt background remover panel")
+            return BackgroundRemoverPanelQt(parent)
+        except Exception as e:
+            logger.warning(f"Failed to load Qt background remover panel: {e}, falling back to Tkinter")
+    
+    from src.ui.background_remover_panel import BackgroundRemoverPanel
+    logger.info("Using Tkinter background remover panel")
+    return BackgroundRemoverPanel(parent)
