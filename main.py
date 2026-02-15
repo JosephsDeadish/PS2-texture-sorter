@@ -11170,7 +11170,9 @@ Built with:
                                     from PIL import Image, ImageTk
                                     with Image.open(str(file_path)) as img:
                                         img.thumbnail((150, 150))
-                                        preview_photo = ImageTk.PhotoImage(img)
+                                        # Create a copy so the image can be safely closed
+                                        img_copy = img.copy()
+                                    preview_photo = ImageTk.PhotoImage(img_copy)
                                     preview_label = ctk.CTkLabel(dialog_window, text="", image=preview_photo)
                                     preview_label.image = preview_photo  # Keep reference
                                     preview_label.pack(pady=5)
@@ -11383,7 +11385,9 @@ Built with:
                                     from PIL import Image, ImageTk
                                     with Image.open(str(file_path)) as img:
                                         img.thumbnail((150, 150))
-                                        preview_photo = ImageTk.PhotoImage(img)
+                                        # Create a copy so the image can be safely closed
+                                        img_copy = img.copy()
+                                    preview_photo = ImageTk.PhotoImage(img_copy)
                                     preview_label = ctk.CTkLabel(dialog_window, text="", image=preview_photo)
                                     preview_label.image = preview_photo  # Keep reference
                                     preview_label.pack(pady=5)
