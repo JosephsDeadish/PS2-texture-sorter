@@ -1,0 +1,120 @@
+"""
+Qt Panel Loader - Dynamically loads Qt or Tkinter versions of panels
+Author: Dead On The Inside / JosephsDeadish
+"""
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Try to import PyQt6
+try:
+    from PyQt6.QtWidgets import QWidget
+    PYQT6_AVAILABLE = True
+    logger.info("PyQt6 available - will use Qt panels where implemented")
+except ImportError:
+    PYQT6_AVAILABLE = False
+    logger.info("PyQt6 not available - using Tkinter panels")
+
+
+def get_widgets_panel(parent, widget_collection, panda_callback=None):
+    """
+    Get widgets panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        widget_collection: WidgetCollection instance
+        panda_callback: Callback for panda updates
+        
+    Returns:
+        WidgetsPanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.widgets_display_qt import WidgetsDisplayQt
+            logger.info("Using Qt widgets panel")
+            return WidgetsDisplayQt(parent)
+        except Exception as e:
+            logger.warning(f"Failed to load Qt widgets panel: {e}, falling back to Tkinter")
+    
+    from src.ui.widgets_panel import WidgetsPanel
+    logger.info("Using Tkinter widgets panel")
+    return WidgetsPanel(parent, widget_collection, panda_callback)
+
+
+def get_closet_panel(parent, panda_closet, panda_character=None, panda_preview=None):
+    """
+    Get closet panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        panda_closet: PandaCloset instance
+        panda_character: PandaCharacter instance
+        panda_preview: Preview callback
+        
+    Returns:
+        ClosetPanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.closet_display_qt import ClosetDisplayQt
+            logger.info("Using Qt closet panel")
+            return ClosetDisplayQt(parent)
+        except Exception as e:
+            logger.warning(f"Failed to load Qt closet panel: {e}, falling back to Tkinter")
+    
+    from src.ui.closet_panel import ClosetPanel
+    logger.info("Using Tkinter closet panel")
+    return ClosetPanel(parent, panda_closet, panda_character, panda_preview)
+
+
+def get_hotkey_settings_panel(parent, hotkey_manager):
+    """
+    Get hotkey settings panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        hotkey_manager: HotkeyManager instance
+        
+    Returns:
+        HotkeySettingsPanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.hotkey_display_qt import HotkeyDisplayQt
+            logger.info("Using Qt hotkey settings panel")
+            return HotkeyDisplayQt(parent)
+        except Exception as e:
+            logger.warning(f"Failed to load Qt hotkey panel: {e}, falling back to Tkinter")
+    
+    from src.ui.hotkey_settings_panel import HotkeySettingsPanel
+    logger.info("Using Tkinter hotkey settings panel")
+    return HotkeySettingsPanel(parent, hotkey_manager)
+
+
+def get_customization_panel(parent, panda_closet, panda_character=None):
+    """
+    Get customization panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        panda_closet: PandaCloset instance
+        panda_character: PandaCharacter instance
+        
+    Returns:
+        CustomizationPanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.color_picker_qt import ColorPickerQt
+            from src.ui.trail_preview_qt import TrailPreviewQt
+            logger.info("Using Qt customization panel components")
+            # For now, return a container with both components
+            # TODO: Create full CustomizationPanelQt wrapper
+            return None  # Placeholder
+        except Exception as e:
+            logger.warning(f"Failed to load Qt customization panel: {e}, falling back to Tkinter")
+    
+    from src.ui.customization_panel import CustomizationPanel
+    logger.info("Using Tkinter customization panel")
+    return CustomizationPanel(parent, panda_closet, panda_character)
