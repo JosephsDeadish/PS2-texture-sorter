@@ -500,13 +500,13 @@ class HotkeyManager:
         Load hotkey configuration from JSON file.
         
         Args:
-            config_file: Path to configuration file
+            config_file: Path to configuration file (empty string uses defaults)
             
         Returns:
-            True if loaded successfully
+            True if config was loaded successfully, False if no config specified or loading failed
         """
         try:
-            # Return silently if no config file specified (empty string means use defaults)
+            # Return silently if no config file specified (empty/whitespace means use defaults)
             if not config_file or not config_file.strip():
                 return False
             
