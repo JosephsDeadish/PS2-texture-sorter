@@ -12,10 +12,11 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 import json
 
-from ..config import APP_NAME, APP_VERSION, APP_AUTHOR
+from ..config import APP_NAME, APP_VERSION, APP_AUTHOR, config
 from .config_loader import ConfigLoader
 
 logger = logging.getLogger(__name__)
+
 
 
 class CLIInterface:
@@ -293,8 +294,8 @@ Author: {APP_AUTHOR}
             
             # Initialize components
             logger.info("Initializing processing components...")
-            classifier = TextureClassifier()
-            file_handler = FileHandler()
+            classifier = TextureClassifier(config=config)
+            file_handler = FileHandler(config=config)
             
             # Map CLI style names to organization style classes
             style_map = {
