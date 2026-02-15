@@ -2903,7 +2903,6 @@ class GameTextureSorter(ctk.CTk):
                         result = result.convert('RGB')
                     else:
                         # User wants alpha but chose JPEG - warn and change to PNG
-                        from pathlib import Path
                         filepath = str(Path(filepath).with_suffix('.png'))
                         export_fmt = 'png'
                         save_kwargs = {}
@@ -3115,7 +3114,7 @@ class GameTextureSorter(ctk.CTk):
             import tempfile
             import zipfile
             import shutil
-            from PIL import Image
+            from PIL import Image, ImageFilter
             
             # Import metadata handler if metadata preservation is enabled
             metadata_handler = None
@@ -3286,7 +3285,6 @@ class GameTextureSorter(ctk.CTk):
                                     # to match the quality of ESRGAN-upscaled RGB
                                     alpha_upscaled = alpha_img.resize(result.size, Image.Resampling.LANCZOS)
                                     # Apply unsharp mask to alpha to match RGB sharpness
-                                    from PIL import ImageFilter
                                     alpha_upscaled = alpha_upscaled.filter(
                                         ImageFilter.UnsharpMask(radius=1.5, percent=80, threshold=2))
                                     
