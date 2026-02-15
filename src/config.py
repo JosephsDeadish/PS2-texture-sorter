@@ -307,7 +307,7 @@ class Config:
                 if self._save_timer is not None:
                     try:
                         self._save_timer.cancel()
-                    except:
+                    except Exception:
                         pass
                 # Schedule save after 500ms of inactivity
                 self._save_timer = threading.Timer(0.5, self._save_immediately)

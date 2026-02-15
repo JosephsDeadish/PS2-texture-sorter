@@ -793,22 +793,28 @@ class LineArtConverterPanel(ctk.CTkFrame):
             messagebox.showwarning("No Image", "Please select an image for preview")
             return
         
-        # Disable update button during processing
+        # Store original button text and disable button during processing
+        original_btn_text = "Update Preview"
         if hasattr(self, 'update_preview_btn'):
             self.update_preview_btn.configure(state="disabled", text="Processing...")
+        
+        # Store preview path to avoid closure issues
+        preview_path = self.preview_image
         
         # Run preview generation in background thread to avoid UI freeze
         def generate_preview():
             try:
                 settings = self._get_settings()
-                original = Image.open(self.preview_image)
-                processed = self.converter.preview_settings(self.preview_image, settings)
+                with Image.open(preview_path) as original:
+                    # Make copies so we can close the file
+                    original_copy = original.copy()
+                processed = self.converter.preview_settings(preview_path, settings)
 
                 # Store full-resolution result for export
                 self._last_preview_result = processed.copy()
 
-                # Update UI on main thread
-                self.after(0, lambda: self._display_preview(original, processed))
+                # Update UI on main thread with copies
+                self.after(0, lambda: self._display_preview(original_copy, processed))
                 
             except Exception as e:
                 logger.error(f"Error updating preview: {e}", exc_info=True)
@@ -816,7 +822,7 @@ class LineArtConverterPanel(ctk.CTkFrame):
             finally:
                 # Re-enable button on main thread
                 if hasattr(self, 'update_preview_btn'):
-                    self.after(0, lambda: self.update_preview_btn.configure(state="normal", text="🔄 Update Preview"))
+                    self.after(0, lambda: self.update_preview_btn.configure(state="normal", text=original_btn_text))
         
         # Start background thread
         threading.Thread(target=generate_preview, daemon=True).start()
