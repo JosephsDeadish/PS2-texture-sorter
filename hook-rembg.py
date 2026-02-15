@@ -21,10 +21,32 @@ from PyInstaller.utils.hooks import (
     collect_data_files,
     collect_dynamic_libs,
     collect_submodules,
-    is_module_satisfies
 )
 import os
 import sys
+
+# Common dependencies required by rembg
+REMBG_DEPENDENCIES = [
+    'PIL',
+    'PIL.Image',
+    'numpy',
+    'numpy.core',
+    'pooch',
+    'tqdm',
+    'pymatting',
+    'pymatting.alpha.estimate_alpha_cf',
+    'pymatting.foreground.estimate_foreground_ml',
+    'pymatting.util.util',
+    'scipy',
+    'scipy.ndimage',
+    'scipy.sparse',
+    'scipy.sparse.linalg',
+    'skimage',
+    'skimage.transform',
+    'skimage.filters',
+    'skimage.morphology',
+    'jsonschema',
+]
 
 # Initialize collections
 hiddenimports = []
@@ -68,27 +90,7 @@ elif not has_onnxruntime:
         hiddenimports = []
     
     # Add dependencies that rembg needs
-    hiddenimports.extend([
-        'PIL',
-        'PIL.Image',
-        'numpy',
-        'numpy.core',
-        'pooch',
-        'tqdm',
-        'pymatting',
-        'pymatting.alpha.estimate_alpha_cf',
-        'pymatting.foreground.estimate_foreground_ml',
-        'pymatting.util.util',
-        'scipy',
-        'scipy.ndimage',
-        'scipy.sparse',
-        'scipy.sparse.linalg',
-        'skimage',
-        'skimage.transform',
-        'skimage.filters',
-        'skimage.morphology',
-        'jsonschema',
-    ])
+    hiddenimports.extend(REMBG_DEPENDENCIES)
     
     # Collect data files and binaries
     try:
@@ -120,26 +122,8 @@ else:
         'onnxruntime',
         'onnxruntime.capi',
         'onnxruntime.capi._pybind_state',
-        'PIL',
-        'PIL.Image',
-        'numpy',
-        'numpy.core',
-        'pooch',
-        'tqdm',
-        'pymatting',
-        'pymatting.alpha.estimate_alpha_cf',
-        'pymatting.foreground.estimate_foreground_ml',
-        'pymatting.util.util',
-        'scipy',
-        'scipy.ndimage',
-        'scipy.sparse',
-        'scipy.sparse.linalg',
-        'skimage',
-        'skimage.transform',
-        'skimage.filters',
-        'skimage.morphology',
-        'jsonschema',
     ])
+    hiddenimports.extend(REMBG_DEPENDENCIES)
     
     # Collect data files
     try:
