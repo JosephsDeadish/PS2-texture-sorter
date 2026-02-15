@@ -163,3 +163,28 @@ def get_batch_rename_panel(parent, unlockables_system=None, tooltip_manager=None
     from src.ui.batch_rename_panel import BatchRenamePanel
     logger.info("Using Tkinter batch rename panel")
     return BatchRenamePanel(parent, unlockables_system, tooltip_manager)
+
+
+def get_lineart_converter_panel(parent, unlockables_system=None, tooltip_manager=None):
+    """
+    Get line art converter panel - Qt version if available, Tkinter otherwise.
+    
+    Args:
+        parent: Parent widget
+        unlockables_system: Unlockables system instance
+        tooltip_manager: Tooltip manager instance
+        
+    Returns:
+        LineArtConverterPanel instance (Qt or Tkinter)
+    """
+    if PYQT6_AVAILABLE:
+        try:
+            from src.ui.lineart_converter_panel_qt import LineArtConverterPanelQt
+            logger.info("Using Qt line art converter panel")
+            return LineArtConverterPanelQt(parent, tooltip_manager)
+        except Exception as e:
+            logger.warning(f"Failed to load Qt line art converter panel: {e}, falling back to Tkinter")
+    
+    from src.ui.lineart_converter_panel import LineArtConverterPanel
+    logger.info("Using Tkinter line art converter panel")
+    return LineArtConverterPanel(parent, unlockables_system, tooltip_manager)
