@@ -66,6 +66,17 @@ class LineArtSettings:
     sharpen_amount: float = 1.0
     contrast_boost: float = 1.0
     auto_threshold: bool = False
+    # Advanced edge detection parameters
+    edge_low_threshold: int = 50
+    edge_high_threshold: int = 150
+    edge_aperture_size: int = 3
+    # Advanced adaptive threshold parameters
+    adaptive_block_size: int = 11
+    adaptive_c_constant: int = 2
+    adaptive_method: str = "gaussian"  # "gaussian" or "mean"
+    # Post-processing options
+    smooth_lines: bool = False
+    smooth_amount: float = 1.0
 
 
 @dataclass
@@ -151,6 +162,10 @@ class LineArtConverter:
             # Denoise if requested
             if settings.denoise:
                 result_img = self._denoise(result_img, settings.denoise_size)
+            
+            # Smooth lines if requested
+            if settings.smooth_lines:
+                result_img = self._smooth_lines(result_img, settings.smooth_amount)
             
             # Invert if requested
             if settings.invert:
@@ -318,12 +333,12 @@ class LineArtConverter:
             return img.point(lambda p: 255 if p >= threshold else 0, mode='1').convert('L')
         
         elif settings.mode == ConversionMode.EDGE_DETECT:
-            # Edge detection
-            return self._detect_edges(img)
+            # Edge detection with configurable parameters
+            return self._detect_edges(img, settings)
         
         elif settings.mode == ConversionMode.ADAPTIVE:
-            # Adaptive thresholding
-            return self._adaptive_threshold(img)
+            # Adaptive thresholding with configurable parameters
+            return self._adaptive_threshold(img, settings)
         
         elif settings.mode == ConversionMode.SKETCH:
             # Sketch effect
@@ -335,13 +350,22 @@ class LineArtConverter:
             binary = (arr < threshold).astype(np.uint8) * 255
             return Image.fromarray(binary, mode='L')
     
-    def _detect_edges(self, img: Image.Image) -> Image.Image:
-        """Detect edges in image."""
+    def _detect_edges(self, img: Image.Image, settings: LineArtSettings = None) -> Image.Image:
+        """Detect edges in image with configurable parameters."""
         if self.has_cv2:
             arr = np.array(img)
             
-            # Use Canny edge detection
-            edges = cv2.Canny(arr, 50, 150)
+            # Use configurable Canny edge detection parameters
+            low_thresh = settings.edge_low_threshold if settings else 50
+            high_thresh = settings.edge_high_threshold if settings else 150
+            aperture = settings.edge_aperture_size if settings else 3
+            
+            # Ensure aperture is odd and in valid range (3, 5, or 7)
+            aperture = max(3, min(7, aperture))
+            if aperture % 2 == 0:
+                aperture += 1
+            
+            edges = cv2.Canny(arr, low_thresh, high_thresh, apertureSize=aperture)
             
             # Invert (white lines on black)
             edges = 255 - edges
@@ -354,22 +378,43 @@ class LineArtConverter:
             edges = ImageOps.invert(edges)
             return edges
     
-    def _adaptive_threshold(self, img: Image.Image) -> Image.Image:
-        """Apply adaptive thresholding."""
+    def _adaptive_threshold(self, img: Image.Image, settings: LineArtSettings = None) -> Image.Image:
+        """Apply adaptive thresholding with configurable parameters."""
         if self.has_cv2:
             arr = np.array(img)
             
+            # Get configurable parameters
+            block_size = settings.adaptive_block_size if settings else 11
+            c_constant = settings.adaptive_c_constant if settings else 2
+            method = settings.adaptive_method if settings else "gaussian"
+            
+            # Ensure block_size is odd and >= 3
+            block_size = max(3, block_size)
+            if block_size % 2 == 0:
+                block_size += 1
+            
+            # Choose adaptive method
+            if method == "mean":
+                adaptive_method = cv2.ADAPTIVE_THRESH_MEAN_C
+            else:
+                adaptive_method = cv2.ADAPTIVE_THRESH_GAUSSIAN_C
+            
             # Apply adaptive threshold
             binary = cv2.adaptiveThreshold(
-                arr, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY, 11, 2
+                arr, 255, adaptive_method,
+                cv2.THRESH_BINARY, block_size, c_constant
             )
             
             return Image.fromarray(binary, mode='L')
         else:
             # Fallback: simple local threshold
             arr = np.array(img)
-            window_size = 11
+            window_size = settings.adaptive_block_size if settings else 11
+            c_constant = settings.adaptive_c_constant if settings else 2
+            
+            # Ensure odd window size
+            if window_size % 2 == 0:
+                window_size += 1
             pad = window_size // 2
             
             # Pad array
@@ -381,7 +426,7 @@ class LineArtConverter:
                 for j in range(arr.shape[1]):
                     window = padded[i:i+window_size, j:j+window_size]
                     local_mean = window.mean()
-                    result[i, j] = 255 if arr[i, j] >= local_mean - 2 else 0
+                    result[i, j] = 255 if arr[i, j] >= local_mean - c_constant else 0
             
             return Image.fromarray(result, mode='L')
     
@@ -486,6 +531,34 @@ class LineArtConverter:
                 result[labels == i] = 0
         
         return Image.fromarray(result, mode='L')
+    
+    def _smooth_lines(self, img: Image.Image, amount: float) -> Image.Image:
+        """
+        Smooth lines using bilateral or median filtering.
+        
+        Args:
+            img: Input image
+            amount: Smoothing strength (0.5-3.0)
+        """
+        if self.has_cv2:
+            arr = np.array(img)
+            
+            # Use bilateral filter for edge-preserving smoothing
+            # Amount controls the sigma values
+            d = int(5 * amount)  # Diameter
+            sigma_color = 75 * amount
+            sigma_space = 75 * amount
+            
+            smoothed = cv2.bilateralFilter(arr, d, sigma_color, sigma_space)
+            
+            return Image.fromarray(smoothed, mode='L')
+        else:
+            # Fallback: use PIL's smooth filter
+            smoothed = img
+            iterations = int(amount)
+            for _ in range(iterations):
+                smoothed = smoothed.filter(ImageFilter.SMOOTH)
+            return smoothed
     
     def _apply_background(self, img: Image.Image, mode: BackgroundMode) -> Image.Image:
         """Apply background mode to result."""

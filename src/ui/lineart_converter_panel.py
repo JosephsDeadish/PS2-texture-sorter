@@ -279,6 +279,9 @@ class LineArtConverterPanel(ctk.CTkFrame):
         # Conversion settings
         self._create_conversion_settings(left_frame)
         
+        # Advanced settings (collapsible)
+        self._create_advanced_settings(left_frame)
+        
         # Line modification settings
         self._create_line_modification_settings(left_frame)
         
@@ -523,6 +526,201 @@ class LineArtConverterPanel(ctk.CTkFrame):
         self.midtone_label.pack(side="left", padx=5)
         self.midtone_slider.configure(command=lambda v: self.midtone_label.configure(text=f"{int(v)}"))
     
+    def _create_advanced_settings(self, parent):
+        """Create advanced settings section."""
+        adv_frame = ctk.CTkFrame(parent)
+        adv_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Header with toggle
+        header_frame = ctk.CTkFrame(adv_frame)
+        header_frame.pack(fill="x", pady=5)
+        
+        self.advanced_visible = ctk.BooleanVar(value=False)
+        self.advanced_toggle = ctk.CTkCheckBox(
+            header_frame,
+            text="⚙️ Advanced Settings",
+            variable=self.advanced_visible,
+            command=self._toggle_advanced_settings,
+            font=("Arial Bold", 14)
+        )
+        self.advanced_toggle.pack(side="left", padx=5)
+        
+        # Container for advanced controls (initially hidden)
+        self.advanced_controls = ctk.CTkFrame(adv_frame)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Edge Detection Controls
+        # ══════════════════════════════════════════════════════════════
+        edge_section = ctk.CTkFrame(self.advanced_controls)
+        edge_section.pack(fill="x", pady=5, padx=10)
+        
+        ctk.CTkLabel(edge_section, text="🔍 Edge Detection (Canny)", 
+                    font=("Arial Bold", 12)).pack(pady=5, anchor="w")
+        
+        # Low threshold
+        low_thresh_frame = ctk.CTkFrame(edge_section)
+        low_thresh_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(low_thresh_frame, text="Low Threshold:").pack(side="left", padx=5)
+        
+        self.edge_low_var = ctk.IntVar(value=50)
+        self.edge_low_slider = ctk.CTkSlider(
+            low_thresh_frame,
+            from_=0,
+            to=255,
+            variable=self.edge_low_var,
+            number_of_steps=255
+        )
+        self.edge_low_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.edge_low_label = ctk.CTkLabel(low_thresh_frame, text="50")
+        self.edge_low_label.pack(side="left", padx=5)
+        self.edge_low_slider.configure(command=lambda v: self.edge_low_label.configure(text=f"{int(v)}"))
+        
+        # High threshold
+        high_thresh_frame = ctk.CTkFrame(edge_section)
+        high_thresh_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(high_thresh_frame, text="High Threshold:").pack(side="left", padx=5)
+        
+        self.edge_high_var = ctk.IntVar(value=150)
+        self.edge_high_slider = ctk.CTkSlider(
+            high_thresh_frame,
+            from_=0,
+            to=255,
+            variable=self.edge_high_var,
+            number_of_steps=255
+        )
+        self.edge_high_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.edge_high_label = ctk.CTkLabel(high_thresh_frame, text="150")
+        self.edge_high_label.pack(side="left", padx=5)
+        self.edge_high_slider.configure(command=lambda v: self.edge_high_label.configure(text=f"{int(v)}"))
+        
+        # Aperture size
+        aperture_frame = ctk.CTkFrame(edge_section)
+        aperture_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(aperture_frame, text="Aperture Size:").pack(side="left", padx=5)
+        
+        self.edge_aperture_var = ctk.IntVar(value=3)
+        self.edge_aperture_menu = ctk.CTkOptionMenu(
+            aperture_frame,
+            variable=self.edge_aperture_var,
+            values=["3", "5", "7"],
+            width=80
+        )
+        self.edge_aperture_menu.pack(side="left", padx=5)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Adaptive Threshold Controls
+        # ══════════════════════════════════════════════════════════════
+        adaptive_section = ctk.CTkFrame(self.advanced_controls)
+        adaptive_section.pack(fill="x", pady=5, padx=10)
+        
+        ctk.CTkLabel(adaptive_section, text="📊 Adaptive Thresholding", 
+                    font=("Arial Bold", 12)).pack(pady=5, anchor="w")
+        
+        # Block size
+        block_frame = ctk.CTkFrame(adaptive_section)
+        block_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(block_frame, text="Block Size:").pack(side="left", padx=5)
+        
+        self.adaptive_block_var = ctk.IntVar(value=11)
+        self.adaptive_block_slider = ctk.CTkSlider(
+            block_frame,
+            from_=3,
+            to=51,
+            variable=self.adaptive_block_var,
+            number_of_steps=24
+        )
+        self.adaptive_block_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.adaptive_block_label = ctk.CTkLabel(block_frame, text="11")
+        self.adaptive_block_label.pack(side="left", padx=5)
+        self.adaptive_block_slider.configure(command=lambda v: self.adaptive_block_label.configure(text=f"{int(v)}"))
+        
+        # C constant
+        c_frame = ctk.CTkFrame(adaptive_section)
+        c_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(c_frame, text="C Constant:").pack(side="left", padx=5)
+        
+        self.adaptive_c_var = ctk.IntVar(value=2)
+        self.adaptive_c_slider = ctk.CTkSlider(
+            c_frame,
+            from_=-10,
+            to=10,
+            variable=self.adaptive_c_var,
+            number_of_steps=20
+        )
+        self.adaptive_c_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.adaptive_c_label = ctk.CTkLabel(c_frame, text="2")
+        self.adaptive_c_label.pack(side="left", padx=5)
+        self.adaptive_c_slider.configure(command=lambda v: self.adaptive_c_label.configure(text=f"{int(v)}"))
+        
+        # Method
+        method_frame = ctk.CTkFrame(adaptive_section)
+        method_frame.pack(fill="x", pady=3)
+        
+        ctk.CTkLabel(method_frame, text="Method:").pack(side="left", padx=5)
+        
+        self.adaptive_method_var = ctk.StringVar(value="gaussian")
+        self.adaptive_method_menu = ctk.CTkOptionMenu(
+            method_frame,
+            variable=self.adaptive_method_var,
+            values=["gaussian", "mean"],
+            width=120
+        )
+        self.adaptive_method_menu.pack(side="left", padx=5)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Post-Processing Controls
+        # ══════════════════════════════════════════════════════════════
+        post_section = ctk.CTkFrame(self.advanced_controls)
+        post_section.pack(fill="x", pady=5, padx=10)
+        
+        ctk.CTkLabel(post_section, text="✨ Post-Processing", 
+                    font=("Arial Bold", 12)).pack(pady=5, anchor="w")
+        
+        # Smooth lines
+        self.smooth_lines_var = ctk.BooleanVar(value=False)
+        self.smooth_lines_checkbox = ctk.CTkCheckBox(
+            post_section,
+            text="Smooth Lines (bilateral filter)",
+            variable=self.smooth_lines_var
+        )
+        self.smooth_lines_checkbox.pack(pady=3, padx=10, anchor="w")
+        
+        # Smooth amount
+        smooth_frame = ctk.CTkFrame(post_section)
+        smooth_frame.pack(fill="x", pady=3, padx=10)
+        
+        ctk.CTkLabel(smooth_frame, text="Smooth Amount:").pack(side="left", padx=5)
+        
+        self.smooth_amount_var = ctk.DoubleVar(value=1.0)
+        self.smooth_slider = ctk.CTkSlider(
+            smooth_frame,
+            from_=0.5,
+            to=3.0,
+            variable=self.smooth_amount_var,
+            number_of_steps=25
+        )
+        self.smooth_slider.pack(side="left", fill="x", expand=True, padx=5)
+        
+        self.smooth_label = ctk.CTkLabel(smooth_frame, text="1.0")
+        self.smooth_label.pack(side="left", padx=5)
+        self.smooth_slider.configure(command=lambda v: self.smooth_label.configure(text=f"{v:.1f}"))
+    
+    def _toggle_advanced_settings(self):
+        """Toggle visibility of advanced settings."""
+        if self.advanced_visible.get():
+            self.advanced_controls.pack(fill="x", pady=5)
+        else:
+            self.advanced_controls.pack_forget()
+    
     def _create_line_modification_settings(self, parent):
         """Create line modification settings."""
         line_frame = ctk.CTkFrame(parent)
@@ -627,6 +825,35 @@ class LineArtConverterPanel(ctk.CTkFrame):
             width=80
         )
         self.kernel_size_menu.pack(side="left", padx=5)
+        
+        # ══════════════════════════════════════════════════════════════
+        # Quick Line Weight Adjusters
+        # ══════════════════════════════════════════════════════════════
+        quick_frame = ctk.CTkFrame(line_frame)
+        quick_frame.pack(fill="x", pady=(10, 5), padx=10)
+        
+        ctk.CTkLabel(quick_frame, text="⚡ Quick Adjustments:", 
+                    font=("Arial Bold", 12)).pack(side="left", padx=5)
+        
+        self.thicker_btn = ctk.CTkButton(
+            quick_frame,
+            text="➕ Make Thicker",
+            command=self._make_lines_thicker,
+            width=120,
+            fg_color="#2B7A0B",
+            hover_color="#368B14"
+        )
+        self.thicker_btn.pack(side="left", padx=3)
+        
+        self.thinner_btn = ctk.CTkButton(
+            quick_frame,
+            text="➖ Make Thinner",
+            command=self._make_lines_thinner,
+            width=120,
+            fg_color="#7A0B2B",
+            hover_color="#8B1436"
+        )
+        self.thinner_btn.pack(side="left", padx=3)
     
     def _create_cleanup_settings(self, parent):
         """Create cleanup settings."""
@@ -842,7 +1069,18 @@ class LineArtConverterPanel(ctk.CTkFrame):
             sharpen=self.sharpen_var.get(),
             sharpen_amount=self.sharpen_amount_var.get(),
             contrast_boost=self.contrast_var.get(),
-            auto_threshold=self.auto_threshold_var.get()
+            auto_threshold=self.auto_threshold_var.get(),
+            # Advanced edge detection parameters
+            edge_low_threshold=self.edge_low_var.get(),
+            edge_high_threshold=self.edge_high_var.get(),
+            edge_aperture_size=self.edge_aperture_var.get(),
+            # Advanced adaptive threshold parameters
+            adaptive_block_size=self.adaptive_block_var.get(),
+            adaptive_c_constant=self.adaptive_c_var.get(),
+            adaptive_method=self.adaptive_method_var.get(),
+            # Post-processing
+            smooth_lines=self.smooth_lines_var.get(),
+            smooth_amount=self.smooth_amount_var.get()
         )
     
     def _schedule_live_update(self, *_args):
@@ -860,6 +1098,52 @@ class LineArtConverterPanel(ctk.CTkFrame):
         # Increased debounce time from 500ms to 800ms for better stability
         # This reduces the chance of multiple rapid updates overwhelming the system
         self._debounce_id = self.after(800, self._update_preview)
+    
+    def _make_lines_thicker(self):
+        """Quick adjustment to make lines thicker."""
+        # Set morphology to dilate if not already set
+        if self.morphology_var.get() == "none":
+            self.morphology_var.set("dilate")
+            self.morphology_iterations_var.set(2)
+            self.iter_label.configure(text="2")
+        else:
+            # Increase iterations
+            current = self.morphology_iterations_var.get()
+            if current < 10:
+                new_val = current + 1
+                self.morphology_iterations_var.set(new_val)
+                self.iter_label.configure(text=str(new_val))
+        
+        # Optionally increase kernel size
+        current_kernel = int(self.kernel_size_var.get())
+        if current_kernel < 7:
+            self.kernel_size_var.set(current_kernel + 2)
+        
+        # Trigger preview update
+        self._schedule_live_update()
+    
+    def _make_lines_thinner(self):
+        """Quick adjustment to make lines thinner."""
+        # Set morphology to erode if not already set
+        if self.morphology_var.get() == "none":
+            self.morphology_var.set("erode")
+            self.morphology_iterations_var.set(1)
+            self.iter_label.configure(text="1")
+        else:
+            # Increase iterations if already eroding, or switch to erode
+            if self.morphology_var.get() != "erode":
+                self.morphology_var.set("erode")
+                self.morphology_iterations_var.set(1)
+                self.iter_label.configure(text="1")
+            else:
+                current = self.morphology_iterations_var.get()
+                if current < 10:
+                    new_val = current + 1
+                    self.morphology_iterations_var.set(new_val)
+                    self.iter_label.configure(text=str(new_val))
+        
+        # Trigger preview update
+        self._schedule_live_update()
 
     def _update_preview(self):
         """Update preview with current settings (runs in background thread)."""
