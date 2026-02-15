@@ -6350,7 +6350,7 @@ class TooltipVerbosityManager:
     
     def _get_dumbed_down_tooltips(self) -> Dict[str, str]:
         """Detailed explanations for beginners with random variants"""
-        return {
+        base_tooltips = {
             'sort_button': [
                 "This button will look at all your texture files, figure out what type "
                 "each one is (UI, character, environment, etc.), and move them into "
