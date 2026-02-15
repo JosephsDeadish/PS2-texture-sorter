@@ -13,8 +13,9 @@ from typing import Optional, Callable, Tuple, List
 from enum import Enum
 
 try:
-    from PyQt6.QtWidgets import QWidget, QOpenGLWidget, QApplication
-    from PyQt6.QtCore import QTimer, Qt, QPoint, pyqtSignal
+    from PyQt6.QtWidgets import QWidget, QApplication
+    from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+    from PyQt6.QtCore import QTimer, Qt, QPoint, pyqtSignal, QState, QStateMachine
     from PyQt6.QtGui import QMouseEvent, QSurfaceFormat
     from OpenGL.GL import *
     from OpenGL.GLU import *
@@ -24,6 +25,8 @@ except ImportError:
     QT_AVAILABLE = False
     QWidget = object
     QOpenGLWidget = object
+    QState = object
+    QStateMachine = object
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +170,72 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         # OpenGL initialization flag
         self.gl_initialized = False
         
+        # Qt State Machine for animation state control
+        self._setup_state_machine()
+        
         logger.info("OpenGL panda widget initialized with hardware acceleration")
+    
+    def _setup_state_machine(self):
+        """Setup Qt State Machine for animation state control."""
+        if not QT_AVAILABLE:
+            return
+        
+        # Create state machine
+        self.state_machine = QStateMachine(self)
+        
+        # Define states
+        self.idle_state = QState(self.state_machine)
+        self.walking_state = QState(self.state_machine)
+        self.jumping_state = QState(self.state_machine)
+        self.working_state = QState(self.state_machine)
+        self.celebrating_state = QState(self.state_machine)
+        self.waving_state = QState(self.state_machine)
+        
+        # Set initial state
+        self.state_machine.setInitialState(self.idle_state)
+        
+        # Connect state entries to animation changes
+        self.idle_state.entered.connect(lambda: self._on_state_entered('idle'))
+        self.walking_state.entered.connect(lambda: self._on_state_entered('walking'))
+        self.jumping_state.entered.connect(lambda: self._on_state_entered('jumping'))
+        self.working_state.entered.connect(lambda: self._on_state_entered('working'))
+        self.celebrating_state.entered.connect(lambda: self._on_state_entered('celebrating'))
+        self.waving_state.entered.connect(lambda: self._on_state_entered('waving'))
+        
+        # Define transitions (can be triggered programmatically)
+        # These would be expanded based on specific animation needs
+        
+        # Start the state machine
+        self.state_machine.start()
+        logger.info("Animation state machine initialized")
+    
+    def _on_state_entered(self, state_name: str):
+        """Called when entering a new animation state."""
+        self.animation_state = state_name
+        self.animation_changed.emit(state_name)
+        logger.debug(f"Animation state changed to: {state_name}")
+    
+    def transition_to_state(self, state_name: str):
+        """Transition to a specific animation state."""
+        state_map = {
+            'idle': self.idle_state,
+            'walking': self.walking_state,
+            'jumping': self.jumping_state,
+            'working': self.working_state,
+            'celebrating': self.celebrating_state,
+            'waving': self.waving_state
+        }
+        
+        if state_name in state_map and hasattr(self, 'state_machine'):
+            target_state = state_map[state_name]
+            # Manually transition by setting the state
+            if self.state_machine.configuration():
+                current_states = list(self.state_machine.configuration())
+                if current_states and current_states[0] != target_state:
+                    # Force transition by stopping and restarting with new initial state
+                    self.state_machine.stop()
+                    self.state_machine.setInitialState(target_state)
+                    self.state_machine.start()
     
     def initializeGL(self):
         """Initialize OpenGL settings."""
@@ -804,9 +872,14 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         self.update()
     
     def set_animation_state(self, state: str):
-        """Set animation state."""
-        self.animation_state = state
-        self.animation_changed.emit(state)
+        """Set animation state using Qt State Machine."""
+        # Use the state machine for state transitions
+        if hasattr(self, 'state_machine'):
+            self.transition_to_state(state)
+        else:
+            # Fallback if state machine not initialized
+            self.animation_state = state
+            self.animation_changed.emit(state)
     
     def add_item_3d(self, item_type: str, x: float, y: float, z: float, **kwargs):
         """Add a 3D item to the scene."""
