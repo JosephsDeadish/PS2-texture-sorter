@@ -82,6 +82,21 @@ from src.file_handler import FileHandler
 from src.database import TextureDatabase
 from src.organizer import OrganizationEngine, ORGANIZATION_STYLES, TextureInfo
 
+# Import performance utilities
+try:
+    from src.utils.performance import LazyLoader, JobScheduler, get_optimal_worker_count
+    from src.utils.memory_cleanup import get_memory_manager
+    PERFORMANCE_UTILS_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_UTILS_AVAILABLE = False
+    print("Warning: Performance utilities not available.")
+
+# Global performance objects (initialized later)
+_job_scheduler = None
+_memory_manager = None
+_ai_model_loader = None
+_incremental_learner_loader = None
+
 # Import UI customization
 try:
     from src.ui.customization_panel import open_customization_dialog
@@ -538,21 +553,44 @@ class GameTextureSorter(ctk.CTk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         
         # Initialize core components
-        # Initialize model manager for AI
+        # Initialize lazy loaders for heavy resources (deferred loading)
+        global _ai_model_loader, _incremental_learner_loader, _job_scheduler, _memory_manager
+        
         self.model_manager = None
-        if config.get('ai', 'offline', 'enabled', default=True) or config.get('ai', 'online', 'enabled', default=False):
-            try:
+        if PERFORMANCE_UTILS_AVAILABLE:
+            # Use lazy loading for AI models (don't load until first use)
+            def _load_model_manager():
                 from src.ai.model_manager import ModelManager
-                self.model_manager = ModelManager.create_default(config.settings.get('ai', {}))
-                logger.info("AI Model Manager initialized successfully")
-            except Exception as e:
-                logger.warning(f"Failed to initialize AI Model Manager: {e}")
-                self.model_manager = None
+                return ModelManager.create_default(config.settings.get('ai', {}))
+            
+            _ai_model_loader = LazyLoader(_load_model_manager, name="AI Model Manager")
+            logger.info("AI Model Manager set up for lazy loading (will load on first use)")
+        else:
+            # Fallback: load immediately if performance utils not available
+            if config.get('ai', 'offline', 'enabled', default=True) or config.get('ai', 'online', 'enabled', default=False):
+                try:
+                    from src.ai.model_manager import ModelManager
+                    self.model_manager = ModelManager.create_default(config.settings.get('ai', {}))
+                    logger.info("AI Model Manager initialized successfully")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize AI Model Manager: {e}")
+                    self.model_manager = None
         
         self.classifier = TextureClassifier(config=config, model_manager=self.model_manager)
         self.lod_detector = LODDetector()
         self.file_handler = FileHandler(create_backup=config.get('file_handling', 'create_backup', default=True))
         self.database = None  # Will be initialized when needed
+        
+        # Initialize job scheduler for batch processing (CPU-aware)
+        if PERFORMANCE_UTILS_AVAILABLE:
+            _job_scheduler = JobScheduler()
+            logger.info(f"Job Scheduler initialized with {_job_scheduler.max_workers} workers")
+        
+        # Initialize memory manager for periodic cleanup
+        if PERFORMANCE_UTILS_AVAILABLE:
+            _memory_manager = get_memory_manager()
+            _memory_manager.start_periodic_cleanup(interval_seconds=300)  # Every 5 minutes
+            logger.info("Memory Manager initialized with periodic cleanup")
         
         # Initialize auto backup system
         self.backup_system = None
@@ -573,12 +611,22 @@ class GameTextureSorter(ctk.CTk):
         
         # Initialize AI incremental learner for feedback-based learning
         self.learner = None
-        try:
-            from src.ai.training import IncrementalLearner
-            self.learner = IncrementalLearner()
-            logger.info("AI IncrementalLearner initialized successfully")
-        except Exception as e:
-            logger.warning(f"Failed to initialize IncrementalLearner: {e}")
+        if PERFORMANCE_UTILS_AVAILABLE:
+            # Use lazy loading for incremental learner
+            def _load_incremental_learner():
+                from src.ai.training import IncrementalLearner
+                return IncrementalLearner()
+            
+            _incremental_learner_loader = LazyLoader(_load_incremental_learner, name="Incremental Learner")
+            logger.info("AI Incremental Learner set up for lazy loading")
+        else:
+            # Fallback: load immediately if performance utils not available
+            try:
+                from src.ai.training import IncrementalLearner
+                self.learner = IncrementalLearner()
+                logger.info("AI IncrementalLearner initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize IncrementalLearner: {e}")
             self.learner = None
         
         # Initialize profile manager for game identification
@@ -773,6 +821,29 @@ class GameTextureSorter(ctk.CTk):
                     logger.info("Auto backup system stopped")
                 except Exception as e:
                     logger.warning(f"Error stopping backup system: {e}")
+            
+            # Cleanup performance utilities
+            global _ai_model_loader, _incremental_learner_loader, _job_scheduler, _memory_manager
+            if PERFORMANCE_UTILS_AVAILABLE:
+                try:
+                    # Unload lazy-loaded resources
+                    if _ai_model_loader:
+                        _ai_model_loader.unload()
+                    if _incremental_learner_loader:
+                        _incremental_learner_loader.unload()
+                    
+                    # Shutdown job scheduler
+                    if _job_scheduler:
+                        _job_scheduler.shutdown()
+                    
+                    # Final memory cleanup
+                    if _memory_manager:
+                        _memory_manager.stop_periodic_cleanup()
+                        _memory_manager.full_cleanup()
+                    
+                    logger.info("Performance utilities cleaned up")
+                except Exception as e:
+                    logger.warning(f"Error cleaning up performance utilities: {e}")
             
             # Close tutorial if active
             if self.tutorial_manager and self.tutorial_manager.tutorial_active:

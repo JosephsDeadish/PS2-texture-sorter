@@ -85,6 +85,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
     ANIMATION_INTERVAL = 33
     # Reset frame counter at this value to prevent unbounded growth
     MAX_ANIMATION_FRAME = 10000
+    # FPS cap for performance optimization (60 FPS = 16.67ms per frame)
+    TARGET_FPS = 60
+    MIN_FRAME_INTERVAL = 1.0 / TARGET_FPS  # 0.01667 seconds
     # Emoji decoration cycle interval (frames between emoji changes, ~660ms at 33ms/frame)
     EMOJI_CYCLE_FRAMES = 20
     
@@ -405,6 +408,9 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         # Damage tracking and visual effects
         self.damage_tracker = None  # Will be initialized lazily when needed
         self.vfx_renderer = None  # Will be initialized lazily when needed
+        
+        # FPS optimization: track last frame time
+        self._last_frame_time = 0.0
         
         # Configure the proxy frame – it stays in the widget tree for API
         # compatibility but is intentionally empty / zero-size.
@@ -7820,6 +7826,15 @@ class PandaWidget(ctk.CTkFrame if ctk else tk.Frame):
         """Animate loop for continuous canvas-based animation."""
         if self._destroyed:
             return
+        
+        # FPS limiter - skip frame if called too soon (prevents excessive CPU usage)
+        current_time = time.time()
+        if current_time - self._last_frame_time < self.MIN_FRAME_INTERVAL:
+            # Schedule next frame and return without drawing
+            self.animation_timer = self.after(self.ANIMATION_INTERVAL, self._animate_loop)
+            return
+        self._last_frame_time = current_time
+        
         try:
             # Recover squash/stretch toward normal (spring-like)
             if abs(self._squash_factor - 1.0) > 0.01:
