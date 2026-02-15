@@ -219,7 +219,7 @@ a = Analysis(
     ],
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['pyi_rth_tkinter_fix.py'],
     excludes=[
         # Heavy scientific libraries (not needed)
         'matplotlib',
@@ -268,9 +268,24 @@ a = Analysis(
     noarchive=False,
 )
 
-# Filter out unnecessary files
+# Filter out unnecessary files but keep essential tcl/tk data
+# Note: We filter demos and timezone data to reduce size, but keep core tcl/tk files
 a.datas = [x for x in a.datas if not x[0].startswith('tk/demos')]
 a.datas = [x for x in a.datas if not x[0].startswith('tcl/tzdata')]
+
+# Ensure we keep critical TCL/Tk initialization files
+# These are required for tkinter to work properly
+print("\n" + "="*70)
+print("TCL/TK DATA FILES CHECK")
+print("="*70)
+tcl_files = [x for x in a.datas if x[0].startswith(('tcl/', 'tk/'))]
+print(f"Found {len(tcl_files)} TCL/Tk data files")
+if tcl_files:
+    print("✓ TCL/Tk data files are included")
+else:
+    print("⚠ WARNING: No TCL/Tk data files found!")
+    print("  Tkinter may not work properly in the built executable.")
+print("="*70 + "\n")
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
