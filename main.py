@@ -267,11 +267,22 @@ except ImportError:
     print("Warning: Shop system not available.")
 
 try:
-    from src.ui.panda_widget import PandaWidget
+    # Use OpenGL widget loader for automatic hardware-accelerated 3D rendering
+    # Falls back to canvas if OpenGL not available
+    from src.ui.panda_widget_loader import PandaWidget, get_panda_widget_info
     PANDA_WIDGET_AVAILABLE = True
-except ImportError:
+    
+    # Log which widget type is being used
+    widget_info = get_panda_widget_info()
+    print(f"Panda widget: {widget_info['widget_type']} ({widget_info['description']})")
+    if widget_info['widget_type'] == 'opengl':
+        print("✅ Hardware-accelerated 3D OpenGL rendering enabled!")
+        print(f"   - 60 FPS animations: {widget_info.get('60_fps', False)}")
+        print(f"   - Real-time lighting: {widget_info.get('realtime_lighting', False)}")
+        print(f"   - Dynamic shadows: {widget_info.get('shadows', False)}")
+except ImportError as e:
     PANDA_WIDGET_AVAILABLE = False
-    print("Warning: Panda widget not available.")
+    print(f"Warning: Panda widget not available: {e}")
 
 try:
     from src.features.panda_closet import PandaCloset
