@@ -1,4 +1,11 @@
 """
+DEPRECATED: This module uses tk.Canvas which is being replaced with PyQt6.
+
+Use the PyQt6 version instead: src/ui/enemy_graphics_widget.py
+
+This file will be removed in a future version.
+Canvas-based rendering is deprecated in favor of QGraphicsView.
+
 Enemy Widget - Animated enemy character for the UI
 Displays an animated enemy that autonomously moves toward the panda to attack.
 Author: Dead On The Inside / JosephsDeadish

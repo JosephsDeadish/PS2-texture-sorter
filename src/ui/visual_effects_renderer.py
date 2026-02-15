@@ -1,4 +1,11 @@
 """
+DEPRECATED: This module uses tk.Canvas which is being replaced with PyQt6.
+
+Use the PyQt6 version instead: src/ui/visual_effects_graphics.py
+
+This file will be removed in a future version.
+Canvas-based rendering is deprecated in favor of QGraphicsScene.
+
 Visual Effects Renderer - Renders damage effects, wounds, and projectiles
 Author: Dead On The Inside / JosephsDeadish
 """
