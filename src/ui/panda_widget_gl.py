@@ -131,6 +131,31 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         # Items (toys, food, clothes)
         self.items_3d = []  # List of 3D items in the scene
         
+        # Clothing system (3D attachments)
+        self.clothing = {
+            'hat': None,      # Hat on head
+            'shirt': None,    # Shirt on body
+            'pants': None,    # Pants on legs
+            'glasses': None,  # Glasses on face
+            'accessory': None # Other accessories
+        }
+        
+        # Weapon system
+        self.equipped_weapon = None  # Current weapon
+        self.weapon_rotation = 0.0  # Weapon rotation angle
+        
+        # Autonomous behavior
+        self.autonomous_mode = True
+        self.target_position = None  # Where panda is walking to
+        self.walking_speed = 0.5  # Units per second
+        self.idle_timer = 0.0
+        self.next_activity_time = random.uniform(3.0, 8.0)
+        
+        # Working state
+        self.is_working = False
+        self.work_progress = 0.0
+        self.work_animation_phase = 0.0
+        
         # Animation timer (60 FPS)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._update_animation)
@@ -388,6 +413,12 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         
         # Legs
         self._draw_panda_legs(limb_offsets, bob_offset)
+        
+        # Draw 3D clothing (hats, shirts, pants, etc.)
+        self._draw_clothing()
+        
+        # Draw equipped weapon
+        self._draw_weapon()
     
     def _draw_panda_geometry_only(self):
         """Draw panda geometry without colors (for shadow mapping)."""
@@ -644,6 +675,12 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
             'right_leg_angle': 0
         }
         
+        # Check if working (overrides other animations)
+        if self.is_working:
+            working_offsets = self._get_working_limb_offsets()
+            positions.update(working_offsets)
+            return positions
+        
         if self.animation_state in ['walking', 'walking_left', 'walking_right']:
             # Walking animation - opposing arm/leg movement
             swing = 30 * math.sin(self.animation_frame * 0.2)
@@ -667,8 +704,18 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         if self.animation_frame > 10000:
             self.animation_frame = 0
         
+        # Calculate delta time
+        current_time = time.time()
+        delta_time = current_time - self.last_frame_time
+        
         # Update physics
         self._update_physics()
+        
+        # Update autonomous behavior (walking around)
+        self._update_autonomous_behavior(delta_time)
+        
+        # Update working animation
+        self._update_working_animation(delta_time)
         
         # Request redraw
         self.update()
@@ -773,6 +820,389 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
             **kwargs
         }
         self.items_3d.append(item)
+    
+    def clear_items(self):
+        """Remove all items from the scene."""
+        self.items_3d.clear()
+    
+    # ========================================================================
+    # Clothing System (3D)
+    # ========================================================================
+    
+    def equip_clothing(self, slot: str, clothing_item):
+        """
+        Equip clothing item in 3D.
+        
+        Args:
+            slot: 'hat', 'shirt', 'pants', 'glasses', 'accessory'
+            clothing_item: Clothing data (name, color, type)
+        """
+        if slot in self.clothing:
+            self.clothing[slot] = clothing_item
+            logger.info(f"Equipped {clothing_item} in slot {slot}")
+    
+    def unequip_clothing(self, slot: str):
+        """Remove clothing from slot."""
+        if slot in self.clothing:
+            self.clothing[slot] = None
+    
+    def _draw_clothing(self):
+        """Draw all equipped clothing items in 3D."""
+        # Draw hat
+        if self.clothing['hat']:
+            self._draw_hat(self.clothing['hat'])
+        
+        # Draw shirt
+        if self.clothing['shirt']:
+            self._draw_shirt(self.clothing['shirt'])
+        
+        # Draw pants
+        if self.clothing['pants']:
+            self._draw_pants(self.clothing['pants'])
+        
+        # Draw glasses
+        if self.clothing['glasses']:
+            self._draw_glasses(self.clothing['glasses'])
+        
+        # Draw accessory
+        if self.clothing['accessory']:
+            self._draw_accessory(self.clothing['accessory'])
+    
+    def _draw_hat(self, hat_data):
+        """Draw hat on panda's head."""
+        glPushMatrix()
+        # Position on top of head
+        glTranslatef(0.0, 1.2, 0.0)
+        
+        # Get hat color
+        color = hat_data.get('color', [0.8, 0.2, 0.2])
+        glColor3f(*color)
+        
+        # Draw hat (cone shape for simple hat)
+        glRotatef(-90, 1.0, 0.0, 0.0)
+        quad = gluNewQuadric()
+        gluCylinder(quad, 0.3, 0.1, 0.3, 16, 1)
+        gluDeleteQuadric(quad)
+        
+        glPopMatrix()
+    
+    def _draw_shirt(self, shirt_data):
+        """Draw shirt on panda's body."""
+        glPushMatrix()
+        # Position on body
+        glTranslatef(0.0, 0.3, 0.0)
+        
+        # Get shirt color
+        color = shirt_data.get('color', [0.2, 0.2, 0.8])
+        glColor3f(*color)
+        
+        # Draw shirt (slightly larger than body)
+        glScalef(self.BODY_WIDTH * 1.05, self.BODY_HEIGHT * 0.8, self.BODY_WIDTH * 0.85)
+        self._draw_sphere(1.0, 16, 16)
+        
+        glPopMatrix()
+    
+    def _draw_pants(self, pants_data):
+        """Draw pants on panda's legs."""
+        # Get pants color
+        color = pants_data.get('color', [0.3, 0.3, 0.3])
+        glColor3f(*color)
+        
+        # Left leg pants
+        glPushMatrix()
+        glTranslatef(-0.2, -0.1, 0.0)
+        glScalef(0.16, self.LEG_LENGTH, 0.16)
+        glTranslatef(0.0, -0.5, 0.0)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+        
+        # Right leg pants
+        glPushMatrix()
+        glTranslatef(0.2, -0.1, 0.0)
+        glScalef(0.16, self.LEG_LENGTH, 0.16)
+        glTranslatef(0.0, -0.5, 0.0)
+        self._draw_sphere(1.0, 12, 12)
+        glPopMatrix()
+    
+    def _draw_glasses(self, glasses_data):
+        """Draw glasses on panda's face."""
+        glPushMatrix()
+        glTranslatef(0.0, 0.95, self.HEAD_RADIUS * 0.8)
+        
+        # Get glasses color
+        color = glasses_data.get('color', [0.0, 0.0, 0.0])
+        glColor3f(*color)
+        
+        # Left lens
+        glPushMatrix()
+        glTranslatef(-0.12, 0.0, 0.0)
+        glutSolidTorus(0.02, 0.08, 8, 16) if 'glutSolidTorus' in dir() else None
+        glPopMatrix()
+        
+        # Right lens
+        glPushMatrix()
+        glTranslatef(0.12, 0.0, 0.0)
+        glutSolidTorus(0.02, 0.08, 8, 16) if 'glutSolidTorus' in dir() else None
+        glPopMatrix()
+        
+        # Bridge
+        glBegin(GL_LINES)
+        glVertex3f(-0.04, 0.0, 0.0)
+        glVertex3f(0.04, 0.0, 0.0)
+        glEnd()
+        
+        glPopMatrix()
+    
+    def _draw_accessory(self, accessory_data):
+        """Draw accessory item."""
+        # Placeholder for various accessories
+        pass
+    
+    # ========================================================================
+    # Weapon System (3D)
+    # ========================================================================
+    
+    def equip_weapon(self, weapon_data):
+        """
+        Equip weapon in 3D.
+        
+        Args:
+            weapon_data: Weapon data (name, type, color, size)
+        """
+        self.equipped_weapon = weapon_data
+        logger.info(f"Equipped weapon: {weapon_data.get('name', 'Unknown')}")
+    
+    def unequip_weapon(self):
+        """Remove equipped weapon."""
+        self.equipped_weapon = None
+    
+    def _draw_weapon(self):
+        """Draw equipped weapon in panda's hand."""
+        if not self.equipped_weapon:
+            return
+        
+        glPushMatrix()
+        
+        # Position in right arm
+        arm_x = self.BODY_WIDTH + 0.1
+        arm_y = 0.15
+        
+        glTranslatef(arm_x, arm_y, 0.0)
+        glRotatef(self.weapon_rotation, 0.0, 0.0, 1.0)
+        
+        # Get weapon properties
+        weapon_type = self.equipped_weapon.get('type', 'sword')
+        color = self.equipped_weapon.get('color', [0.7, 0.7, 0.7])
+        size = self.equipped_weapon.get('size', 0.5)
+        
+        glColor3f(*color)
+        
+        # Draw different weapon types
+        if weapon_type == 'sword':
+            self._draw_sword(size)
+        elif weapon_type == 'axe':
+            self._draw_axe(size)
+        elif weapon_type == 'staff':
+            self._draw_staff(size)
+        else:
+            self._draw_sword(size)  # Default
+        
+        glPopMatrix()
+    
+    def _draw_sword(self, size: float):
+        """Draw sword weapon."""
+        # Blade
+        glPushMatrix()
+        glScalef(0.05, size, 0.02)
+        self._draw_cube(1.0)
+        glPopMatrix()
+        
+        # Handle
+        glPushMatrix()
+        glTranslatef(0.0, -size * 0.2, 0.0)
+        glScalef(0.08, 0.15, 0.08)
+        self._draw_cube(1.0)
+        glPopMatrix()
+        
+        # Guard
+        glPushMatrix()
+        glTranslatef(0.0, -size * 0.1, 0.0)
+        glScalef(0.2, 0.02, 0.05)
+        self._draw_cube(1.0)
+        glPopMatrix()
+    
+    def _draw_axe(self, size: float):
+        """Draw axe weapon."""
+        # Handle
+        glPushMatrix()
+        glScalef(0.05, size, 0.05)
+        self._draw_cube(1.0)
+        glPopMatrix()
+        
+        # Axe head
+        glPushMatrix()
+        glTranslatef(0.0, size * 0.4, 0.0)
+        glScalef(0.15, 0.1, 0.05)
+        self._draw_cube(1.0)
+        glPopMatrix()
+    
+    def _draw_staff(self, size: float):
+        """Draw staff weapon."""
+        # Staff pole
+        glPushMatrix()
+        glScalef(0.04, size, 0.04)
+        self._draw_cube(1.0)
+        glPopMatrix()
+        
+        # Orb on top
+        glPushMatrix()
+        glTranslatef(0.0, size * 0.5, 0.0)
+        glColor3f(0.2, 0.5, 1.0)  # Blue orb
+        self._draw_sphere(0.08, 12, 12)
+        glPopMatrix()
+    
+    # ========================================================================
+    # Autonomous Behavior
+    # ========================================================================
+    
+    def set_autonomous_mode(self, enabled: bool):
+        """Enable or disable autonomous wandering."""
+        self.autonomous_mode = enabled
+    
+    def walk_to_position(self, x: float, y: float, z: float):
+        """Make panda walk to specific position."""
+        self.target_position = (x, y, z)
+        self.set_animation_state('walking')
+    
+    def _update_autonomous_behavior(self, delta_time: float):
+        """Update autonomous walking and activities."""
+        if not self.autonomous_mode:
+            return
+        
+        # If has target, walk towards it
+        if self.target_position:
+            self._move_towards_target(delta_time)
+        else:
+            # Idle behavior
+            self.idle_timer += delta_time
+            
+            if self.idle_timer >= self.next_activity_time:
+                self._choose_random_activity()
+                self.idle_timer = 0.0
+                self.next_activity_time = random.uniform(3.0, 8.0)
+    
+    def _move_towards_target(self, delta_time: float):
+        """Move panda towards target position."""
+        if not self.target_position:
+            return
+        
+        tx, ty, tz = self.target_position
+        
+        # Calculate direction
+        dx = tx - self.panda_x
+        dy = ty - self.panda_y
+        dz = tz - self.panda_z
+        
+        distance = math.sqrt(dx*dx + dy*dy + dz*dz)
+        
+        if distance < 0.1:
+            # Reached target
+            self.target_position = None
+            self.set_animation_state('idle')
+            return
+        
+        # Normalize direction
+        dx /= distance
+        dy /= distance
+        dz /= distance
+        
+        # Move towards target
+        move_amount = self.walking_speed * delta_time
+        self.panda_x += dx * move_amount
+        self.panda_y += dy * move_amount
+        self.panda_z += dz * move_amount
+        
+        # Face direction of movement
+        angle = math.atan2(dx, dz)
+        self.rotation_y = math.degrees(angle)
+    
+    def _choose_random_activity(self):
+        """Choose a random activity for panda."""
+        activities = [
+            ('walk_around', 0.4),
+            ('work', 0.3),
+            ('idle', 0.2),
+            ('celebrate', 0.1)
+        ]
+        
+        # Weighted random choice
+        total = sum(w for _, w in activities)
+        r = random.uniform(0, total)
+        
+        cumulative = 0
+        for activity, weight in activities:
+            cumulative += weight
+            if r <= cumulative:
+                if activity == 'walk_around':
+                    # Pick random position to walk to
+                    x = random.uniform(-1.5, 1.5)
+                    z = random.uniform(-1.5, 1.5)
+                    self.walk_to_position(x, -0.7, z)
+                elif activity == 'work':
+                    self.start_working()
+                elif activity == 'celebrate':
+                    self.set_animation_state('celebrating')
+                break
+    
+    # ========================================================================
+    # Working Behavior
+    # ========================================================================
+    
+    def start_working(self):
+        """Start working animation."""
+        self.is_working = True
+        self.work_progress = 0.0
+        self.set_animation_state('working')
+        logger.info("Panda started working")
+    
+    def stop_working(self):
+        """Stop working animation."""
+        self.is_working = False
+        self.set_animation_state('idle')
+        logger.info("Panda stopped working")
+    
+    def _update_working_animation(self, delta_time: float):
+        """Update working animation state."""
+        if not self.is_working:
+            return
+        
+        # Update work progress
+        self.work_progress += delta_time * 0.1
+        if self.work_progress >= 1.0:
+            self.work_progress = 0.0
+        
+        # Update animation phase for typing/sorting gestures
+        self.work_animation_phase += delta_time * 5.0
+        
+        # Arms move as if typing or sorting
+        # This is reflected in limb positions
+    
+    def _get_working_limb_offsets(self):
+        """Get limb positions for working animation."""
+        if not self.is_working:
+            return {}
+        
+        # Simulate typing motions
+        phase = self.work_animation_phase
+        left_offset = 10 * math.sin(phase)
+        right_offset = 10 * math.sin(phase + math.pi)
+        
+        return {
+            'left_arm_angle': -30 + left_offset,
+            'right_arm_angle': -30 + right_offset,
+            'left_leg_angle': 0,
+            'right_leg_angle': 0
+        }
     
     def clear_items(self):
         """Remove all items from the scene."""
