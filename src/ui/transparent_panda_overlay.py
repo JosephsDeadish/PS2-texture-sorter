@@ -39,6 +39,7 @@ try:
     import math
     import random
     import logging
+    import time
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
@@ -59,6 +60,27 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
     - Passes mouse events through when not on Panda
     - Tracks Panda body part positions for widget interaction
     """
+    
+    # Animation timing constants (milliseconds)
+    BITE_ANIMATION_DELAY = 300
+    JUMP_START_DELAY = 400
+    JUMP_LAND_DELAY = 500
+    JUMP_RECOVER_DELAY = 600
+    TAP_ANIMATION_DELAY = 200
+    SQUASH_EFFECT_DURATION = 100
+    
+    # Behavior timing constants (seconds)
+    MIN_BEHAVIOR_INTERVAL = 5.0
+    MAX_BEHAVIOR_INTERVAL = 15.0
+    INVESTIGATION_TRIGGER_CHANCE = 0.1  # 10% chance per frame
+    
+    # Behavior probabilities (must sum to 1.0)
+    BEHAVIOR_WEIGHTS = {
+        'idle': 0.4,
+        'walking': 0.3,
+        'interacting': 0.2,
+        'investigating': 0.1
+    }
     
     # Signals for interaction events
     panda_moved = pyqtSignal(int, int) if PYQT_AVAILABLE else None
@@ -357,8 +379,6 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
     
     def _update_frame(self):
         """Update animation, physics, AI behavior and request repaint - 60 FPS."""
-        import time
-        
         # Calculate delta time
         current_time = time.time()
         delta_time = current_time - getattr(self, '_last_update_time', current_time)
@@ -530,17 +550,17 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
             # Move panda mouth toward widget
             self._move_panda_to(widget_center.x(), widget_center.y())
             # Trigger click after animation delay
-            QTimer.singleShot(300, lambda: self._trigger_widget_click(widget))
+            QTimer.singleShot(self.BITE_ANIMATION_DELAY, lambda: self._trigger_widget_click(widget))
             
         elif interaction_type == 'jump':
             # Panda jumps on widget
             self.set_animation_state('jumping')
             self.velocity_y = 3.0  # Jump velocity
             # Apply squash effect when landing
-            QTimer.singleShot(500, lambda: self.apply_squash_effect(0.7))
-            QTimer.singleShot(600, lambda: self.apply_squash_effect(1.0))
+            QTimer.singleShot(self.JUMP_LAND_DELAY, lambda: self.apply_squash_effect(0.7))
+            QTimer.singleShot(self.JUMP_RECOVER_DELAY, lambda: self.apply_squash_effect(1.0))
             # Trigger click at peak of jump
-            QTimer.singleShot(400, lambda: self._trigger_widget_click(widget))
+            QTimer.singleShot(self.JUMP_START_DELAY, lambda: self._trigger_widget_click(widget))
             
         elif interaction_type == 'tap':
             # Panda taps widget with paw
@@ -548,7 +568,7 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
             # Playful bounce animation
             self.velocity_y = 1.0
             # Trigger click immediately
-            QTimer.singleShot(200, lambda: self._trigger_widget_click(widget))
+            QTimer.singleShot(self.TAP_ANIMATION_DELAY, lambda: self._trigger_widget_click(widget))
             
         else:  # Default click
             self._trigger_widget_click(widget)
@@ -570,7 +590,7 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
                 
                 # Visual feedback: squash effect
                 self.apply_squash_effect(0.85)
-                QTimer.singleShot(100, lambda: self.apply_squash_effect(1.0))
+                QTimer.singleShot(self.SQUASH_EFFECT_DURATION, lambda: self.apply_squash_effect(1.0))
                 
             elif hasattr(widget, 'setCurrentIndex'):
                 # It's a tab widget or combo box
@@ -608,14 +628,14 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
         Args:
             delta_time: Time since last update in seconds
         """
-        import time
-        
         current_time = time.time()
         
         # Check if it's time for a new behavior
         if current_time >= self.next_behavior_time:
             self._decide_next_behavior()
-            self.next_behavior_time = current_time + random.uniform(5.0, 15.0)
+            self.next_behavior_time = current_time + random.uniform(
+                self.MIN_BEHAVIOR_INTERVAL, self.MAX_BEHAVIOR_INTERVAL
+            )
         
         # Execute current behavior
         if self.behavior_state == 'walking' and self.target_position:
@@ -658,13 +678,13 @@ class TransparentPandaOverlay(QOpenGLWidget if PYQT_AVAILABLE else QWidget):
             self.panda_rotation += 30.0 * delta_time
             
             # Check if there's something interesting nearby
-            if random.random() < 0.1:  # 10% chance per frame
+            if random.random() < self.INVESTIGATION_TRIGGER_CHANCE:
                 self.behavior_state = 'interacting'
     
     def _decide_next_behavior(self):
         """Decide what panda should do next based on AI."""
-        behaviors = ['idle', 'walking', 'interacting', 'investigating']
-        weights = [0.4, 0.3, 0.2, 0.1]  # Probabilities
+        behaviors = list(self.BEHAVIOR_WEIGHTS.keys())
+        weights = list(self.BEHAVIOR_WEIGHTS.values())
         
         self.behavior_state = random.choices(behaviors, weights=weights)[0]
         
