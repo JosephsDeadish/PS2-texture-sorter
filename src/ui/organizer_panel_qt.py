@@ -307,6 +307,11 @@ class OrganizerPanelQt(QWidget):
         self.current_files = []
         self.current_file_index = 0
         
+        # Store current classification data to avoid parsing UI text
+        self.current_filename = None
+        self.current_suggested_folder = None
+        self.current_confidence = None
+        
         self._create_ui()
         self._setup_learning_system()
     
@@ -909,51 +914,48 @@ class OrganizerPanelQt(QWidget):
     
     def _on_good_feedback(self):
         """Handle Good button click."""
-        # This is called when user accepts AI suggestion
-        suggested_folder = self.suggestion_label.text().replace("AI Suggestion: ", "")
-        confidence = float(self.confidence_label.text().replace("Confidence: ", "").replace("%", "")) / 100.0
+        # Use stored values instead of parsing UI text
+        if not self.current_suggested_folder or not self.current_filename:
+            self._log("⚠ No current classification to accept")
+            return
         
         # Add to learning system
         if self.enable_learning_cb.isChecked():
-            current_filename = self.preview_info_label.text().split(" - ")[0] if self.preview_info_label.text() else "unknown.png"
-            
             self.learning_system.add_learning(
-                filename=current_filename,
-                suggested_folder=suggested_folder,
-                user_choice=suggested_folder,
-                confidence=confidence,
+                filename=self.current_filename,
+                suggested_folder=self.current_suggested_folder,
+                user_choice=self.current_suggested_folder,
+                confidence=self.current_confidence or 0.0,
                 accepted=True
             )
             
-            self._log(f"✓ Learned: {current_filename} → {suggested_folder}")
+            self._log(f"✓ Learned: {self.current_filename} → {self.current_suggested_folder}")
         
         # Move to next file or complete action
         self._process_next_file()
     
     def _on_bad_feedback(self):
         """Handle Bad button click."""
-        # User rejected AI suggestion
-        suggested_folder = self.suggestion_label.text().replace("AI Suggestion: ", "")
-        confidence = float(self.confidence_label.text().replace("Confidence: ", "").replace("%", "")) / 100.0
-        
-        # Log rejection
-        current_filename = self.preview_info_label.text().split(" - ")[0] if self.preview_info_label.text() else "unknown.png"
+        # Use stored values instead of parsing UI text
+        if not self.current_suggested_folder or not self.current_filename:
+            self._log("⚠ No current classification to reject")
+            return
         
         if self.enable_learning_cb.isChecked():
             # Ask for alternative
             manual_choice = self.folder_input.text()
             if manual_choice:
                 self.learning_system.add_learning(
-                    filename=current_filename,
-                    suggested_folder=suggested_folder,
+                    filename=self.current_filename,
+                    suggested_folder=self.current_suggested_folder,
                     user_choice=manual_choice,
-                    confidence=confidence,
+                    confidence=self.current_confidence or 0.0,
                     accepted=False
                 )
                 
-                self._log(f"✗ Rejected: {current_filename}. Suggested: {suggested_folder}, User chose: {manual_choice}")
+                self._log(f"✗ Rejected: {self.current_filename}. Suggested: {self.current_suggested_folder}, User chose: {manual_choice}")
             else:
-                self._log(f"✗ Rejected: {current_filename} → {suggested_folder}")
+                self._log(f"✗ Rejected: {self.current_filename} → {self.current_suggested_folder}")
         
         # Prompt for manual input
         QMessageBox.information(
@@ -1058,6 +1060,11 @@ class OrganizerPanelQt(QWidget):
     def _handle_classification(self, filename: str, suggested_folder: str, 
                               confidence: float, image):
         """Handle classification result in suggested/manual mode."""
+        # Store current classification data
+        self.current_filename = filename
+        self.current_suggested_folder = suggested_folder
+        self.current_confidence = confidence
+        
         # Update suggestion display
         self.suggestion_label.setText(f"AI Suggestion: {suggested_folder}")
         self.confidence_label.setText(f"Confidence: {confidence:.0%}")

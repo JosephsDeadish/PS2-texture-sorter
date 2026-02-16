@@ -136,15 +136,22 @@ def test_learning_system_basic():
         # Test 10: Pattern matching
         print("\n10. Testing pattern similarity...")
         test_cases = [
-            ("kratos_head_01.png", "kratos_*.*", 1.0),
-            ("kratos_body_99.png", "kratos_*.*", 1.0),
-            ("zeus_texture.png", "kratos_*.*", 0.0),
+            ("kratos_head_01.png", "kratos_*.*", 1.0),  # Exact match
+            ("kratos_body_99.png", "kratos_*.*", 1.0),  # Exact match
+            ("olympus_texture.png", "kratos_*.*", 0.0),  # No match
         ]
         
         for filename, pattern, expected_min in test_cases:
             score = learning._pattern_similarity(filename, pattern)
             print(f"   {filename} vs {pattern}: {score:.2f}")
-            assert score >= expected_min or score <= 0.1
+            
+            # For expected_min > 0, score should be >= expected_min
+            # For expected_min == 0, score should be 0 (no match at all)
+            if expected_min > 0:
+                assert score >= expected_min, f"Score {score} should be >= {expected_min}"
+            else:
+                # Allow some tolerance for partial matches, but must be significantly lower
+                assert score < expected_min + 0.6, f"Score {score} should be low for no match"
         
         print("✓ Pattern matching working")
         

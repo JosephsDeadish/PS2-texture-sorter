@@ -466,11 +466,15 @@ class AILearningSystem:
         if not CRYPTO_AVAILABLE:
             raise RuntimeError("Encryption not available")
         
+        # Generate random salt for this encryption
+        import os
+        salt = os.urandom(16)
+        
         # Derive key from password
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=b'ps2_texture_sorter_salt',  # Fixed salt for simplicity
+            salt=salt,
             iterations=100000,
         )
         key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
@@ -480,7 +484,8 @@ class AILearningSystem:
         json_data = json.dumps(profile_data).encode('utf-8')
         encrypted = fernet.encrypt(json_data)
         
-        return encrypted
+        # Prepend salt to encrypted data (salt is not secret)
+        return salt + encrypted
     
     def _decrypt_profile(self, encrypted_data: bytes, password: str) -> Dict[str, Any]:
         """Decrypt profile data with password."""
@@ -488,18 +493,22 @@ class AILearningSystem:
             raise RuntimeError("Encryption not available")
         
         try:
-            # Derive key from password
+            # Extract salt from beginning of data (first 16 bytes)
+            salt = encrypted_data[:16]
+            encrypted_content = encrypted_data[16:]
+            
+            # Derive key from password using extracted salt
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
-                salt=b'ps2_texture_sorter_salt',
+                salt=salt,
                 iterations=100000,
             )
             key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
             
             # Decrypt
             fernet = Fernet(key)
-            json_data = fernet.decrypt(encrypted_data)
+            json_data = fernet.decrypt(encrypted_content)
             
             return json.loads(json_data.decode('utf-8'))
         except Exception as e:
