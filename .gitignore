@@ -167,3 +167,9 @@ test_hd_preprocessing.py
 test_format_support.py
 test_keyword_search.py
 validate_integration.py
+
+# AI Models - downloaded at runtime
+models/
+*.pth
+*.onnx
+weights/
