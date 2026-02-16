@@ -72,7 +72,7 @@ a = Analysis(
         'preprocessing.preprocessing_pipeline',
         'preprocessing.upscaler',
         'preprocessing.filters',
-        # Core image processing (Qt/OpenGL ONLY - NO TKINTER)
+        # Core image processing
         'PIL',
         'PIL.Image',
         'PIL.ImageFile',
@@ -89,17 +89,16 @@ a = Analysis(
         'sqlite3',
         'send2trash',
         'watchdog',
-        # Qt6 UI framework (REQUIRED - ONLY SUPPORTED UI)
-        # NO TKINTER - Full Qt6 migration complete - Pure Qt/OpenGL system
+        # Qt6 UI framework
         'PyQt6',
         'PyQt6.QtCore',
         'PyQt6.QtGui',
         'PyQt6.QtWidgets',
         'PyQt6.QtOpenGL',
         'PyQt6.QtOpenGLWidgets',
-        'PyQt6.QtSvg',  # SVG support
+        'PyQt6.QtSvg',
         'PyQt6.sip',
-        # OpenGL for 3D rendering (panda, skeletal animations, hardware acceleration)
+        # OpenGL for 3D rendering
         'OpenGL',
         'OpenGL.GL',
         'OpenGL.GLU',
@@ -135,8 +134,7 @@ a = Analysis(
         str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers
     ],
     excludes=[
-        # Tkinter/CustomTkinter - NO LONGER USED (full Qt6 migration complete)
-        # Explicitly exclude ALL tkinter variants to prevent accidental inclusion
+        # Exclude tkinter
         'tkinter',
         'tkinter.ttk',
         'tkinter.messagebox',
@@ -147,7 +145,7 @@ a = Analysis(
         'customtkinter',
         'tkinterdnd2',
         '_tkinter',
-        'PIL.ImageTk',  # Tkinter-specific PIL module
+        'PIL.ImageTk',
         
         # Heavy scientific libraries (not needed)
         'matplotlib',
@@ -202,15 +200,15 @@ a = Analysis(
     noarchive=False,
 )
 
-# Filter out problematic DLLs that cause build warnings or errors
-print("Filtering out problematic DLLs...")
+# Filter out problematic DLLs
+print("Filtering DLLs...")
 print("  - Legacy OpenGL DLLs (gle*.vc9.dll, gle*.vc10.dll, freeglut*.vc9.dll, freeglut*.vc10.dll)")
-print("  - CUDA DLLs from onnxruntime (nvcuda.dll, cudart*.dll, cublas*.dll, etc.)")
+print("  - CUDA DLLs (nvcuda.dll, cudart*.dll, cublas*.dll, etc.)")
 
 a.binaries = [
     (dest, src, typ) for (dest, src, typ) in a.binaries
     if not (
-        # Exclude legacy GLE DLLs (Visual C++ 9.0 and 10.0 versions with MSVCR90/100.dll deps)
+        # Exclude legacy GLE DLLs
         ('gle32.vc9.dll' in dest.lower()) or
         ('gle64.vc9.dll' in dest.lower()) or
         ('gle32.vc10.dll' in dest.lower()) or
@@ -220,7 +218,7 @@ a.binaries = [
         ('freeglut64.vc9.dll' in dest.lower()) or
         ('freeglut32.vc10.dll' in dest.lower()) or
         ('freeglut64.vc10.dll' in dest.lower()) or
-        # Exclude CUDA DLLs from onnxruntime (prevents nvcuda.dll error)
+        # Exclude CUDA DLLs
         ('nvcuda' in dest.lower()) or
         ('cudart' in dest.lower()) or
         ('cublas' in dest.lower()) or

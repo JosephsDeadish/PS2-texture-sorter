@@ -181,7 +181,7 @@ a = Analysis(
         'preprocessing.preprocessing_pipeline',
         'preprocessing.upscaler',
         'preprocessing.filters',
-        # Core image processing (Qt/OpenGL ONLY - NO TKINTER)
+        # Core image processing
         'PIL',
         'PIL.Image',
         'PIL.ImageFile',
@@ -198,8 +198,8 @@ a = Analysis(
         'sqlite3',
         'send2trash',
         'watchdog',
-        # Qt6 UI framework (REQUIRED - ONLY SUPPORTED UI)
-        # NO TKINTER - Full Qt6 migration complete - Pure Qt/OpenGL system
+        # Qt6 UI framework
+        
         'PyQt6',
         'PyQt6.QtCore',
         'PyQt6.QtGui',
@@ -208,7 +208,7 @@ a = Analysis(
         'PyQt6.QtOpenGLWidgets',
         'PyQt6.QtSvg',  # SVG support
         'PyQt6.sip',
-        # OpenGL for 3D rendering (panda, skeletal animations, hardware acceleration)
+        # OpenGL for 3D rendering
         'OpenGL',
         'OpenGL.GL',
         'OpenGL.GLU',
@@ -251,8 +251,8 @@ a = Analysis(
         str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers
     ],
     excludes=[
-        # Tkinter/CustomTkinter - NO LONGER USED (full Qt6 migration complete)
-        # Explicitly exclude ALL tkinter variants to prevent accidental inclusion
+        # Exclude tkinter
+        
         'tkinter',
         'tkinter.ttk',
         'tkinter.messagebox',
