@@ -127,11 +127,24 @@ a = Analysis(
         'onnxruntime',  # Required for rembg background removal
         'pooch',  # Required for rembg model downloads
         'requests',
+        # PyTorch - Core deep learning
+        'torch',
+        'torch._C',
+        'torch._six',
+        'torch.nn',
+        'torch.nn.functional',
+        'torch.optim',
+        'torch.autograd',
+        'torch.cuda',
+        'torch.jit',
+        'torchvision',
+        'torchvision.transforms',
     ],
-    hookspath=[str(SCRIPT_DIR)],  # Use hooks in project root (hook-*.py files)
+    hookspath=[str(SCRIPT_DIR)],  # Use hooks in project root (hook-torch.py, hook-*.py files)
     hooksconfig={},
     runtime_hooks=[
-        str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers
+        str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers for onnxruntime
+        str(SCRIPT_DIR / 'runtime-hook-torch.py'),  # Graceful CUDA handling for torch
     ],
     excludes=[
         # Exclude tkinter

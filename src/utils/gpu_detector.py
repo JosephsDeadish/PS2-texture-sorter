@@ -233,6 +233,13 @@ class GPUDetector:
         """Detect NVIDIA GPUs using CUDA."""
         try:
             import torch
+        except (ImportError, OSError) as e:
+            # ImportError: PyTorch not installed
+            # OSError: DLL initialization failed
+            logger.debug(f"PyTorch not available for CUDA detection: {e}")
+            return []
+        
+        try:
             if not torch.cuda.is_available():
                 return []
             
@@ -253,14 +260,23 @@ class GPUDetector:
             
             return devices
             
-        except (ImportError, Exception) as e:
-            logger.debug(f"CUDA detection failed: {e}")
+        except (RuntimeError, OSError) as e:
+            # RuntimeError: CUDA runtime errors
+            # OSError: DLL errors during CUDA calls
+            logger.debug(f"CUDA runtime error: {e}")
             return []
     
     def _detect_nvidia_pytorch(self) -> List[GPUDevice]:
         """Detect NVIDIA GPUs using PyTorch (simpler fallback)."""
         try:
             import torch
+        except (ImportError, OSError) as e:
+            # ImportError: PyTorch not installed
+            # OSError: DLL initialization failed
+            logger.debug(f"PyTorch not available: {e}")
+            return []
+        
+        try:
             if torch.cuda.is_available():
                 # Simple detection - just report presence
                 device_name = torch.cuda.get_device_name(0) if torch.cuda.device_count() > 0 else "NVIDIA GPU"
@@ -269,14 +285,23 @@ class GPUDetector:
                     name=self._parse_nvidia_name(device_name),
                     index=0
                 )]
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
+            # RuntimeError: CUDA runtime errors
+            # OSError: DLL errors during CUDA calls
             logger.debug(f"PyTorch CUDA detection failed: {e}")
+            return []
+        
         return []
     
     def _add_nvidia_compute_capability(self, devices: List[GPUDevice]) -> None:
         """Add compute capability to NVIDIA devices if not already set."""
         try:
             import torch
+        except (ImportError, OSError):
+            # torch not available or DLL initialization failed
+            return
+        
+        try:
             if not torch.cuda.is_available():
                 return
             
@@ -285,7 +310,8 @@ class GPUDetector:
                     if device.index < torch.cuda.device_count():
                         props = torch.cuda.get_device_properties(device.index)
                         device.compute_capability = f"{props.major}.{props.minor}"
-        except Exception:
+        except (RuntimeError, OSError):
+            # CUDA runtime errors - gracefully handle
             pass
     
     def _parse_nvidia_name(self, raw_name: str) -> str:
