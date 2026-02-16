@@ -564,3 +564,44 @@ All files are Qt-based, no legacy files exist.
 - ✅ No legacy code, no bridges, no deprecation
 
 **No work required** - All requirements met!
+
+---
+
+## Update: PandaWidgetGLBridge Removed (2026-02-16)
+
+### Change Summary
+
+The deprecated `PandaWidgetGLBridge` compatibility wrapper has been removed:
+
+- **Removed**: 227 lines of deprecated compatibility code (lines 1293-1519)
+- **Updated**: `PandaWidget` now exports `PandaOpenGLWidget` directly
+- **Impact**: File reduced from 1522 to 1295 lines
+- **Benefits**: 
+  - Cleaner codebase
+  - No unnecessary abstraction layer
+  - Direct usage of OpenGL widget
+  - Better maintainability
+
+### What Was Removed
+
+The bridge provided redundant wrapper methods that were not used:
+- Animation aliases (`set_animation`, `start_animation`, `play_animation_once`)
+- Item wrappers (`set_active_item`, `walk_to_item`, `react_to_item_hit`)
+- Combat wrappers (`take_damage`)
+- Utility wrappers (`update_panda`)
+- MockLabel class
+
+All functionality is preserved in `PandaOpenGLWidget`.
+
+### Migration
+
+No migration needed - no code used the bridge. Direct usage:
+```python
+# Import directly
+from ui.panda_widget_gl import PandaOpenGLWidget
+
+# Or use the export
+from ui.panda_widget_loader import PandaWidget  # Now PandaOpenGLWidget
+```
+
+See `BRIDGE_REMOVAL_DOCUMENTATION.md` for full details.
