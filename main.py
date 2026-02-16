@@ -713,8 +713,8 @@ class TextureSorterMainWindow(QMainWindow):
             
             # Initialize tooltip manager
             try:
-                from features.tutorial_system import TooltipManager
-                self.tooltip_manager = TooltipManager(config)
+                from features.tutorial_system import TooltipVerbosityManager
+                self.tooltip_manager = TooltipVerbosityManager(config)
                 logger.info("Tooltip manager initialized")
             except Exception as e:
                 logger.warning(f"Could not initialize tooltip manager: {e}")
