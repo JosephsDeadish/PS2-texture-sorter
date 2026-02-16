@@ -297,6 +297,27 @@ a = Analysis(
     noarchive=False,
 )
 
+# Filter out legacy OpenGL DLLs that depend on old MSVC runtimes (MSVCR90.dll, MSVCR100.dll)
+# These are optional compatibility DLLs for very old systems and are not needed
+# PyOpenGL works fine with modern Windows OpenGL drivers without these DLLs
+print("Filtering out legacy OpenGL DLLs (gle*.vc9.dll, gle*.vc10.dll, freeglut*.vc9.dll, freeglut*.vc10.dll)...")
+a.binaries = [
+    (dest, src, typ) for (dest, src, typ) in a.binaries
+    if not (
+        # Exclude legacy GLE DLLs (Visual C++ 9.0 and 10.0 versions)
+        ('gle32.vc9.dll' in dest.lower()) or
+        ('gle64.vc9.dll' in dest.lower()) or
+        ('gle32.vc10.dll' in dest.lower()) or
+        ('gle64.vc10.dll' in dest.lower()) or
+        # Exclude legacy freeglut DLLs (Visual C++ 9.0 and 10.0 versions)
+        ('freeglut32.vc9.dll' in dest.lower()) or
+        ('freeglut64.vc9.dll' in dest.lower()) or
+        ('freeglut32.vc10.dll' in dest.lower()) or
+        ('freeglut64.vc10.dll' in dest.lower())
+    )
+]
+print(f"Binary count after filtering: {len(a.binaries)}")
+
 # Filter out unnecessary files but keep essential tcl/tk data
 # Note: We filter demos and timezone data to reduce size, but keep core tcl/tk files
 a.datas = [x for x in a.datas if not x[0].startswith('tk/demos')]
