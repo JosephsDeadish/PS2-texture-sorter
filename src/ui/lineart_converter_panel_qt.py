@@ -148,12 +148,22 @@ class LineArtConverterPanelQt(QWidget):
         self.preview_worker = None
         self.conversion_worker = None
         
+        # Track whether widgets have been fully initialized
+        self._widgets_initialized = False
+        
         # Debounce timer for preview updates
         self.preview_timer = QTimer(self)
         self.preview_timer.setSingleShot(True)
         self.preview_timer.timeout.connect(self._update_preview)
         
         self._create_widgets()
+        
+        # Mark widgets as initialized after creation
+        self._widgets_initialized = True
+        
+        # Now apply the default preset (this will work since widgets are initialized)
+        if hasattr(self, 'preset_combo'):
+            self._on_preset_changed(self.preset_combo.currentText())
     
     def _create_widgets(self):
         """Create the UI widgets."""
@@ -238,8 +248,7 @@ class LineArtConverterPanelQt(QWidget):
         self.preset_desc.setStyleSheet("color: gray; font-size: 10pt;")
         group_layout.addWidget(self.preset_desc)
         
-        # Load first preset
-        self._on_preset_changed(self.preset_combo.currentText())
+        # Note: preset will be loaded after all widgets are initialized (see __init__)
         
         group.setLayout(group_layout)
         layout.addWidget(group)
@@ -367,21 +376,19 @@ class LineArtConverterPanelQt(QWidget):
             preset = LINEART_PRESETS[preset_name]
             self.preset_desc.setText(preset["desc"])
             
-            # Update controls (only if they exist - they may not be created yet during initialization)
-            if hasattr(self, 'threshold_slider'):
-                self.threshold_slider.setValue(preset["threshold"])
-            if hasattr(self, 'contrast_spin'):
-                self.contrast_spin.setValue(preset["contrast"])
-            if hasattr(self, 'auto_threshold_cb'):
-                self.auto_threshold_cb.setChecked(preset["auto_threshold"])
-            if hasattr(self, 'sharpen_cb'):
-                self.sharpen_cb.setChecked(preset["sharpen"])
-            if hasattr(self, 'denoise_cb'):
-                self.denoise_cb.setChecked(preset["denoise"])
+            # Only update controls if widgets are fully initialized
+            if not self._widgets_initialized:
+                return
             
-            # Trigger preview update (only if widgets are ready)
-            if hasattr(self, 'threshold_slider'):
-                self._schedule_preview_update()
+            # Update controls
+            self.threshold_slider.setValue(preset["threshold"])
+            self.contrast_spin.setValue(preset["contrast"])
+            self.auto_threshold_cb.setChecked(preset["auto_threshold"])
+            self.sharpen_cb.setChecked(preset["sharpen"])
+            self.denoise_cb.setChecked(preset["denoise"])
+            
+            # Trigger preview update
+            self._schedule_preview_update()
     
     def _schedule_preview_update(self):
         """Schedule preview update with debouncing."""
