@@ -709,7 +709,7 @@ class OrganizerPanelQt(QWidget):
             return
         
         try:
-            game_info = self.game_identifier.identify_from_path(self.source_directory)
+            game_info = self.game_identifier.identify_game(Path(self.source_directory))
             
             if game_info and game_info.confidence > 0.5:
                 self.detected_game = game_info
