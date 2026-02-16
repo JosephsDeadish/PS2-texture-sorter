@@ -19,14 +19,31 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 # Qt imports - REQUIRED, no fallbacks
-from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QProgressBar, QTextEdit, QTabWidget,
-    QFileDialog, QMessageBox, QStatusBar, QMenuBar, QMenu,
-    QSplitter, QFrame
-)
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSize
-from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
+try:
+    from PyQt6.QtWidgets import (
+        QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+        QLabel, QPushButton, QProgressBar, QTextEdit, QTabWidget,
+        QFileDialog, QMessageBox, QStatusBar, QMenuBar, QMenu,
+        QSplitter, QFrame
+    )
+    from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSize
+    from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
+except ImportError as e:
+    print("=" * 70)
+    print("ERROR: PyQt6 is not installed!")
+    print("=" * 70)
+    print()
+    print("This application requires PyQt6 to run.")
+    print()
+    print("To install PyQt6, run:")
+    print("    pip install PyQt6")
+    print()
+    print("Or install all dependencies:")
+    print("    pip install -r requirements.txt")
+    print()
+    print(f"Technical details: {e}")
+    print("=" * 70)
+    sys.exit(1)
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
