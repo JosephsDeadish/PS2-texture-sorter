@@ -107,6 +107,7 @@ class SettingsPanelQt(QWidget):
         self.tabs.addTab(self.create_font_tab(), "🔤 Font")
         self.tabs.addTab(self.create_behavior_tab(), "⚡ Behavior")
         self.tabs.addTab(self.create_performance_tab(), "🚀 Performance")
+        self.tabs.addTab(self.create_ai_models_tab(), "🤖 AI Models")
         self.tabs.addTab(self.create_advanced_tab(), "🔧 Advanced")
         
         # Bottom buttons
@@ -529,6 +530,21 @@ class SettingsPanelQt(QWidget):
         tab_layout = QVBoxLayout(tab)
         tab_layout.addWidget(scroll)
         return tab
+    
+    def create_ai_models_tab(self):
+        """Create AI models management tab"""
+        try:
+            from .ai_models_settings_tab import AIModelsSettingsTab
+            return AIModelsSettingsTab(self.config)
+        except ImportError as e:
+            logger.warning(f"AI Models settings tab not available: {e}")
+            # Return a placeholder widget
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            label = QLabel("AI Models settings not available")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(label)
+            return widget
     
     def create_advanced_tab(self):
         """Create advanced settings tab"""
