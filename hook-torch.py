@@ -59,14 +59,18 @@ try:
     TORCH_HIDDENIMPORTS = [
         'torch',
         'torch._C',
-        'torch._six',
+        # 'torch._six',  # REMOVED - deprecated in PyTorch 1.9+, no longer exists
         'torch.nn',
         'torch.nn.functional',
         'torch.optim',
         'torch.autograd',
         'torch.cuda',
         'torch.jit',
+        # ONNX export support (for model export/import)
         'torch.onnx',
+        'torch.onnx.symbolic_helper',
+        'torch.onnx.utils',
+        'torch.onnx._internal',
         'torch.utils',
         'torch.utils.data',
         'torch.distributions',
@@ -82,9 +86,11 @@ try:
         # Mobile and Lite Interpreter
         'torch.jit.mobile',
         'torch.lite',
-        # Distributed (if used)
+        # Distributed (if used) - Updated paths
         'torch.distributed',
         'torch.distributed.rpc',
+        'torch.distributed._shard',  # NEW PATH for sharding
+        'torch.distributed._shard.sharding_spec',  # NEW PATH (replaces deprecated _sharding_spec)
     ]
 
     def should_skip_cuda_dll(file_path):
