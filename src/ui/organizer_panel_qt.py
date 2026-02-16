@@ -42,8 +42,12 @@ try:
     from vision_models.dinov2_model import DINOv2Model
     VISION_MODELS_AVAILABLE = True
 except ImportError as e:
-    logger.warning(f"Vision models not available: {e}")
+    logger.error(f"Vision models not available: {e}")
+    logger.error("Please install required dependencies: pip install torch transformers open_clip_torch")
     VISION_MODELS_AVAILABLE = False
+    # Vision models should be available - show error to user
+    CLIPModel = None
+    DINOv2Model = None
 
 try:
     from PIL import Image
@@ -75,23 +79,32 @@ class OrganizerWorker(QThread):
         self._start_time = 0
         self._files_processed = 0
         
-        # Initialize AI models if needed
+        # Initialize AI models - ALWAYS attempt to load them
         self.clip_model = None
         self.dinov2_model = None
         
-        if settings.get('use_ai', False) and VISION_MODELS_AVAILABLE:
-            try:
-                model_type = settings.get('ai_model', 'clip')
-                if model_type in ['clip', 'hybrid']:
-                    self.clip_model = CLIPModel()
-                    self.log.emit("✓ CLIP model loaded")
-                
-                if model_type in ['dinov2', 'hybrid']:
-                    self.dinov2_model = DINOv2Model()
-                    self.log.emit("✓ DINOv2 model loaded")
-            except Exception as e:
-                logger.error(f"Failed to load AI models: {e}")
-                self.log.emit(f"⚠ AI models failed to load: {e}")
+        # Always use AI if available
+        use_ai = settings.get('use_ai', True)  # Default to True
+        
+        if use_ai:
+            if not VISION_MODELS_AVAILABLE:
+                self.log.emit("⚠️ WARNING: Vision models not available!")
+                self.log.emit("Please install: pip install torch transformers open_clip_torch")
+                self.log.emit("Falling back to pattern-based classification")
+            else:
+                try:
+                    model_type = settings.get('ai_model', 'clip')
+                    if model_type in ['clip', 'hybrid']:
+                        self.clip_model = CLIPModel()
+                        self.log.emit("✓ CLIP model loaded successfully")
+                    
+                    if model_type in ['dinov2', 'hybrid']:
+                        self.dinov2_model = DINOv2Model()
+                        self.log.emit("✓ DINOv2 model loaded successfully")
+                except Exception as e:
+                    logger.error(f"Failed to load AI models: {e}")
+                    self.log.emit(f"⚠️ AI models failed to load: {e}")
+                    self.log.emit("Falling back to pattern-based classification")
     
     def run(self):
         """Execute organization with AI classification."""
@@ -340,6 +353,16 @@ class OrganizerPanelQt(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
         
+        # AI Status indicator
+        if VISION_MODELS_AVAILABLE:
+            status_label = QLabel("✓ AI Models Ready")
+            status_label.setStyleSheet("color: green; font-size: 10pt; font-weight: bold;")
+        else:
+            status_label = QLabel("⚠️ AI Models Not Available - Install: pip install torch transformers")
+            status_label.setStyleSheet("color: orange; font-size: 10pt; font-weight: bold;")
+        status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(status_label)
+        
         # Main scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -453,15 +476,23 @@ class OrganizerPanelQt(QWidget):
         
         group_layout.addLayout(target_layout)
         
-        # Options
+        # Options - Always enabled with helpful tooltips
         options_layout = QHBoxLayout()
         
         self.archive_input_cb = QCheckBox("📦 Archive Input")
-        self.archive_input_cb.setEnabled(ARCHIVE_AVAILABLE)
+        if not ARCHIVE_AVAILABLE:
+            self.archive_input_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
+            self.archive_input_cb.setStyleSheet("color: gray;")
+        else:
+            self.archive_input_cb.setToolTip("Select ZIP/7Z/RAR archives as input")
         options_layout.addWidget(self.archive_input_cb)
         
         self.archive_output_cb = QCheckBox("📦 Archive Output")
-        self.archive_output_cb.setEnabled(ARCHIVE_AVAILABLE)
+        if not ARCHIVE_AVAILABLE:
+            self.archive_output_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
+            self.archive_output_cb.setStyleSheet("color: gray;")
+        else:
+            self.archive_output_cb.setToolTip("Save organized files to archive")
         options_layout.addWidget(self.archive_output_cb)
         
         self.subfolders_cb = QCheckBox("📂 Include Subfolders")
@@ -644,7 +675,7 @@ class OrganizerPanelQt(QWidget):
         group = QGroupBox("🔧 Settings")
         group_layout = QVBoxLayout()
         
-        # AI Model Selection
+        # AI Model Selection (AI is always enabled)
         model_layout = QHBoxLayout()
         model_layout.addWidget(QLabel("AI Model:"))
         
@@ -652,7 +683,15 @@ class OrganizerPanelQt(QWidget):
         self.ai_model_combo.addItem("CLIP (Recommended)", "clip")
         self.ai_model_combo.addItem("DINOv2 (Visual Similarity)", "dinov2")
         self.ai_model_combo.addItem("Hybrid (Both, Highest Accuracy)", "hybrid")
-        self.ai_model_combo.addItem("None (Pattern-based)", "none")
+        # Removed "None" option - AI models should always be used
+        self.ai_model_combo.setCurrentIndex(0)  # Default to CLIP
+        
+        # Show warning if models not available
+        if not VISION_MODELS_AVAILABLE:
+            warning_label = QLabel("⚠️ Vision models not installed")
+            warning_label.setStyleSheet("color: orange; font-weight: bold;")
+            model_layout.addWidget(warning_label)
+        
         model_layout.addWidget(self.ai_model_combo)
         model_layout.addStretch()
         
@@ -979,6 +1018,23 @@ class OrganizerPanelQt(QWidget):
             )
             return
         
+        # Check if user selected archive options without archive support
+        if (self.archive_input_cb.isChecked() or self.archive_output_cb.isChecked()) and not ARCHIVE_AVAILABLE:
+            reply = QMessageBox.warning(
+                self,
+                "Archive Support Not Available",
+                "Archive support is not available.\n\n"
+                "Install required packages:\n"
+                "  pip install py7zr rarfile\n\n"
+                "Continue without archive support?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.No:
+                return
+            # Uncheck archive options
+            self.archive_input_cb.setChecked(False)
+            self.archive_output_cb.setChecked(False)
+        
         # Confirm action
         reply = QMessageBox.question(
             self,
@@ -1001,7 +1057,7 @@ class OrganizerPanelQt(QWidget):
             'source_dir': self.source_directory,
             'target_dir': self.target_directory,
             'recursive': self.subfolders_cb.isChecked(),
-            'use_ai': self.ai_model_combo.currentData() != 'none',
+            'use_ai': True,  # Always try to use AI
             'ai_model': self.ai_model_combo.currentData(),
             'confidence_threshold': self.confidence_threshold_spin.value(),
             'enable_learning': self.enable_learning_cb.isChecked(),
