@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 try:
     from cryptography.fernet import Fernet
     from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
@@ -350,9 +350,11 @@ class AILearningSystem:
                 # Encrypt the profile
                 encrypted_data = self._encrypt_profile(profile_data, password)
                 
-                # Save with .enc extension
+                # Ensure .enc extension
+                filepath = Path(str(filepath))
                 if not str(filepath).endswith('.enc'):
-                    filepath = filepath.with_suffix('.json.enc')
+                    # Add .enc to whatever extension exists
+                    filepath = Path(str(filepath) + '.enc')
                 
                 filepath.parent.mkdir(parents=True, exist_ok=True)
                 
@@ -465,7 +467,7 @@ class AILearningSystem:
             raise RuntimeError("Encryption not available")
         
         # Derive key from password
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=b'ps2_texture_sorter_salt',  # Fixed salt for simplicity
@@ -487,7 +489,7 @@ class AILearningSystem:
         
         try:
             # Derive key from password
-            kdf = PBKDF2(
+            kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
                 salt=b'ps2_texture_sorter_salt',
