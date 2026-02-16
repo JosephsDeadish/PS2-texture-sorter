@@ -34,6 +34,7 @@ datas = []
 binaries = []
 
 # Prevent torch from initializing CUDA during build
+# Using try-finally to ensure sys.exit is always restored
 _original_exit = sys.exit
 
 def _patched_exit(code=0):
@@ -43,8 +44,9 @@ def _patched_exit(code=0):
 # Apply patch during hook execution
 sys.exit = _patched_exit
 
-print("[torch hook] Starting PyTorch collection...")
-print("[torch hook] Note: sys.exit() is patched to prevent build termination")
+try:
+    print("[torch hook] Starting PyTorch collection...")
+    print("[torch hook] Note: sys.exit() is patched to prevent build termination")
 
 # CUDA keywords for filtering (case-insensitive)
 CUDA_KEYWORDS = [
@@ -268,8 +270,8 @@ else:
     
     print("[torch hook] PyTorch collection completed successfully")
 
-# Restore original sys.exit
-sys.exit = _original_exit
-
-print("[torch hook] Hook completed")
-print(f"[torch hook] Summary: {len(binaries)} binaries, {len(datas)} data files, {len(hiddenimports)} hidden imports")
+finally:
+    # Restore original sys.exit in finally block to guarantee restoration
+    sys.exit = _original_exit
+    print("[torch hook] Hook completed")
+    print(f"[torch hook] Summary: {len(binaries)} binaries, {len(datas)} data files, {len(hiddenimports)} hidden imports")

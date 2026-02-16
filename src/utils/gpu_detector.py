@@ -233,16 +233,10 @@ class GPUDetector:
         """Detect NVIDIA GPUs using CUDA."""
         try:
             import torch
-        except ImportError as e:
+        except (ImportError, OSError) as e:
+            # ImportError: PyTorch not installed
+            # OSError: DLL initialization failed
             logger.debug(f"PyTorch not available for CUDA detection: {e}")
-            return []
-        except OSError as e:
-            # Handle DLL initialization errors gracefully
-            logger.debug(f"PyTorch DLL initialization failed: {e}")
-            logger.debug("This is expected in PyInstaller builds without CUDA runtime")
-            return []
-        except Exception as e:
-            logger.debug(f"Unexpected error importing torch: {e}")
             return []
         
         try:
@@ -267,26 +261,19 @@ class GPUDetector:
             return devices
             
         except (RuntimeError, OSError) as e:
-            # Handle CUDA runtime errors gracefully
+            # RuntimeError: CUDA runtime errors
+            # OSError: DLL errors during CUDA calls
             logger.debug(f"CUDA runtime error: {e}")
-            return []
-        except Exception as e:
-            logger.debug(f"CUDA detection failed: {e}")
             return []
     
     def _detect_nvidia_pytorch(self) -> List[GPUDevice]:
         """Detect NVIDIA GPUs using PyTorch (simpler fallback)."""
         try:
             import torch
-        except ImportError as e:
+        except (ImportError, OSError) as e:
+            # ImportError: PyTorch not installed
+            # OSError: DLL initialization failed
             logger.debug(f"PyTorch not available: {e}")
-            return []
-        except OSError as e:
-            # Handle DLL initialization errors gracefully
-            logger.debug(f"PyTorch DLL initialization failed: {e}")
-            return []
-        except Exception as e:
-            logger.debug(f"Unexpected error importing torch: {e}")
             return []
         
         try:
@@ -299,9 +286,8 @@ class GPUDetector:
                     index=0
                 )]
         except (RuntimeError, OSError) as e:
-            logger.debug(f"CUDA runtime error: {e}")
-            return []
-        except Exception as e:
+            # RuntimeError: CUDA runtime errors
+            # OSError: DLL errors during CUDA calls
             logger.debug(f"PyTorch CUDA detection failed: {e}")
             return []
         
@@ -311,8 +297,8 @@ class GPUDetector:
         """Add compute capability to NVIDIA devices if not already set."""
         try:
             import torch
-        except (ImportError, OSError, Exception):
-            # Gracefully handle torch import failures
+        except (ImportError, OSError):
+            # torch not available or DLL initialization failed
             return
         
         try:
@@ -324,8 +310,8 @@ class GPUDetector:
                     if device.index < torch.cuda.device_count():
                         props = torch.cuda.get_device_properties(device.index)
                         device.compute_capability = f"{props.major}.{props.minor}"
-        except (RuntimeError, OSError, Exception):
-            # Gracefully handle CUDA runtime errors
+        except (RuntimeError, OSError):
+            # CUDA runtime errors - gracefully handle
             pass
     
     def _parse_nvidia_name(self, raw_name: str) -> str:
