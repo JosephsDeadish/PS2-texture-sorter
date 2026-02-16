@@ -295,12 +295,29 @@ class OrganizerSettingsPanel(QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            # TODO: Call learning system to clear
-            QMessageBox.information(
-                self,
-                "History Cleared",
-                "Learning history has been cleared successfully."
-            )
+            # Import learning system and clear history
+            try:
+                from organizer.learning_system import AILearningSystem
+                learning_system = AILearningSystem()
+                learning_system.clear_learning_history()
+                
+                QMessageBox.information(
+                    self,
+                    "History Cleared",
+                    "Learning history has been cleared successfully."
+                )
+            except ImportError:
+                QMessageBox.warning(
+                    self,
+                    "Not Available",
+                    "Learning system is not available. Cannot clear history."
+                )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Failed to clear learning history: {str(e)}"
+                )
     
     def load_settings(self):
         """Load settings from config"""
