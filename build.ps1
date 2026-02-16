@@ -182,6 +182,36 @@ foreach ($dir in $resourceDirs) {
 }
 Write-Host ""
 
+# Pre-build validation
+Write-Host "🔍 Pre-build validation..." -ForegroundColor Yellow
+Write-Host "Checking for problematic long paths..." -ForegroundColor Gray
+
+# Check if basicsr is installed
+try {
+    $basicsr_check = python -c "import basicsr; print('OK')" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ basicsr found" -ForegroundColor Green
+    } else {
+        Write-Warning "⚠️  basicsr not installed - upscaling will be disabled"
+    }
+} catch {
+    Write-Warning "⚠️  basicsr not installed - upscaling will be disabled"
+}
+
+# Check if realesrgan is installed
+try {
+    $realesrgan_check = python -c "import realesrgan; print('OK')" 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ realesrgan found" -ForegroundColor Green
+    } else {
+        Write-Warning "⚠️  realesrgan not installed - upscaling will be disabled"
+    }
+} catch {
+    Write-Warning "⚠️  realesrgan not installed - upscaling will be disabled"
+}
+
+Write-Host ""
+
 # Build with PyInstaller
 Write-Host "========================================================================" -ForegroundColor Cyan
 Write-Host "  Building One-Folder with PyInstaller..." -ForegroundColor Cyan

@@ -1,15 +1,19 @@
-"""PyInstaller hook for Real-ESRGAN upscaling
+"""PyInstaller hook for Real-ESRGAN"""
+from PyInstaller.utils.hooks import collect_data_files
 
-This hook ensures that realesrgan and all its dependencies are properly collected
-when building with PyInstaller. This is required for AI-powered texture upscaling.
-"""
+# DON'T introspect - force include known modules
+hiddenimports = [
+    'realesrgan',
+    'realesrgan.archs',
+    'realesrgan.archs.rrdbnet_arch',
+    'realesrgan.data',
+]
 
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+try:
+    datas = collect_data_files('realesrgan', includes=['archs', 'data', 'weights'])
+except Exception as e:
+    print(f"[realesrgan hook] Warning: Could not collect data files: {e}")
+    datas = []
 
-# Collect all realesrgan submodules (architectures, utilities, etc.)
-hiddenimports = collect_submodules('realesrgan')
-
-# Collect data files (model weights, architectures, configs)
-datas = collect_data_files('realesrgan', includes=['**/*.py', '**/*.pth', '**/*.yml', '**/*.yaml'])
-
-print(f"[realesrgan hook] Collected {len(hiddenimports)} hidden imports and {len(datas)} data files")
+print(f"[realesrgan hook] Forced inclusion of {len(hiddenimports)} modules")
+print(f"[realesrgan hook] Collected {len(datas)} data files")

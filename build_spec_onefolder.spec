@@ -18,8 +18,16 @@ Usage: pyinstaller build_spec_onefolder.spec --clean --noconfirm
 
 import sys
 from pathlib import Path
+import os
+import tempfile
 
 block_cipher = None
+
+# Windows path length workaround
+# Some dependencies have very long paths which exceed Windows 260 char limit
+# Use relative paths and shorter paths where possible
+WORK_PATH = os.path.join(tempfile.gettempdir(), 'pyi_build')
+os.makedirs(WORK_PATH, exist_ok=True)
 
 # Application metadata
 APP_NAME = "Game Texture Sorter"
@@ -214,6 +222,7 @@ a = Analysis(
         str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers for onnxruntime
         str(SCRIPT_DIR / 'runtime-hook-torch.py'),  # Graceful CUDA handling for torch
     ],
+    workpath=WORK_PATH,  # Use temp directory for work files
     excludes=[
         # Exclude tkinter
         'tkinter',

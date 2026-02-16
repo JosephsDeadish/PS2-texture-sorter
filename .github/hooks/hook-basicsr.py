@@ -1,15 +1,25 @@
-"""PyInstaller hook for basicsr (Basic Super-Resolution Restoration)
+"""PyInstaller hook for basicsr (Basic Super-Resolution)"""
+from PyInstaller.utils.hooks import collect_data_files
 
-This hook ensures that basicsr and all its dependencies are properly collected
-when building with PyInstaller. This is required for Real-ESRGAN upscaling support.
-"""
+# DON'T try to introspect basicsr - causes version conflicts
+# Instead, force-include the modules we know are needed
 
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+hiddenimports = [
+    'basicsr',
+    'basicsr.archs',
+    'basicsr.archs.rrdbnet_arch',
+    'basicsr.data',
+    'basicsr.metrics',
+    'basicsr.losses',
+    'basicsr.models',
+]
 
-# Collect all basicsr submodules (architectures, models, utilities, etc.)
-hiddenimports = collect_submodules('basicsr')
+# Try to collect data files, but don't fail if unable
+try:
+    datas = collect_data_files('basicsr', includes=['archs', 'metrics', 'losses'])
+except Exception as e:
+    print(f"[basicsr hook] Warning: Could not collect data files: {e}")
+    datas = []
 
-# Collect data files (model architectures, configs, pretrained weights)
-datas = collect_data_files('basicsr', includes=['**/*.py', '**/*.pth', '**/*.yml', '**/*.yaml'])
-
-print(f"[basicsr hook] Collected {len(hiddenimports)} hidden imports and {len(datas)} data files")
+print(f"[basicsr hook] Forced inclusion of {len(hiddenimports)} modules")
+print(f"[basicsr hook] Collected {len(datas)} data files")
