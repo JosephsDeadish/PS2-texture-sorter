@@ -195,6 +195,18 @@ a = Analysis(
         'tokenizers',
         'safetensors',
         'regex',
+        # Upscaling models - Real-ESRGAN
+        'basicsr',
+        'basicsr.archs',
+        'basicsr.archs.rrdbnet_arch',
+        'basicsr.data',
+        'basicsr.losses',
+        'basicsr.metrics',
+        'basicsr.models',
+        'basicsr.utils',
+        'realesrgan',
+        'realesrgan.archs',
+        'realesrgan.archs.srvgg_arch',
     ],
     hookspath=HOOKSPATH,  # Use validated hookspath variable
     hooksconfig={},

@@ -532,13 +532,23 @@ class ImageUpscalerPanelQt(QWidget):
         
         scroll.setWidget(container)
         layout.addWidget(scroll)
+        
+        # Initialize method description with current selection
+        self._update_method_description(self.method_combo.currentText())
     
     def _update_method_description(self, method):
         """Update the method description based on selection."""
+        # Import to check availability
+        try:
+            from preprocessing.upscaler import REALESRGAN_AVAILABLE, NATIVE_AVAILABLE
+        except:
+            REALESRGAN_AVAILABLE = False
+            NATIVE_AVAILABLE = False
+        
         descriptions = {
-            "bicubic": "Bicubic: Fast, good quality for most images",
-            "lanczos": "Lanczos: Sharp results, best for textures with fine details (requires Rust native module)",
-            "realesrgan": "Real-ESRGAN: Best for retro/PS2 textures, slower (requires model download)",
+            "bicubic": "Bicubic: Fast, good quality for most images (always available)",
+            "lanczos": f"Lanczos: Sharp results, best for textures with fine details {'✅ Available' if NATIVE_AVAILABLE else '⚠️ Native acceleration not available'}",
+            "realesrgan": f"Real-ESRGAN: Best for retro/PS2 textures, slower {'✅ Available' if REALESRGAN_AVAILABLE else '❌ Not installed - pip install basicsr realesrgan'}",
             "esrgan": "ESRGAN: High quality (currently uses bicubic as fallback)"
         }
         self.method_desc_label.setText(descriptions.get(method, ""))

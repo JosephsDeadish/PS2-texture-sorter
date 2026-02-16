@@ -949,6 +949,8 @@ def check_feature_availability():
         'timm': False,
         'onnx': False,
         'onnxruntime': False,
+        'realesrgan': False,
+        'native_lanczos': False,
     }
     
     # Check PIL/Pillow - CRITICAL for image loading and vision models
@@ -1001,6 +1003,20 @@ def check_feature_availability():
     try:
         import timm
         features['timm'] = True
+    except Exception:
+        pass
+    
+    # Check Real-ESRGAN upscaling
+    try:
+        from preprocessing.upscaler import REALESRGAN_AVAILABLE
+        features['realesrgan'] = REALESRGAN_AVAILABLE
+    except Exception:
+        pass
+    
+    # Check native Rust Lanczos upscaling
+    try:
+        from native_ops import NATIVE_AVAILABLE
+        features['native_lanczos'] = NATIVE_AVAILABLE
     except Exception:
         pass
     
@@ -1119,6 +1135,20 @@ def log_startup_diagnostics(window):
         window.log("   ✅ timm (PyTorch Image Models)")
     else:
         window.log("   ⚠️  timm not available")
+    
+    # Upscaling features
+    window.log("")
+    window.log("🔍 Upscaling Features:")
+    window.log("   ✅ Bicubic upscaling (always available)")
+    if features['native_lanczos']:
+        window.log("   ✅ Lanczos upscaling (native Rust acceleration)")
+    else:
+        window.log("   ⚠️  Lanczos native acceleration not available")
+    if features['realesrgan']:
+        window.log("   ✅ Real-ESRGAN upscaling (AI - best for textures)")
+    else:
+        window.log("   ⚠️  Real-ESRGAN not available (optional)")
+        window.log("   💡 Install: pip install basicsr realesrgan")
     
     window.log("=" * 60)
     logger.info("Startup diagnostics completed")
