@@ -327,13 +327,11 @@ class TextureSorterMainWindow(QMainWindow):
                 repair_panel = ImageRepairPanelQt()
                 tool_tabs.addTab(repair_panel, "🔧 Image Repair")
                 
-                # Customization (only if panda widget and character are available)
-                if hasattr(self, 'panda_widget') and self.panda_widget is not None:
-                    panda_char = getattr(self.panda_widget, 'panda', None)
-                    # Only add customization panel if panda character exists
-                    if panda_char is not None:
-                        custom_panel = CustomizationPanelQt(panda_char, self.panda_widget)
-                        tool_tabs.addTab(custom_panel, "🎨 Customization")
+                # Customization (only if panda character is available)
+                panda_char = getattr(getattr(self, 'panda_widget', None), 'panda', None)
+                if panda_char is not None:
+                    custom_panel = CustomizationPanelQt(panda_char, self.panda_widget)
+                    tool_tabs.addTab(custom_panel, "🎨 Customization")
                 
                 self.log("✅ All tool panels loaded successfully")
                 

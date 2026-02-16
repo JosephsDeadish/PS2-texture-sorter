@@ -161,9 +161,8 @@ class LineArtConverterPanelQt(QWidget):
         # Mark widgets as initialized after creation
         self._widgets_initialized = True
         
-        # Now apply the default preset (this will work since widgets are initialized)
-        if hasattr(self, 'preset_combo'):
-            self._on_preset_changed(self.preset_combo.currentText())
+        # Now apply the default preset (widgets are guaranteed to exist)
+        self._on_preset_changed(self.preset_combo.currentText())
     
     def _create_widgets(self):
         """Create the UI widgets."""
