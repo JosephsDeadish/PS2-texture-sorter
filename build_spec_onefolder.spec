@@ -130,13 +130,14 @@ a = Analysis(
         # PyTorch - Core deep learning
         'torch',
         'torch._C',
-        'torch._six',
+        # 'torch._six',  # REMOVED - deprecated module no longer exists in PyTorch 1.9+
         'torch.nn',
         'torch.nn.functional',
         'torch.optim',
         'torch.autograd',
         'torch.cuda',
         'torch.jit',
+        'torch.onnx',  # ONNX export support for model export/import
         'torchvision',
         'torchvision.transforms',
     ],
@@ -176,9 +177,9 @@ a = Analysis(
         'torch.testing._internal.common_utils',
         'torch.distributed.elastic',
         'torch.distributed.elastic.multiprocessing',
-        'torch.distributed._sharding_spec',
+        'torch.distributed._sharding_spec',  # Deprecated - now uses torch.distributed._shard.sharding_spec
         'torch.distributed._sharded_tensor',
-        'torch.distributed._shard',
+        # Note: torch.distributed._shard is NOT excluded - it's needed for new sharding spec path
         'torch.distributed._shard.checkpoint',
         'torch._inductor',
         'torch._inductor.compile_fx',

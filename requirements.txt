@@ -100,6 +100,9 @@ onnxruntime>=1.16.0  # Lightweight offline AI model inference
 torch>=1.13.0,<3.0.0  # Deep learning framework
 torchvision>=0.14.0  # Computer vision models and transforms
 
+# ONNX Model Export/Import (Required for torch.onnx.export)
+onnx>=1.14.0  # ONNX model format - needed for PyTorch model export
+
 # Transformer Models
 transformers>=4.48.0  # CLIP, ViT models (>= 4.48.0 for security fixes)
 timm>=0.9.0  # Image models (EfficientNet, ResNet, etc.)

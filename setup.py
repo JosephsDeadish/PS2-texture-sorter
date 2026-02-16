@@ -84,6 +84,7 @@ EXTRAS_REQUIRE = {
         'transformers>=4.48.0',  # >= 4.48.0 for security fixes
         'timm>=0.9.0',
         'open-clip-torch>=2.20.0',
+        'onnx>=1.14.0',  # ONNX model format - needed for PyTorch model export
     ],
     
     # Vector similarity search
