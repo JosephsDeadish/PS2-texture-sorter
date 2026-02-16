@@ -20,6 +20,50 @@ import cv2
 
 logger = logging.getLogger(__name__)
 
+
+def apply_post_processing(img, settings):
+    """Apply post-processing effects to an image.
+    
+    Args:
+        img: PIL Image
+        settings: Dictionary with post-processing settings
+    
+    Returns:
+        Processed PIL Image
+    """
+    # Sharpen using ImageEnhance.Sharpness
+    if settings.get('sharpen', False):
+        amount = settings.get('sharpen_amount', 1.0)
+        # ImageEnhance.Sharpness: 0=blurred, 1=original, >1=sharpened
+        # Convert our 0-3 scale to 1-4 scale
+        sharpness_factor = 1.0 + amount
+        enhancer = ImageEnhance.Sharpness(img)
+        img = enhancer.enhance(sharpness_factor)
+    
+    # Denoise using cv2
+    if settings.get('denoise', False):
+        strength = settings.get('denoise_strength', 2)
+        img_array = np.array(img)
+        if len(img_array.shape) == 3:
+            img_array = cv2.fastNlMeansDenoisingColored(img_array, None, strength, strength, 7, 21)
+        else:
+            img_array = cv2.fastNlMeansDenoising(img_array, None, strength, 7, 21)
+        img = Image.fromarray(img_array)
+    
+    # Auto-contrast
+    if settings.get('auto_contrast', False):
+        enhancer = ImageEnhance.Contrast(img)
+        factor = settings.get('contrast_factor', 1.0)
+        img = enhancer.enhance(factor)
+    
+    # Custom resolution
+    if settings.get('custom_resolution', False):
+        width = settings.get('custom_width', img.width)
+        height = settings.get('custom_height', img.height)
+        img = img.resize((width, height), Image.Resampling.LANCZOS)
+    
+    return img
+
 try:
     from preprocessing.upscaler import TextureUpscaler
     UPSCALER_AVAILABLE = True
@@ -53,33 +97,33 @@ UPSCALER_PRESETS = {
         "auto_contrast": False,
         "desc": "Smooth upscaling with light sharpening"
     },
-    "🟡 Bilinear (Fast)": {
+    "🟡 Bicubic Fast": {
         "method": "bicubic",
         "sharpen": 0.0,
         "denoise": False,
         "auto_contrast": False,
         "desc": "Fast upscaling, minimal processing"
     },
-    "🔶 Hamming (Balanced)": {
+    "🔶 Bicubic Balanced": {
         "method": "bicubic",
         "sharpen": 1.0,
         "denoise": True,
         "auto_contrast": True,
-        "desc": "Balanced quality and speed"
+        "desc": "Balanced quality and speed with bicubic"
     },
-    "🟣 Box (Pixel Art)": {
+    "🟣 Bicubic Pixel Art": {
         "method": "bicubic",
         "sharpen": 0.0,
         "denoise": False,
         "auto_contrast": False,
-        "desc": "Preserves hard edges for pixel art"
+        "desc": "Bicubic for pixel art (Note: Use 2x/4x scales for best results)"
     },
-    "⬜ Nearest (Pixel Perfect)": {
+    "⬜ Bicubic Clean": {
         "method": "bicubic",
         "sharpen": 0.0,
         "denoise": False,
         "auto_contrast": False,
-        "desc": "No interpolation, pure nearest neighbor"
+        "desc": "Pure bicubic interpolation, no post-processing"
     }
 }
 
@@ -126,7 +170,7 @@ class UpscaleWorker(QThread):
                 
                 # Post-processing
                 upscaled_img = Image.fromarray(upscaled)
-                upscaled_img = self._apply_post_processing(upscaled_img)
+                upscaled_img = apply_post_processing(upscaled_img, self.post_process_settings)
                 
                 # Save
                 output_path = Path(self.output_dir) / Path(file_path).name
@@ -136,41 +180,6 @@ class UpscaleWorker(QThread):
         except Exception as e:
             logger.error(f"Upscaling failed: {e}", exc_info=True)
             self.finished.emit(False, f"Upscaling failed: {str(e)}")
-    
-    def _apply_post_processing(self, img):
-        """Apply post-processing effects"""
-        settings = self.post_process_settings
-        
-        # Sharpen
-        if settings.get('sharpen', False):
-            amount = settings.get('sharpen_amount', 1.0)
-            for _ in range(int(amount)):
-                img = img.filter(ImageFilter.SHARPEN)
-        
-        # Denoise
-        if settings.get('denoise', False):
-            strength = settings.get('denoise_strength', 2)
-            # Convert to cv2 for denoising
-            img_array = np.array(img)
-            if len(img_array.shape) == 3:
-                img_array = cv2.fastNlMeansDenoisingColored(img_array, None, strength, strength, 7, 21)
-            else:
-                img_array = cv2.fastNlMeansDenoising(img_array, None, strength, 7, 21)
-            img = Image.fromarray(img_array)
-        
-        # Auto-contrast
-        if settings.get('auto_contrast', False):
-            enhancer = ImageEnhance.Contrast(img)
-            factor = settings.get('contrast_factor', 1.0)
-            img = enhancer.enhance(factor)
-        
-        # Custom resolution
-        if settings.get('custom_resolution', False):
-            width = settings.get('custom_width', img.width)
-            height = settings.get('custom_height', img.height)
-            img = img.resize((width, height), Image.Resampling.LANCZOS)
-        
-        return img
     
     def cancel(self):
         """Cancel the operation."""
@@ -210,7 +219,7 @@ class PreviewWorker(QThread):
             
             # Post-processing
             processed_img = Image.fromarray(upscaled)
-            processed_img = self._apply_post_processing(processed_img)
+            processed_img = apply_post_processing(processed_img, self.post_process_settings)
             
             if not self._should_cancel:
                 self.finished.emit(orig_img, processed_img)
@@ -218,34 +227,6 @@ class PreviewWorker(QThread):
         except Exception as e:
             logger.error(f"Preview generation failed: {e}")
             self.error.emit(str(e))
-    
-    def _apply_post_processing(self, img):
-        """Apply post-processing effects"""
-        settings = self.post_process_settings
-        
-        # Sharpen
-        if settings.get('sharpen', False):
-            amount = settings.get('sharpen_amount', 1.0)
-            for _ in range(int(amount)):
-                img = img.filter(ImageFilter.SHARPEN)
-        
-        # Denoise
-        if settings.get('denoise', False):
-            strength = settings.get('denoise_strength', 2)
-            img_array = np.array(img)
-            if len(img_array.shape) == 3:
-                img_array = cv2.fastNlMeansDenoisingColored(img_array, None, strength, strength, 7, 21)
-            else:
-                img_array = cv2.fastNlMeansDenoising(img_array, None, strength, 7, 21)
-            img = Image.fromarray(img_array)
-        
-        # Auto-contrast
-        if settings.get('auto_contrast', False):
-            enhancer = ImageEnhance.Contrast(img)
-            factor = settings.get('contrast_factor', 1.0)
-            img = enhancer.enhance(factor)
-        
-        return img
     
     def cancel(self):
         """Cancel the preview generation."""
@@ -612,9 +593,9 @@ class ImageUpscalerPanelQt(QWidget):
         if self.preview_worker and self.preview_worker.isRunning():
             self.preview_worker.cancel()
         
-        # Restart debounce timer (1000ms delay)
+        # Restart debounce timer (500ms delay for responsive feedback)
         self.preview_timer.stop()
-        self.preview_timer.start(1000)
+        self.preview_timer.start(500)
     
     def _update_live_preview(self):
         """Generate and display live preview."""

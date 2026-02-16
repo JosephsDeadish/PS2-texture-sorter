@@ -627,40 +627,45 @@ class LineArtConverterPanelQt(QWidget):
         self.preview_timer.stop()
         self.preview_timer.start(800)
     
+    def _get_morphology_operation(self):
+        """Get morphology operation from combo box."""
+        morph_map = {
+            "None": MorphologyOperation.NONE,
+            "Close (fill gaps)": MorphologyOperation.CLOSE,
+            "Open (remove noise)": MorphologyOperation.OPEN,
+            "Dilate (thicken)": MorphologyOperation.DILATE,
+            "Erode (thin)": MorphologyOperation.ERODE
+        }
+        return morph_map.get(self.morphology_combo.currentText(), MorphologyOperation.NONE)
+    
+    def _create_settings_from_controls(self):
+        """Create LineArtSettings from current control values."""
+        return LineArtSettings(
+            mode=ConversionMode.PURE_BLACK,
+            threshold=self.threshold_slider.value(),
+            auto_threshold=self.auto_threshold_cb.isChecked(),
+            background_mode=BackgroundMode.TRANSPARENT,
+            invert=False,
+            remove_midtones=self.remove_midtones_cb.isChecked(),
+            midtone_threshold=self.midtone_spin.value(),
+            contrast_boost=self.contrast_spin.value(),
+            sharpen=self.sharpen_cb.isChecked(),
+            sharpen_amount=self.sharpen_spin.value(),
+            morphology_operation=self._get_morphology_operation(),
+            morphology_iterations=self.morphology_iterations.value(),
+            morphology_kernel_size=self.kernel_size_spin.value(),
+            denoise=self.denoise_cb.isChecked(),
+            denoise_size=self.denoise_size.value()
+        )
+    
     def _update_preview(self):
         """Update the preview image."""
         if not self.selected_file:
             return
         
         try:
-            # Map morphology combo to operation
-            morph_map = {
-                "None": MorphologyOperation.NONE,
-                "Close (fill gaps)": MorphologyOperation.CLOSE,
-                "Open (remove noise)": MorphologyOperation.OPEN,
-                "Dilate (thicken)": MorphologyOperation.DILATE,
-                "Erode (thin)": MorphologyOperation.ERODE
-            }
-            morph_op = morph_map.get(self.morphology_combo.currentText(), MorphologyOperation.NONE)
-            
             # Create settings from current controls
-            settings = LineArtSettings(
-                mode=ConversionMode.PURE_BLACK,
-                threshold=self.threshold_slider.value(),
-                auto_threshold=self.auto_threshold_cb.isChecked(),
-                background_mode=BackgroundMode.TRANSPARENT,
-                invert=False,
-                remove_midtones=self.remove_midtones_cb.isChecked(),
-                midtone_threshold=self.midtone_spin.value(),
-                contrast_boost=self.contrast_spin.value(),
-                sharpen=self.sharpen_cb.isChecked(),
-                sharpen_amount=self.sharpen_spin.value() if self.sharpen_cb.isChecked() else 1.0,
-                morphology_operation=morph_op,
-                morphology_iterations=self.morphology_iterations.value(),
-                morphology_kernel_size=self.kernel_size_spin.value(),
-                denoise=self.denoise_cb.isChecked(),
-                denoise_size=self.denoise_size.value() if self.denoise_cb.isChecked() else 0
-            )
+            settings = self._create_settings_from_controls()
             
             # Start preview worker
             self.preview_worker = PreviewWorker(self.converter, self.selected_file, settings)
@@ -742,34 +747,8 @@ class LineArtConverterPanelQt(QWidget):
             return
         
         try:
-            # Map morphology combo to operation
-            morph_map = {
-                "None": MorphologyOperation.NONE,
-                "Close (fill gaps)": MorphologyOperation.CLOSE,
-                "Open (remove noise)": MorphologyOperation.OPEN,
-                "Dilate (thicken)": MorphologyOperation.DILATE,
-                "Erode (thin)": MorphologyOperation.ERODE
-            }
-            morph_op = morph_map.get(self.morphology_combo.currentText(), MorphologyOperation.NONE)
-            
             # Create settings from current controls
-            settings = LineArtSettings(
-                mode=ConversionMode.PURE_BLACK,
-                threshold=self.threshold_slider.value(),
-                auto_threshold=self.auto_threshold_cb.isChecked(),
-                background_mode=BackgroundMode.TRANSPARENT,
-                invert=False,
-                remove_midtones=self.remove_midtones_cb.isChecked(),
-                midtone_threshold=self.midtone_spin.value(),
-                contrast_boost=self.contrast_spin.value(),
-                sharpen=self.sharpen_cb.isChecked(),
-                sharpen_amount=self.sharpen_spin.value() if self.sharpen_cb.isChecked() else 1.0,
-                morphology_operation=morph_op,
-                morphology_iterations=self.morphology_iterations.value(),
-                morphology_kernel_size=self.kernel_size_spin.value(),
-                denoise=self.denoise_cb.isChecked(),
-                denoise_size=self.denoise_size.value() if self.denoise_cb.isChecked() else 0
-            )
+            settings = self._create_settings_from_controls()
             
             # Start conversion worker
             self.conversion_worker = ConversionWorker(
