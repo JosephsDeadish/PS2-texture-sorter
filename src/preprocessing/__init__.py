@@ -5,6 +5,7 @@ Author: Dead On The Inside / JosephsDeadish
 
 import logging
 
+# Logger for this module - used in exception handling and debug messages
 logger = logging.getLogger(__name__)
 
 from .preprocessing_pipeline import PreprocessingPipeline
