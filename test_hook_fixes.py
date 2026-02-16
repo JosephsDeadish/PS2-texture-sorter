@@ -23,7 +23,7 @@ def test_hook_basicsr():
         content = f.read()
     
     # Check that collect_submodules is NOT used (causes import at build time)
-    if 'collect_submodules' in content and 'collect_submodules(' in content:
+    if 'collect_submodules(' in content:
         print("❌ hook-basicsr.py still uses collect_submodules() - this will cause build failures")
         return False
     
@@ -82,7 +82,7 @@ def test_hook_realesrgan():
         content = f.read()
     
     # Check that collect_submodules is NOT used
-    if 'collect_submodules' in content and 'collect_submodules(' in content:
+    if 'collect_submodules(' in content:
         print("❌ hook-realesrgan.py still uses collect_submodules() - this will cause build failures")
         return False
     
