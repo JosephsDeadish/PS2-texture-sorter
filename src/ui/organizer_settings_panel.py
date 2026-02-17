@@ -55,13 +55,33 @@ class OrganizerSettingsPanel(QWidget):
         self.extractor_combo.addItems([
             "CLIP (image-to-text classification)",
             "DINOv2 (visual similarity clustering)",
-            "timm (PyTorch Image Models)"
+            "timm (PyTorch Image Models)",
+            "CLIP+DINOv2 (Combined: text + visual)",
+            "CLIP+timm (Combined: text + PyTorch)",
+            "DINOv2+timm (Combined: visual + PyTorch)",
+            "CLIP+DINOv2+timm (All three combined)"
         ])
         self.extractor_combo.currentTextChanged.connect(self.on_extractor_changed)
         extractor_layout.addWidget(extractor_label)
         extractor_layout.addWidget(self.extractor_combo)
         extractor_layout.addStretch()
         model_layout.addLayout(extractor_layout)
+        
+        # Performance warning label (initially hidden)
+        self.perf_warning_label = QLabel()
+        self.perf_warning_label.setStyleSheet("""
+            QLabel {
+                color: #ff6b00;
+                font-weight: bold;
+                padding: 8px;
+                background-color: #fff3e0;
+                border: 1px solid #ffb74d;
+                border-radius: 4px;
+            }
+        """)
+        self.perf_warning_label.setWordWrap(True)
+        self.perf_warning_label.setVisible(False)
+        model_layout.addWidget(self.perf_warning_label)
         
         # CLIP selector
         self.clip_layout = QHBoxLayout()
@@ -304,14 +324,45 @@ class OrganizerSettingsPanel(QWidget):
         self.set_layout_visible(self.clip_layout, False)
         self.set_layout_visible(self.dinov2_layout, False)
         
-        # Show the relevant dropdown based on selection
+        # Check if this is a combined model
+        is_combined = self.is_combined_model(extractor)
+        
+        # Show relevant dropdowns based on selection
         if "CLIP" in extractor:
             self.set_layout_visible(self.clip_layout, True)
-        elif "DINOv2" in extractor:
+        if "DINOv2" in extractor:
             self.set_layout_visible(self.dinov2_layout, True)
-        # For timm, no specific model dropdown is shown
+        # For timm alone, no specific model dropdown is shown
+        # For combined models with timm, we show the other model dropdowns
+        
+        # Show performance warning for combined models
+        if is_combined:
+            self.show_performance_warning(extractor)
+        else:
+            self.perf_warning_label.setVisible(False)
         
         self.emit_settings()
+    
+    def is_combined_model(self, extractor: str) -> bool:
+        """Check if the selected extractor is a combined model"""
+        return '+' in extractor
+    
+    def show_performance_warning(self, extractor: str):
+        """Show performance warning for combined models"""
+        model_count = extractor.count('+') + 1
+        
+        if model_count == 3:
+            warning_text = "⚠️ Warning: Using all three models (CLIP+DINOv2+timm) will significantly impact performance. Processing will be slower but may provide better accuracy for complex categorization tasks."
+        elif model_count == 2:
+            warning_text = f"⚠️ Warning: {extractor.split(' ')[0]} combines two models, which may reduce processing speed. This provides better accuracy but takes longer than single models."
+        else:
+            warning_text = ""
+        
+        if warning_text:
+            self.perf_warning_label.setText(warning_text)
+            self.perf_warning_label.setVisible(True)
+        else:
+            self.perf_warning_label.setVisible(False)
     
     def set_layout_visible(self, layout, visible):
         """Set visibility for all widgets in a layout"""

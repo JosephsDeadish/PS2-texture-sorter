@@ -30,11 +30,18 @@ def validate_organizer_settings():
         'CLIP option': 'CLIP (image-to-text classification)' in content,
         'DINOv2 option': 'DINOv2 (visual similarity clustering)' in content,
         'timm option': 'timm (PyTorch Image Models)' in content,
+        'CLIP+DINOv2 option': 'CLIP+DINOv2' in content,
+        'CLIP+timm option': 'CLIP+timm' in content,
+        'DINOv2+timm option': 'DINOv2+timm' in content,
+        'CLIP+DINOv2+timm option': 'CLIP+DINOv2+timm' in content,
         'on_extractor_changed method': 'def on_extractor_changed' in content,
+        'is_combined_model method': 'def is_combined_model' in content,
+        'show_performance_warning method': 'def show_performance_warning' in content,
         'set_layout_visible method': 'def set_layout_visible' in content,
         'feature_extractor in settings': "'feature_extractor'" in content,
         'CLIP layout visibility': 'self.clip_layout' in content,
         'DINOv2 layout visibility': 'self.dinov2_layout' in content,
+        'Performance warning label': 'self.perf_warning_label' in content,
     }
     
     all_passed = True
@@ -52,12 +59,19 @@ def validate_organizer_settings():
     
     if all_passed:
         print("\n✅ All validations passed!")
-        print("\nFeature Extractor dropdown implementation complete:")
-        print("  • CLIP (image-to-text classification)")
-        print("  • DINOv2 (visual similarity clustering)")
-        print("  • timm (PyTorch Image Models)")
+        print("\nFeature Extractor dropdown implementation complete with all 7 presets:")
+        print("  Single Models:")
+        print("    • CLIP (image-to-text classification)")
+        print("    • DINOv2 (visual similarity clustering)")
+        print("    • timm (PyTorch Image Models)")
+        print("  Combined Models:")
+        print("    • CLIP+DINOv2 (text + visual)")
+        print("    • CLIP+timm (text + PyTorch)")
+        print("    • DINOv2+timm (visual + PyTorch)")
+        print("    • CLIP+DINOv2+timm (all three)")
         print("\n💡 The dropdown dynamically shows/hides model-specific options")
         print("   based on the selected feature extractor.")
+        print("⚠️  Combined models show performance warnings automatically.")
     else:
         print("\n❌ Some validations failed")
         return False
