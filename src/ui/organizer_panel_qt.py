@@ -53,7 +53,7 @@ try:
     VISION_MODELS_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Vision models not available: {e}")
-    logger.warning("Please install required dependencies: pip install torch transformers open_clip_torch")
+    logger.warning("Please install required dependencies: pip install torch transformers open-clip-torch")
     VISION_MODELS_AVAILABLE = False
     CLIPModel = None
     DINOv2Model = None
@@ -113,7 +113,7 @@ class OrganizerWorker(QThread):
                 self.log.emit("⚠️ WARNING: Vision models not available!")
                 if not PIL_AVAILABLE:
                     self.log.emit("Missing dependency: PIL/Pillow (pip install pillow)")
-                self.log.emit("Missing dependencies: torch transformers open_clip_torch")
+                self.log.emit("Missing dependencies: torch transformers open-clip-torch")
                 self.log.emit("Install with: pip install torch transformers open-clip-torch pillow")
                 self.log.emit("Falling back to pattern-based classification")
             else:
