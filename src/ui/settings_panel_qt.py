@@ -536,7 +536,7 @@ class SettingsPanelQt(QWidget):
         try:
             from .ai_models_settings_tab import AIModelsSettingsTab
             return AIModelsSettingsTab(self.config)
-        except ImportError as e:
+        except Exception as e:
             logger.warning(f"AI Models settings tab not available: {e}")
             # Return a placeholder widget
             widget = QWidget()
@@ -803,7 +803,7 @@ class SettingsPanelQt(QWidget):
             
             # Update tooltip system if available
             if self.main_window and hasattr(self.main_window, 'tooltip_manager'):
-                from src.features.tutorial_system import TooltipMode
+                from features.tutorial_system import TooltipMode
                 mode_enum = {
                     'normal': TooltipMode.NORMAL,
                     'dumbed_down': TooltipMode.DUMBED_DOWN,
