@@ -26,14 +26,14 @@ This update enables all previously disabled/hidden features and ensures AI model
 ```python
 # Lines 40-50: Better error messages
 logger.error(f"Vision models not available: {e}")
-logger.error("Please install required dependencies: pip install torch transformers open_clip_torch")
+logger.error("Please install required dependencies: pip install torch transformers open-clip-torch")
 
 # Lines 78-105: Always attempt to load AI models
 use_ai = settings.get('use_ai', True)  # Default to True
 if use_ai:
     if not VISION_MODELS_AVAILABLE:
         self.log.emit("⚠️ WARNING: Vision models not available!")
-        self.log.emit("Please install: pip install torch transformers open_clip_torch")
+        self.log.emit("Please install: pip install torch transformers open-clip-torch")
         self.log.emit("Falling back to pattern-based classification")
 ```
 
@@ -142,7 +142,7 @@ The UI now provides clear installation instructions when dependencies are missin
 
 **For AI Models:**
 ```bash
-pip install torch transformers open_clip_torch
+pip install torch transformers open-clip-torch
 ```
 
 **For Archive Support:**

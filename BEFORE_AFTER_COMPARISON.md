@@ -119,7 +119,7 @@ OR (if models not available):
 **In Log Window:**
 ```
 [09:15:30] ⚠️ WARNING: Vision models not available!
-[09:15:30] Please install: pip install torch transformers open_clip_torch
+[09:15:30] Please install: pip install torch transformers open-clip-torch
 [09:15:30] Falling back to pattern-based classification
 ```
 
@@ -149,7 +149,7 @@ if use_ai:
     if not VISION_MODELS_AVAILABLE:
         # Clear warning messages
         self.log.emit("⚠️ WARNING: Vision models not available!")
-        self.log.emit("Please install: pip install torch transformers open_clip_torch")
+        self.log.emit("Please install: pip install torch transformers open-clip-torch")
         self.log.emit("Falling back to pattern-based classification")
     else:
         # Load models with detailed logging
