@@ -1094,58 +1094,78 @@ def check_feature_availability():
         import torch
         features['pytorch'] = True
         features['pytorch_cuda'] = torch.cuda.is_available()
-    except Exception:
-        pass
+        logger.info(f"✓ PyTorch available (CUDA: {features['pytorch_cuda']})")
+    except Exception as e:
+        features['pytorch'] = False
+        features['pytorch_cuda'] = False
+        logger.debug(f"PyTorch not available: {e}")
     
     # Check ONNX
     try:
         import onnx
         features['onnx'] = True
-    except Exception:
-        pass
+        logger.info("✓ ONNX available")
+    except Exception as e:
+        features['onnx'] = False
+        logger.debug(f"ONNX not available: {e}")
     
     # Check ONNX Runtime
     try:
         import onnxruntime
         features['onnxruntime'] = True
-    except Exception:
-        pass
+        logger.info("✓ ONNX Runtime available")
+    except Exception as e:
+        features['onnxruntime'] = False
+        logger.debug(f"ONNX Runtime not available: {e}")
     
     # Check transformers
     try:
         import transformers
         features['transformers'] = True
-    except Exception:
-        pass
+        logger.info("✓ Transformers available")
+    except Exception as e:
+        features['transformers'] = False
+        logger.debug(f"Transformers not available: {e}")
     
     # Check open_clip
     try:
         import open_clip
         features['open_clip'] = True
-    except Exception:
-        pass
+        logger.info("✓ Open CLIP available")
+    except Exception as e:
+        features['open_clip'] = False
+        logger.debug(f"Open CLIP not available: {e}")
     
     # Check timm
     try:
         import timm
         features['timm'] = True
-    except Exception:
-        pass
+        logger.info("✓ timm available")
+    except Exception as e:
+        features['timm'] = False
+        logger.debug(f"timm not available: {e}")
     
     # Check Real-ESRGAN upscaling
     try:
         from preprocessing.upscaler import REALESRGAN_AVAILABLE
         features['upscaler'] = REALESRGAN_AVAILABLE
         features['realesrgan'] = REALESRGAN_AVAILABLE  # DEPRECATED: Kept for backward compatibility
-    except Exception:
-        pass
+        if REALESRGAN_AVAILABLE:
+            logger.info("✓ Real-ESRGAN upscaler available")
+    except Exception as e:
+        features['upscaler'] = False
+        features['realesrgan'] = False
+        logger.debug(f"Real-ESRGAN not available: {e}")
     
     # Check native Rust Lanczos upscaling
     try:
         from native_ops import NATIVE_AVAILABLE
         features['native_lanczos'] = NATIVE_AVAILABLE
-    except Exception:
-        pass
+        if NATIVE_AVAILABLE:
+            logger.info("✓ Native Lanczos upscaling available")
+    except Exception as e:
+        features['native_lanczos'] = False
+        logger.debug(f"Native ops not available: {e}")
     
     # CLIP requires PIL + PyTorch + (transformers OR open_clip)
     features['clip'] = features['pil'] and features['pytorch'] and (features['transformers'] or features['open_clip'])
