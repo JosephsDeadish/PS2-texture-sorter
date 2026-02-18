@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Game Texture Sorter - Qt Main Application
 A Qt6-based application with OpenGL rendering.
@@ -9,6 +10,18 @@ import sys
 import os
 import logging
 from pathlib import Path
+
+# Fix Unicode encoding issues on Windows
+# This prevents UnicodeEncodeError when printing emojis to console
+if sys.platform == 'win32':
+    import codecs
+    # Reconfigure stdout and stderr to use UTF-8 encoding
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    # Also set environment variable for child processes
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 # CRITICAL: Add src directory to sys.path BEFORE any src imports
 # This ensures that all imports from src/ work correctly, particularly config.py
@@ -221,6 +234,12 @@ class TextureSorterMainWindow(QMainWindow):
                 self.panda_widget = PandaOpenGLWidget()
                 self.panda_widget.setMinimumWidth(300)
                 self.panda_widget.setMaximumWidth(400)
+                
+                # Connect panda widget signals
+                self.panda_widget.clicked.connect(self.on_panda_clicked)
+                self.panda_widget.mood_changed.connect(self.on_panda_mood_changed)
+                self.panda_widget.animation_changed.connect(self.on_panda_animation_changed)
+                
                 splitter.addWidget(self.panda_widget)
                 splitter.setStretchFactor(0, 3)  # Content gets 75%
                 splitter.setStretchFactor(1, 1)  # Panda gets 25%
@@ -1161,6 +1180,45 @@ class TextureSorterMainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Error handling settings change: {e}", exc_info=True)
+    
+    def on_panda_clicked(self):
+        """Handle panda widget click events."""
+        try:
+            # Log the interaction
+            self.log("🐼 Panda clicked!")
+            logger.info("Panda widget clicked")
+            
+            # You can add custom behavior here, such as:
+            # - Playing a sound
+            # - Showing a message
+            # - Updating panda state
+            
+        except Exception as e:
+            logger.error(f"Error handling panda click: {e}", exc_info=True)
+    
+    def on_panda_mood_changed(self, mood: str):
+        """Handle panda mood changes."""
+        try:
+            # Log the mood change
+            logger.info(f"Panda mood changed to: {mood}")
+            
+            # Update status bar to reflect mood
+            self.statusbar.showMessage(f"🐼 Panda is feeling {mood}", 3000)
+            
+        except Exception as e:
+            logger.error(f"Error handling panda mood change: {e}", exc_info=True)
+    
+    def on_panda_animation_changed(self, animation: str):
+        """Handle panda animation state changes."""
+        try:
+            # Log animation state changes
+            logger.debug(f"Panda animation changed to: {animation}")
+            
+            # You can add custom behavior here based on animation state
+            # For example, update UI elements or trigger other animations
+            
+        except Exception as e:
+            logger.error(f"Error handling panda animation change: {e}", exc_info=True)
     
     def show_about(self):
         """Show about dialog."""
