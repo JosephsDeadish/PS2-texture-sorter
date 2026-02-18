@@ -69,7 +69,6 @@ except ImportError as e:
     PandaOpenGLWidget = None
 
 UI_PANELS_AVAILABLE = False
-UI_PANELS_AVAILABLE = False
 try:
     from ui.background_remover_panel_qt import BackgroundRemoverPanelQt
     from ui.color_correction_panel_qt import ColorCorrectionPanelQt
@@ -508,7 +507,6 @@ class TextureSorterMainWindow(QMainWindow):
                     logger.info("✅ Panda customization panel loaded")
             except Exception as e:
                 logger.error(f"Could not load customization panel: {e}", exc_info=True)
-            tool_tabs.addTab(label, "Info")
         
         self.tabs.addTab(tab, "Tools")
     
