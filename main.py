@@ -396,7 +396,7 @@ class TextureSorterMainWindow(QMainWindow):
         if UI_PANELS_AVAILABLE:
             try:
                 # Background Remover
-                bg_panel = BackgroundRemoverPanelQt()
+                bg_panel = BackgroundRemoverPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(bg_panel, "🎭 Background Remover")
                 
                 # Alpha Fixer
@@ -404,7 +404,7 @@ class TextureSorterMainWindow(QMainWindow):
                 tool_tabs.addTab(alpha_panel, "✨ Alpha Fixer")
                 
                 # Color Correction
-                color_panel = ColorCorrectionPanelQt()
+                color_panel = ColorCorrectionPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(color_panel, "🎨 Color Correction")
                 
                 # Batch Normalizer

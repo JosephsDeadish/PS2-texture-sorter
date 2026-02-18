@@ -27,6 +27,18 @@ except ImportError as e:
     logger.warning(f"Color corrector not available: {e}")
     COLOR_CORRECTOR_AVAILABLE = False
 
+# Try to import comparison slider
+try:
+    from ui.live_preview_slider_qt import ComparisonSliderWidget
+    SLIDER_AVAILABLE = True
+except ImportError:
+    try:
+        from live_preview_slider_qt import ComparisonSliderWidget
+        SLIDER_AVAILABLE = True
+    except ImportError:
+        SLIDER_AVAILABLE = False
+        ComparisonSliderWidget = None
+
 
 class ColorCorrectionWorker(QThread):
     """Worker thread for color correction processing."""
@@ -91,6 +103,7 @@ class ColorCorrectionPanelQt(QWidget):
         self.output_dir = ""
         self.current_lut = None
         self.worker = None
+        self.preview_file = None  # Current file for preview
         
         self._create_ui()
     
@@ -135,6 +148,10 @@ class ColorCorrectionPanelQt(QWidget):
         # Adjustment controls section
         self._create_controls_section(container_layout)
         
+        # Live Preview section
+        if SLIDER_AVAILABLE:
+            self._create_preview_section(container_layout)
+        
         # Actions section
         self._create_actions_section(container_layout)
         
@@ -155,6 +172,7 @@ class ColorCorrectionPanelQt(QWidget):
         
         self.select_btn = QPushButton("Select Images...")
         self.select_btn.clicked.connect(self._select_files)
+        self._set_tooltip(self.select_btn, "Select image files to apply color correction")
         input_layout.addWidget(self.select_btn)
         
         group_layout.addLayout(input_layout)
@@ -166,6 +184,7 @@ class ColorCorrectionPanelQt(QWidget):
         
         self.output_btn = QPushButton("Set Output...")
         self.output_btn.clicked.connect(self._select_output)
+        self._set_tooltip(self.output_btn, "Choose where to save corrected images")
         output_layout.addWidget(self.output_btn)
         
         group_layout.addLayout(output_layout)
@@ -180,22 +199,22 @@ class ColorCorrectionPanelQt(QWidget):
         
         # Brightness
         self.brightness_slider = self._create_slider(
-            group_layout, "Brightness", -100, 100, 0
+            group_layout, "Brightness", -100, 100, 0, "Adjust image brightness"
         )
         
         # Contrast
         self.contrast_slider = self._create_slider(
-            group_layout, "Contrast", -100, 100, 0
+            group_layout, "Contrast", -100, 100, 0, "Adjust image contrast"
         )
         
         # Saturation
         self.saturation_slider = self._create_slider(
-            group_layout, "Saturation", -100, 100, 0
+            group_layout, "Saturation", -100, 100, 0, "Adjust color saturation"
         )
         
         # Sharpness
         self.sharpness_slider = self._create_slider(
-            group_layout, "Sharpness", 0, 200, 100
+            group_layout, "Sharpness", 0, 200, 100, "Adjust image sharpness"
         )
         
         # LUT selection
@@ -203,18 +222,20 @@ class ColorCorrectionPanelQt(QWidget):
         lut_layout.addWidget(QLabel("LUT:"))
         self.lut_combo = QComboBox()
         self.lut_combo.addItems(["None", "Warm", "Cool", "Cinematic", "Vintage"])
+        self._set_tooltip(self.lut_combo, "Apply color lookup table for stylized color grading")
         lut_layout.addWidget(self.lut_combo, 1)
         group_layout.addLayout(lut_layout)
         
         # Reset button
         reset_btn = QPushButton("Reset to Defaults")
         reset_btn.clicked.connect(self._reset_controls)
+        self._set_tooltip(reset_btn, "Reset all adjustments to default values")
         group_layout.addWidget(reset_btn)
         
         group.setLayout(group_layout)
         layout.addWidget(group)
     
-    def _create_slider(self, layout, label, min_val, max_val, default):
+    def _create_slider(self, layout, label, min_val, max_val, default, tooltip=""):
         """Create a labeled slider with value display."""
         row = QHBoxLayout()
         
@@ -226,6 +247,8 @@ class ColorCorrectionPanelQt(QWidget):
         slider.setMinimum(min_val)
         slider.setMaximum(max_val)
         slider.setValue(default)
+        if tooltip:
+            self._set_tooltip(slider, tooltip)
         row.addWidget(slider, 1)
         
         value_label = QLabel(str(default))
@@ -234,6 +257,7 @@ class ColorCorrectionPanelQt(QWidget):
         row.addWidget(value_label)
         
         slider.valueChanged.connect(lambda v: value_label.setText(str(v)))
+        slider.valueChanged.connect(self._update_preview)
         
         layout.addLayout(row)
         return slider
@@ -260,14 +284,50 @@ class ColorCorrectionPanelQt(QWidget):
         self.process_btn = QPushButton("🎨 Apply Color Correction")
         self.process_btn.clicked.connect(self._start_processing)
         self.process_btn.setEnabled(False)
+        self._set_tooltip(self.process_btn, "Apply color corrections to all selected images")
         btn_layout.addWidget(self.process_btn)
         
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.clicked.connect(self._cancel_processing)
         self.cancel_btn.setEnabled(False)
+        self._set_tooltip(self.cancel_btn, "Cancel current processing")
         btn_layout.addWidget(self.cancel_btn)
         
         group_layout.addLayout(btn_layout)
+        
+        group.setLayout(group_layout)
+        layout.addWidget(group)
+    
+    def _create_preview_section(self, layout):
+        """Create live preview section with comparison slider."""
+        group = QGroupBox("👁️ Live Preview (Before/After)")
+        group_layout = QVBoxLayout()
+        
+        # File selector for preview
+        file_layout = QHBoxLayout()
+        file_layout.addWidget(QLabel("Preview file:"))
+        self.preview_file_combo = QComboBox()
+        self.preview_file_combo.currentTextChanged.connect(self._load_preview_file)
+        self._set_tooltip(self.preview_file_combo, "Select which file to preview")
+        file_layout.addWidget(self.preview_file_combo, 1)
+        group_layout.addLayout(file_layout)
+        
+        # Comparison mode selector
+        mode_layout = QHBoxLayout()
+        mode_layout.addWidget(QLabel("Comparison:"))
+        self.comparison_mode_combo = QComboBox()
+        self.comparison_mode_combo.addItems(["Slider", "Toggle", "Overlay"])
+        self.comparison_mode_combo.currentTextChanged.connect(self._on_comparison_mode_changed)
+        self._set_tooltip(self.comparison_mode_combo, "Choose comparison mode")
+        mode_layout.addWidget(self.comparison_mode_combo)
+        mode_layout.addStretch()
+        group_layout.addLayout(mode_layout)
+        
+        # Comparison slider widget
+        self.preview_widget = ComparisonSliderWidget()
+        self.preview_widget.setMinimumHeight(300)
+        self._set_tooltip(self.preview_widget, "Drag slider to compare before/after color correction")
+        group_layout.addWidget(self.preview_widget)
         
         group.setLayout(group_layout)
         layout.addWidget(group)
@@ -284,6 +344,15 @@ class ColorCorrectionPanelQt(QWidget):
         if files:
             self.input_files = [Path(f) for f in files]
             self.input_label.setText(f"Selected: {len(self.input_files)} files")
+            
+            # Update preview file combo
+            if SLIDER_AVAILABLE and hasattr(self, 'preview_file_combo'):
+                self.preview_file_combo.clear()
+                for f in self.input_files:
+                    self.preview_file_combo.addItem(f.name, str(f))
+                if self.input_files:
+                    self._load_preview_file(self.input_files[0].name)
+            
             self._update_ui_state()
     
     def _select_output(self):
@@ -388,3 +457,48 @@ class ColorCorrectionPanelQt(QWidget):
             self.worker.cancel()
             self.worker.wait()
             self.worker = None
+    
+    def _load_preview_file(self, filename):
+        """Load a file for preview."""
+        if not SLIDER_AVAILABLE or not hasattr(self, 'preview_widget'):
+            return
+        
+        # Find the full path for this filename
+        for f in self.input_files:
+            if f.name == filename:
+                self.preview_file = f
+                pixmap = QPixmap(str(f))
+                self.preview_widget.set_before_image(pixmap)
+                self._update_preview()
+                break
+    
+    def _update_preview(self):
+        """Update the preview with current adjustments."""
+        if not SLIDER_AVAILABLE or not hasattr(self, 'preview_widget'):
+            return
+        if not self.preview_file:
+            return
+        
+        # For now, just show the same image (TODO: apply adjustments)
+        # In a full implementation, apply brightness, contrast, etc. here
+        pixmap = QPixmap(str(self.preview_file))
+        self.preview_widget.set_after_image(pixmap)
+    
+    def _on_comparison_mode_changed(self, mode_text):
+        """Handle comparison mode change."""
+        if not SLIDER_AVAILABLE or not hasattr(self, 'preview_widget'):
+            return
+        
+        mode_map = {
+            "Slider": "slider",
+            "Toggle": "toggle",
+            "Overlay": "overlay"
+        }
+        self.preview_widget.set_mode(mode_map.get(mode_text, "slider"))
+    
+    def _set_tooltip(self, widget, text):
+        """Set tooltip on a widget using tooltip manager if available."""
+        if self.tooltip_manager and hasattr(self.tooltip_manager, 'set_tooltip'):
+            self.tooltip_manager.set_tooltip(widget, text)
+        else:
+            widget.setToolTip(text)
