@@ -14,6 +14,7 @@ from PyQt6.QtGui import QPixmap, QImage
 from pathlib import Path
 from typing import List, Optional
 import logging
+import os
 from PIL import Image
 import numpy as np
 
@@ -49,6 +50,14 @@ class AlphaFixWorker(QThread):
             for i, filepath in enumerate(self.files):
                 progress = ((i + 1) / len(self.files)) * 100
                 self.progress.emit(progress, f"Processing: {Path(filepath).name}")
+                
+                # Validate file exists and is readable
+                if not os.path.exists(filepath):
+                    logger.warning(f"File not found, skipping: {filepath}")
+                    continue
+                if not os.access(filepath, os.R_OK):
+                    logger.warning(f"File not readable, skipping: {filepath}")
+                    continue
                 
                 # Process image
                 image = Image.open(filepath)
@@ -365,8 +374,9 @@ class AlphaFixerPanelQt(QWidget):
             4: {"defringe": True, "threshold": 35},  # Game Asset
         }
         
+        # Get preset settings with bounds checking
         if index < 5:
-            settings = presets[index]
+            settings = presets.get(index, presets[0])  # Use .get() for safety
             self.defringe_slider.setValue(settings["threshold"])
     
     def _preview_first(self):
