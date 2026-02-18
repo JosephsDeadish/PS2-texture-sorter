@@ -277,18 +277,59 @@ class BackgroundRemoverPanelQt(QWidget):
         self.size_spinbox.setValue(value)
     
     def auto_remove_background(self):
-        """Automatically remove background."""
+        """
+        Automatically remove background using AI (rembg).
+        
+        FUTURE FEATURE: This requires the 'rembg' library to be installed.
+        
+        Installation: pip install rembg
+        
+        When implemented, this will:
+        1. Load the current image
+        2. Use rembg to remove the background
+        3. Save the result with alpha transparency
+        4. Update the preview with the processed image
+        5. Add to edit history for undo/redo
+        
+        For now, shows a message to the user that this feature is planned.
+        """
         if not self.current_image:
             return
         
-        # TODO: Implement actual background removal using rembg
-        # For now, just notify that feature is not yet implemented
-        # Once implemented, update preview with processed image
-        if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
-            # Note: This is a placeholder. The actual background removal
-            # will be implemented when rembg integration is complete.
-            # For now, we just show the original image in both views.
-            pass
+        # Check if rembg is available
+        try:
+            import rembg
+            rembg_available = True
+        except ImportError:
+            rembg_available = False
+        
+        if not rembg_available:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.information(
+                self,
+                "Feature Not Available",
+                "Automatic background removal requires the 'rembg' library.\n\n"
+                "To enable this feature, install it with:\n"
+                "pip install rembg\n\n"
+                "This feature is planned for a future release."
+            )
+            return
+        
+        # TODO: Implement actual background removal when rembg is available
+        # Basic implementation would be:
+        # 1. Load image with PIL
+        # 2. Process with rembg.remove()
+        # 3. Save with alpha transparency
+        # 4. Update preview
+        # 5. Add to history
+        
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(
+            self,
+            "Feature Coming Soon",
+            "Automatic background removal is available but not yet integrated.\n\n"
+            "Manual tools (Brush, Eraser, Fill) are available now."
+        )
         
         if self.processing_complete:
             self.processing_complete.emit()
