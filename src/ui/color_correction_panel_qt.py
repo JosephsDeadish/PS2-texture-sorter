@@ -469,9 +469,8 @@ class ColorCorrectionPanelQt(QWidget):
                 self.preview_file = f
                 pixmap = QPixmap(str(f))
                 self.preview_widget.set_before_image(pixmap)
-                # Note: The _update_preview() will be called by slider changes
-                # For now, we don't apply color corrections in preview
-                # as this would require full image processing pipeline
+                # Trigger preview update
+                self._update_preview()
                 break
     
     def _update_preview(self):
@@ -481,12 +480,44 @@ class ColorCorrectionPanelQt(QWidget):
         if not self.preview_file:
             return
         
-        # Note: Real-time color correction preview is not implemented yet
-        # This would require applying PIL ImageEnhance operations in real-time
-        # For now, the preview shows before/after with the original image
-        # Full color correction is applied when the process button is clicked
-        # TODO: Implement real-time preview with PIL ImageEnhance
-        pass
+        try:
+            # Load original image
+            from PIL import Image, ImageEnhance
+            img = Image.open(str(self.preview_file))
+            
+            # Get current slider values
+            brightness = self.brightness_slider.value() / 100.0  # -1.0 to 1.0
+            contrast = self.contrast_slider.value() / 100.0
+            saturation = self.saturation_slider.value() / 100.0
+            sharpness = self.sharpness_slider.value() / 100.0  # 0.0 to 2.0
+            
+            # Apply adjustments
+            if brightness != 0:
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(1.0 + brightness)
+            
+            if contrast != 0:
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.0 + contrast)
+            
+            if saturation != 0:
+                enhancer = ImageEnhance.Color(img)
+                img = enhancer.enhance(1.0 + saturation)
+            
+            if sharpness != 1.0:
+                enhancer = ImageEnhance.Sharpness(img)
+                img = enhancer.enhance(sharpness)
+            
+            # Convert PIL image to QPixmap
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                img.save(tmp.name, 'PNG')
+                pixmap = QPixmap(tmp.name)
+                self.preview_widget.set_after_image(pixmap)
+                
+        except Exception as e:
+            import logging
+            logging.error(f"Preview update failed: {e}")
     
     def _on_comparison_mode_changed(self, mode_text):
         """Handle comparison mode change."""

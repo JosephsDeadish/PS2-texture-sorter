@@ -46,6 +46,11 @@ class BackgroundRemoverPanelQt(QWidget):
         self.brush_size = 10
         self.current_tool = "brush"
         
+        # Undo/Redo history management
+        self.edit_history = []
+        self.history_index = -1
+        self.max_history = 50
+        
         self.setup_ui()
     
     def setup_ui(self):
@@ -201,8 +206,10 @@ class BackgroundRemoverPanelQt(QWidget):
                 self.image_loaded.emit(file_path)
     
     def save_image(self):
-        """Save the processed image."""
+        """Save the processed image with transparency."""
         if not self.current_image:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "No Image", "No image to save. Please load an image first.")
             return
         
         file_path, _ = QFileDialog.getSaveFileName(
@@ -213,8 +220,27 @@ class BackgroundRemoverPanelQt(QWidget):
         )
         
         if file_path:
-            # Implement save logic
-            pass
+            try:
+                # Ensure .png extension for transparency support
+                if not any(file_path.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg']):
+                    file_path += '.png'
+                
+                # Load and save the image
+                from PIL import Image
+                img = Image.open(self.processed_image if self.processed_image else self.current_image)
+                
+                # Convert to RGBA if saving as PNG
+                if file_path.lower().endswith('.png') and img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                
+                # Save
+                img.save(file_path, optimize=True)
+                
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Success", f"Image saved to:\n{file_path}")
+            except Exception as e:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "Error", f"Failed to save image:\n{str(e)}")
     
     def select_tool(self, tool):
         """Select a paint tool."""
@@ -259,16 +285,46 @@ class BackgroundRemoverPanelQt(QWidget):
             self.processing_complete.emit()
     
     def clear_all(self):
-        """Clear all edits."""
-        pass
+        """Clear all edits and reset to original."""
+        if not self.current_image:
+            return
+        
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self, "Clear All",
+            "Clear all edits and reset to original image?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.processed_image = None
+            self.edit_history = []
+            self.history_index = -1
+            
+            # Update preview
+            if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
+                pixmap = QPixmap(self.current_image)
+                self.preview_widget.set_after_image(pixmap)
     
     def undo(self):
         """Undo last action."""
-        pass
+        if self.history_index > 0:
+            self.history_index -= 1
+            self.processed_image = self.edit_history[self.history_index]
+            
+            if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
+                pixmap = QPixmap(self.processed_image)
+                self.preview_widget.set_after_image(pixmap)
     
     def redo(self):
         """Redo last undone action."""
-        pass
+        if self.history_index < len(self.edit_history) - 1:
+            self.history_index += 1
+            self.processed_image = self.edit_history[self.history_index]
+            
+            if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
+                pixmap = QPixmap(self.processed_image)
+                self.preview_widget.set_after_image(pixmap)
     
     def _on_comparison_mode_changed(self, mode_text):
         """Handle comparison mode change."""
