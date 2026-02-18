@@ -552,6 +552,11 @@ class TextureSorterMainWindow(QMainWindow):
             from ui.customization_panel_qt import CustomizationPanelQt
             if panda_char is not None:
                 custom_panel = CustomizationPanelQt(panda_char, self.panda_widget)
+                
+                # Connect customization panel signals
+                custom_panel.color_changed.connect(self.on_customization_color_changed)
+                custom_panel.trail_changed.connect(self.on_customization_trail_changed)
+                
                 panda_tabs.addTab(custom_panel, "🎨 Customization")
                 logger.info("✅ Customization panel added to panda tab")
         except Exception as e:
@@ -1219,6 +1224,32 @@ class TextureSorterMainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Error handling panda animation change: {e}", exc_info=True)
+    
+    def on_customization_color_changed(self, color_data: dict):
+        """Handle color changes from customization panel."""
+        try:
+            color_type = color_data.get('type', 'unknown')
+            color_rgb = color_data.get('color', (255, 255, 255))
+            logger.info(f"Customization: {color_type} color changed to RGB{color_rgb}")
+            
+            # Apply the color change to the panda widget if it has the method
+            if hasattr(self.panda_widget, 'set_color'):
+                self.panda_widget.set_color(color_type, color_rgb)
+            
+        except Exception as e:
+            logger.error(f"Error handling customization color change: {e}", exc_info=True)
+    
+    def on_customization_trail_changed(self, trail_type: str, trail_data: dict):
+        """Handle trail changes from customization panel."""
+        try:
+            logger.info(f"Customization: trail changed to {trail_type} with settings {trail_data}")
+            
+            # Apply the trail change to the panda widget if it has the method
+            if hasattr(self.panda_widget, 'set_trail'):
+                self.panda_widget.set_trail(trail_type, trail_data)
+            
+        except Exception as e:
+            logger.error(f"Error handling customization trail change: {e}", exc_info=True)
     
     def show_about(self):
         """Show about dialog."""

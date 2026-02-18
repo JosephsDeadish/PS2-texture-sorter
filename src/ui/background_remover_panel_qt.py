@@ -96,22 +96,26 @@ class BackgroundRemoverPanelQt(QWidget):
         
         layout.addLayout(file_layout)
         
-        # Archive options
+        # Archive options (not yet implemented - disabled for now)
         archive_layout = QHBoxLayout()
         
-        self.archive_input_cb = QCheckBox("📦 Input is Archive")
+        self.archive_input_cb = QCheckBox("📦 Input is Archive (Not Yet Implemented)")
+        self.archive_input_cb.setEnabled(False)  # Disable until implemented
         if not ARCHIVE_AVAILABLE:
             self.archive_input_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
             self.archive_input_cb.setStyleSheet("color: gray;")
         else:
+            self.archive_input_cb.setToolTip("⚠️ Archive support is not yet implemented for background remover")
             self._set_tooltip(self.archive_input_cb, 'input_archive_checkbox')
         archive_layout.addWidget(self.archive_input_cb)
         
-        self.archive_output_cb = QCheckBox("📦 Export to Archive")
+        self.archive_output_cb = QCheckBox("📦 Export to Archive (Not Yet Implemented)")
+        self.archive_output_cb.setEnabled(False)  # Disable until implemented
         if not ARCHIVE_AVAILABLE:
             self.archive_output_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
             self.archive_output_cb.setStyleSheet("color: gray;")
         else:
+            self.archive_output_cb.setToolTip("⚠️ Archive support is not yet implemented for background remover")
             self._set_tooltip(self.archive_output_cb, 'output_archive_checkbox')
         archive_layout.addWidget(self.archive_output_cb)
         
