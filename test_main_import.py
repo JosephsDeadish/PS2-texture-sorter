@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script to verify main.py can be imported and initialized without errors.
 This is a minimal test that doesn't require a display.
 """
 import sys
 import os
+
+# Fix Unicode encoding issues on Windows
+# This prevents UnicodeEncodeError when printing emojis to console
+if sys.platform == 'win32':
+    import codecs
+    # Reconfigure stdout and stderr to use UTF-8 encoding
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    # Also set environment variable for child processes
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 # Set up offscreen platform for Qt
 os.environ['QT_QPA_PLATFORM'] = 'offscreen'

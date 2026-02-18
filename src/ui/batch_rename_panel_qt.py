@@ -345,9 +345,18 @@ class BatchRenamePanelQt(QWidget):
             # Get all image files in directory
             extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.tiff', '.webp'}
             files = []
-            for file in os.listdir(directory):
-                if any(file.lower().endswith(ext) for ext in extensions):
-                    files.append(os.path.join(directory, file))
+            try:
+                for file in os.listdir(directory):
+                    if any(file.lower().endswith(ext) for ext in extensions):
+                        files.append(os.path.join(directory, file))
+            except (OSError, PermissionError) as e:
+                logger.error(f"Error accessing directory {directory}: {e}")
+                QMessageBox.warning(
+                    self,
+                    "Directory Access Error",
+                    f"Could not access directory:\n{directory}\n\n{str(e)}"
+                )
+                return
             
             if files:
                 self.selected_files = files

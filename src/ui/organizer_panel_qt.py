@@ -263,8 +263,9 @@ class OrganizerWorker(QThread):
         extensions = {'.dds', '.png', '.jpg', '.jpeg', '.tga', '.bmp'}
         files = []
         
-        # Use checkbox if available, otherwise fall back to settings
-        recursive = self.subfolders_cb.isChecked() if hasattr(self, 'subfolders_cb') else self.settings.get('recursive', True)
+        # Get recursive setting from settings dict (thread-safe)
+        # Never access UI widgets from worker thread
+        recursive = self.settings.get('recursive', True)
         
         if recursive:
             for ext in extensions:

@@ -715,6 +715,11 @@ class ImageUpscalerPanelQt(QWidget):
     def _display_preview(self, original, processed):
         """Display the preview in comparison slider."""
         try:
+            # Ensure preview widget exists
+            if not hasattr(self, 'preview_widget') or self.preview_widget is None:
+                logger.warning("Preview widget not available")
+                return
+            
             # Convert to QPixmap
             orig_pixmap = self._pil_to_pixmap(original)
             proc_pixmap = self._pil_to_pixmap(processed)

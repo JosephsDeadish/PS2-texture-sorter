@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Game Texture Sorter - Qt Main Application
 A Qt6-based application with OpenGL rendering.
@@ -9,6 +10,18 @@ import sys
 import os
 import logging
 from pathlib import Path
+
+# Fix Unicode encoding issues on Windows
+# This prevents UnicodeEncodeError when printing emojis to console
+if sys.platform == 'win32':
+    import codecs
+    # Reconfigure stdout and stderr to use UTF-8 encoding
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    if hasattr(sys.stderr, 'buffer'):
+        sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+    # Also set environment variable for child processes
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
 
 # CRITICAL: Add src directory to sys.path BEFORE any src imports
 # This ensures that all imports from src/ work correctly, particularly config.py
@@ -221,6 +234,12 @@ class TextureSorterMainWindow(QMainWindow):
                 self.panda_widget = PandaOpenGLWidget()
                 self.panda_widget.setMinimumWidth(300)
                 self.panda_widget.setMaximumWidth(400)
+                
+                # Connect panda widget signals
+                self.panda_widget.clicked.connect(self.on_panda_clicked)
+                self.panda_widget.mood_changed.connect(self.on_panda_mood_changed)
+                self.panda_widget.animation_changed.connect(self.on_panda_animation_changed)
+                
                 splitter.addWidget(self.panda_widget)
                 splitter.setStretchFactor(0, 3)  # Content gets 75%
                 splitter.setStretchFactor(1, 1)  # Panda gets 25%
@@ -532,7 +551,12 @@ class TextureSorterMainWindow(QMainWindow):
         try:
             from ui.customization_panel_qt import CustomizationPanelQt
             if panda_char is not None:
-                custom_panel = CustomizationPanelQt(panda_char, self.panda_widget)
+                custom_panel = CustomizationPanelQt(panda_char, self.panda_widget, tooltip_manager=self.tooltip_manager)
+                
+                # Connect customization panel signals
+                custom_panel.color_changed.connect(self.on_customization_color_changed)
+                custom_panel.trail_changed.connect(self.on_customization_trail_changed)
+                
                 panda_tabs.addTab(custom_panel, "🎨 Customization")
                 logger.info("✅ Customization panel added to panda tab")
         except Exception as e:
@@ -548,7 +572,11 @@ class TextureSorterMainWindow(QMainWindow):
             shop_system = ShopSystem()
             currency_system = CurrencySystem()
             
-            shop_panel = ShopPanelQt(shop_system, currency_system)
+            shop_panel = ShopPanelQt(shop_system, currency_system, tooltip_manager=self.tooltip_manager)
+            
+            # Connect shop panel signals
+            shop_panel.item_purchased.connect(self.on_shop_item_purchased)
+            
             panda_tabs.addTab(shop_panel, "🛒 Shop")
             logger.info("✅ Shop panel added to panda tab")
         except Exception as e:
@@ -564,7 +592,11 @@ class TextureSorterMainWindow(QMainWindow):
             from features.shop_system import ShopSystem
             
             shop_system = ShopSystem()  # Reuse or get existing
-            inventory_panel = InventoryPanelQt(shop_system)
+            inventory_panel = InventoryPanelQt(shop_system, tooltip_manager=self.tooltip_manager)
+            
+            # Connect inventory panel signals
+            inventory_panel.item_selected.connect(self.on_inventory_item_selected)
+            
             panda_tabs.addTab(inventory_panel, "📦 Inventory")
             logger.info("✅ Inventory panel added to panda tab")
         except Exception as e:
@@ -577,7 +609,7 @@ class TextureSorterMainWindow(QMainWindow):
         # 4. Closet Tab
         try:
             from ui.closet_display_qt import ClosetDisplayWidget
-            closet_panel = ClosetDisplayWidget()
+            closet_panel = ClosetDisplayWidget(tooltip_manager=self.tooltip_manager)
             panda_tabs.addTab(closet_panel, "👔 Closet")
             logger.info("✅ Closet panel added to panda tab")
         except Exception as e:
@@ -593,7 +625,7 @@ class TextureSorterMainWindow(QMainWindow):
             from features.achievements import AchievementSystem
             
             achievement_system = AchievementSystem()
-            achievement_panel = AchievementDisplayWidget(achievement_system)
+            achievement_panel = AchievementDisplayWidget(achievement_system, tooltip_manager=self.tooltip_manager)
             panda_tabs.addTab(achievement_panel, "🏆 Achievements")
             logger.info("✅ Achievements panel added to panda tab")
         except Exception as e:
@@ -1161,6 +1193,98 @@ class TextureSorterMainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Error handling settings change: {e}", exc_info=True)
+    
+    def on_panda_clicked(self):
+        """Handle panda widget click events."""
+        try:
+            # Log the interaction
+            self.log("🐼 Panda clicked!")
+            logger.info("Panda widget clicked")
+            
+            # You can add custom behavior here, such as:
+            # - Playing a sound
+            # - Showing a message
+            # - Updating panda state
+            
+        except Exception as e:
+            logger.error(f"Error handling panda click: {e}", exc_info=True)
+    
+    def on_panda_mood_changed(self, mood: str):
+        """Handle panda mood changes."""
+        try:
+            # Log the mood change
+            logger.info(f"Panda mood changed to: {mood}")
+            
+            # Update status bar to reflect mood
+            self.statusbar.showMessage(f"🐼 Panda is feeling {mood}", 3000)
+            
+        except Exception as e:
+            logger.error(f"Error handling panda mood change: {e}", exc_info=True)
+    
+    def on_panda_animation_changed(self, animation: str):
+        """Handle panda animation state changes."""
+        try:
+            # Log animation state changes
+            logger.debug(f"Panda animation changed to: {animation}")
+            
+            # You can add custom behavior here based on animation state
+            # For example, update UI elements or trigger other animations
+            
+        except Exception as e:
+            logger.error(f"Error handling panda animation change: {e}", exc_info=True)
+    
+    def on_customization_color_changed(self, color_data: dict):
+        """Handle color changes from customization panel."""
+        try:
+            color_type = color_data.get('type', 'unknown')
+            color_rgb = color_data.get('color', (255, 255, 255))
+            logger.info(f"Customization: {color_type} color changed to RGB{color_rgb}")
+            
+            # Apply the color change to the panda widget if it has the method
+            if hasattr(self.panda_widget, 'set_color'):
+                self.panda_widget.set_color(color_type, color_rgb)
+            
+        except Exception as e:
+            logger.error(f"Error handling customization color change: {e}", exc_info=True)
+    
+    def on_customization_trail_changed(self, trail_type: str, trail_data: dict):
+        """Handle trail changes from customization panel."""
+        try:
+            logger.info(f"Customization: trail changed to {trail_type} with settings {trail_data}")
+            
+            # Apply the trail change to the panda widget if it has the method
+            if hasattr(self.panda_widget, 'set_trail'):
+                self.panda_widget.set_trail(trail_type, trail_data)
+            
+        except Exception as e:
+            logger.error(f"Error handling customization trail change: {e}", exc_info=True)
+    
+    def on_shop_item_purchased(self, item_id: str):
+        """Handle item purchase from shop panel."""
+        try:
+            logger.info(f"Item purchased: {item_id}")
+            self.log(f"🛒 Purchased item: {item_id}")
+            
+            # You can add additional logic here:
+            # - Play purchase sound
+            # - Show achievement notification
+            # - Update panda appearance if item is clothing
+            
+        except Exception as e:
+            logger.error(f"Error handling shop purchase: {e}", exc_info=True)
+    
+    def on_inventory_item_selected(self, item_id: str):
+        """Handle item selection from inventory panel."""
+        try:
+            logger.info(f"Inventory item selected: {item_id}")
+            
+            # You can add custom behavior here:
+            # - Show item details
+            # - Allow equipping/unequipping
+            # - Preview item on panda
+            
+        except Exception as e:
+            logger.error(f"Error handling inventory selection: {e}", exc_info=True)
     
     def show_about(self):
         """Show about dialog."""
