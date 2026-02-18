@@ -439,31 +439,31 @@ class TextureSorterMainWindow(QMainWindow):
                 tool_tabs.addTab(color_panel, "🎨 Color Correction")
                 
                 # Batch Normalizer
-                norm_panel = BatchNormalizerPanelQt()
+                norm_panel = BatchNormalizerPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(norm_panel, "⚙️ Batch Normalizer")
                 
                 # Quality Checker
-                quality_panel = QualityCheckerPanelQt()
+                quality_panel = QualityCheckerPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(quality_panel, "✓ Quality Checker")
                 
                 # Image Upscaler
-                upscaler_panel = ImageUpscalerPanelQt()
+                upscaler_panel = ImageUpscalerPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(upscaler_panel, "🔍 Image Upscaler")
                 
                 # Line Art Converter
-                line_panel = LineArtConverterPanelQt()
+                line_panel = LineArtConverterPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(line_panel, "✏️ Line Art Converter")
                 
                 # Batch Rename
-                rename_panel = BatchRenamePanelQt()
+                rename_panel = BatchRenamePanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(rename_panel, "📝 Batch Rename")
                 
                 # Image Repair
-                repair_panel = ImageRepairPanelQt()
+                repair_panel = ImageRepairPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(repair_panel, "🔧 Image Repair")
                 
                 # Texture Organizer
-                organizer_panel = OrganizerPanelQt()
+                organizer_panel = OrganizerPanelQt(tooltip_manager=self.tooltip_manager)
                 tool_tabs.addTab(organizer_panel, "📁 Texture Organizer")
                 
                 self.log("✅ All tool panels loaded successfully")

@@ -416,3 +416,10 @@ class BatchNormalizerPanelQt(QWidget):
             2: NamingPattern.CUSTOM_PREFIX
         }
         return patterns.get(self.naming_combo.currentIndex(), NamingPattern.KEEP_ORIGINAL)
+
+    def _set_tooltip(self, widget, text):
+        """Set tooltip on a widget using tooltip manager if available."""
+        if self.tooltip_manager and hasattr(self.tooltip_manager, 'set_tooltip'):
+            self.tooltip_manager.set_tooltip(widget, text)
+        else:
+            widget.setToolTip(text)

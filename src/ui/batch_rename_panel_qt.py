@@ -479,3 +479,10 @@ class BatchRenamePanelQt(QWidget):
         except Exception as e:
             logger.error(f"Error during undo: {e}")
             QMessageBox.critical(self, "Error", f"Failed to undo: {str(e)}")
+
+    def _set_tooltip(self, widget, text):
+        """Set tooltip on a widget using tooltip manager if available."""
+        if self.tooltip_manager and hasattr(self.tooltip_manager, 'set_tooltip'):
+            self.tooltip_manager.set_tooltip(widget, text)
+        else:
+            widget.setToolTip(text)

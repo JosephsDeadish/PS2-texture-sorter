@@ -251,13 +251,14 @@ class PreviewWorker(QThread):
 class ImageUpscalerPanelQt(QWidget):
     """PyQt6 panel for image upscaling."""
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, tooltip_manager=None):
         super().__init__(parent)
         
         if not UPSCALER_AVAILABLE:
             self._show_unavailable()
             return
         
+        self.tooltip_manager = tooltip_manager
         self.upscaler = TextureUpscaler()
         self.selected_files: List[str] = []
         self.output_directory: Optional[str] = None
@@ -1002,3 +1003,10 @@ class ImageUpscalerPanelQt(QWidget):
             QMessageBox.warning(self, "Error", message)
         
         self.worker_thread = None
+    
+    def _set_tooltip(self, widget, text):
+        """Set tooltip on a widget using tooltip manager if available."""
+        if self.tooltip_manager and hasattr(self.tooltip_manager, 'set_tooltip'):
+            self.tooltip_manager.set_tooltip(widget, text)
+        else:
+            widget.setToolTip(text)
