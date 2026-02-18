@@ -82,6 +82,8 @@ try:
     from ui.upscaler_panel_qt import ImageUpscalerPanelQt
     from ui.organizer_panel_qt import OrganizerPanelQt
     from ui.settings_panel_qt import SettingsPanelQt
+    from ui.file_browser_panel_qt import FileBrowserPanelQt
+    from ui.notepad_panel_qt import NotepadPanelQt
     UI_PANELS_AVAILABLE = True
     logger.info("✅ UI panels loaded successfully")
 except ImportError as e:
@@ -194,6 +196,12 @@ class TextureSorterMainWindow(QMainWindow):
         
         # Create tools tab (includes sorting + all tools)
         self.create_tools_tab()
+        
+        # Create file browser tab
+        self.create_file_browser_tab()
+        
+        # Create notepad tab
+        self.create_notepad_tab()
         
         # Create settings tab
         self.create_settings_tab()
@@ -509,6 +517,54 @@ class TextureSorterMainWindow(QMainWindow):
                 logger.error(f"Could not load customization panel: {e}", exc_info=True)
         
         self.tabs.addTab(tab, "Tools")
+    
+    def create_file_browser_tab(self):
+        """Create file browser tab."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        try:
+            if UI_PANELS_AVAILABLE:
+                tooltip_manager = getattr(self, 'tooltip_manager', None)
+                self.file_browser_panel = FileBrowserPanelQt(config, tooltip_manager)
+                layout.addWidget(self.file_browser_panel)
+                self.log("✅ File browser panel loaded successfully")
+            else:
+                label = QLabel("⚠️ File browser requires PyQt6 and PIL\n\nInstall with: pip install PyQt6 Pillow")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(label)
+        except Exception as e:
+            logger.error(f"Error loading file browser panel: {e}", exc_info=True)
+            label = QLabel(f"⚠️ Error loading file browser:\n{e}")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(label)
+        
+        self.tabs.addTab(tab, "📁 File Browser")
+    
+    def create_notepad_tab(self):
+        """Create notepad tab."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        try:
+            if UI_PANELS_AVAILABLE:
+                tooltip_manager = getattr(self, 'tooltip_manager', None)
+                self.notepad_panel = NotepadPanelQt(config, tooltip_manager)
+                layout.addWidget(self.notepad_panel)
+                self.log("✅ Notepad panel loaded successfully")
+            else:
+                label = QLabel("⚠️ Notepad requires PyQt6\n\nInstall with: pip install PyQt6")
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(label)
+        except Exception as e:
+            logger.error(f"Error loading notepad panel: {e}", exc_info=True)
+            label = QLabel(f"⚠️ Error loading notepad:\n{e}")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(label)
+        
+        self.tabs.addTab(tab, "📝 Notepad")
     
     def create_settings_tab(self):
         """Create settings tab."""

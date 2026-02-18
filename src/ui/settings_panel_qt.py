@@ -539,24 +539,105 @@ class SettingsPanelQt(QWidget):
             except ImportError:
                 from ui.ai_models_settings_tab import AIModelsSettingsTab
             return AIModelsSettingsTab(self.config)
+        except ImportError as e:
+            logger.warning(f"AI Models settings tab import error: {e}")
+            error_msg = str(e)
         except Exception as e:
-            logger.warning(f"AI Models settings tab not available: {e}")
+            logger.error(f"AI Models settings tab error: {e}", exc_info=True)
+            error_msg = str(e)
         
-        # Return a placeholder widget with helpful info
+        # Return a placeholder widget with detailed error info
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.addStretch()
-        label = QLabel(
+        
+        # Create error message with install instructions
+        error_text = (
             "🤖 AI Models Management\n\n"
             "Could not load AI Models settings.\n\n"
-            "💡 Try installing required packages:\n"
-            "   pip install torch transformers"
         )
+        
+        if "PyQt6" in error_msg:
+            error_text += (
+                "❌ Missing PyQt6\n\n"
+                "💡 Install with:\n"
+                "   pip install PyQt6\n\n"
+            )
+        elif "model_manager" in error_msg or "upscaler" in error_msg:
+            error_text += (
+                "❌ Model manager module not available\n\n"
+                "This is OK - the AI models tab is optional.\n"
+                "The application works fine without it.\n\n"
+                "If you want to use AI model management:\n"
+                "1. Ensure upscaler/model_manager.py exists\n"
+                "2. Install dependencies:\n"
+                "   pip install torch transformers\n\n"
+            )
+        else:
+            error_text += (
+                f"❌ Error: {error_msg}\n\n"
+                "💡 Try installing AI dependencies:\n"
+                "   pip install torch transformers\n\n"
+                "Or use minimal install:\n"
+                "   pip install -r requirements-minimal.txt\n\n"
+            )
+        
+        label = QLabel(error_text)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setWordWrap(True)
+        label.setStyleSheet("""
+            QLabel {
+                font-size: 11pt;
+                padding: 20px;
+                background-color: #fff8dc;
+                border: 2px solid #f0ad4e;
+                border-radius: 8px;
+                color: #333;
+            }
+        """)
         layout.addWidget(label)
+        
+        # Add helpful button
+        install_btn = QPushButton("📖 View Installation Guide")
+        install_btn.clicked.connect(self.show_ai_install_guide)
+        install_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #5cb85c;
+                color: white;
+                padding: 10px 20px;
+                font-size: 11pt;
+                font-weight: bold;
+                border-radius: 4px;
+                max-width: 300px;
+            }
+            QPushButton:hover {
+                background-color: #4cae4c;
+            }
+        """)
+        layout.addWidget(install_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+        
         layout.addStretch()
         return widget
+    
+    def show_ai_install_guide(self):
+        """Show detailed installation guide for AI features"""
+        guide = QMessageBox(self)
+        guide.setWindowTitle("AI Models Installation Guide")
+        guide.setIcon(QMessageBox.Icon.Information)
+        guide.setText("📚 How to Enable AI Model Management")
+        guide.setInformativeText(
+            "The AI Models tab requires optional dependencies.\n\n"
+            "**Basic Installation (CPU):**\n"
+            "pip install torch transformers\n\n"
+            "**GPU Support (NVIDIA):**\n"
+            "Visit https://pytorch.org/ for CUDA versions\n\n"
+            "**Minimal Installation (No AI):**\n"
+            "pip install -r requirements-minimal.txt\n\n"
+            "The application works great without AI features!\n"
+            "You can still use all other tools."
+        )
+        guide.setStandardButtons(QMessageBox.StandardButton.Ok)
+        guide.exec()
     
     def create_advanced_tab(self):
         """Create advanced settings tab"""
