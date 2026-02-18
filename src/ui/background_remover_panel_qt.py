@@ -3,8 +3,12 @@ Qt implementation of the background remover panel.
 Pure PyQt6 UI for AI-powered background removal.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
-    from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    from PyQt6.QtWidgets (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                                   QLabel, QSlider, QFileDialog, QSpinBox, QCheckBox,
                                   QGroupBox, QComboBox, QMessageBox)
     from PyQt6.QtCore import Qt, pyqtSignal
@@ -28,6 +32,7 @@ try:
     ARCHIVE_AVAILABLE = True
 except ImportError:
     ARCHIVE_AVAILABLE = False
+    logger.warning("Archive handler not available")
 
 # Try to import comparison slider
 try:
