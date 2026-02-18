@@ -198,26 +198,26 @@ class ColorCorrectionPanelQt(QWidget):
         
         group_layout.addLayout(output_layout)
         
-        # Archive options (not yet implemented - disabled for now)
+        # Archive options
         archive_layout = QHBoxLayout()
         
-        self.archive_input_cb = QCheckBox("📦 Input is Archive (Not Yet Implemented)")
-        self.archive_input_cb.setEnabled(False)  # Disable until implemented
+        self.archive_input_cb = QCheckBox("📦 Input is Archive")
         if not ARCHIVE_AVAILABLE:
+            self.archive_input_cb.setEnabled(False)
             self.archive_input_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
             self.archive_input_cb.setStyleSheet("color: gray;")
         else:
-            self.archive_input_cb.setToolTip("⚠️ Archive support is not yet implemented for color correction")
+            self.archive_input_cb.setToolTip("Extract images from archive file (ZIP, 7Z, RAR, TAR)")
             self._set_tooltip(self.archive_input_cb, 'input_archive_checkbox')
         archive_layout.addWidget(self.archive_input_cb)
         
-        self.archive_output_cb = QCheckBox("📦 Export to Archive (Not Yet Implemented)")
-        self.archive_output_cb.setEnabled(False)  # Disable until implemented
+        self.archive_output_cb = QCheckBox("📦 Export to Archive")
         if not ARCHIVE_AVAILABLE:
+            self.archive_output_cb.setEnabled(False)
             self.archive_output_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
             self.archive_output_cb.setStyleSheet("color: gray;")
         else:
-            self.archive_output_cb.setToolTip("⚠️ Archive support is not yet implemented for color correction")
+            self.archive_output_cb.setToolTip("Save processed images to archive file")
             self._set_tooltip(self.archive_output_cb, 'output_archive_checkbox')
         archive_layout.addWidget(self.archive_output_cb)
         

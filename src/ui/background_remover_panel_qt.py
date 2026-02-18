@@ -4,6 +4,8 @@ Pure PyQt6 UI for AI-powered background removal.
 """
 
 import logging
+import shutil
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,7 @@ class BackgroundRemoverPanelQt(QWidget):
         self.processed_image = None
         self.brush_size = 10
         self.current_tool = "brush"
+        self._temp_extract_dir = None  # Track temp directory for archive extraction
         
         # Undo/Redo history management
         self.edit_history = []
@@ -96,26 +99,26 @@ class BackgroundRemoverPanelQt(QWidget):
         
         layout.addLayout(file_layout)
         
-        # Archive options (not yet implemented - disabled for now)
+        # Archive options
         archive_layout = QHBoxLayout()
         
-        self.archive_input_cb = QCheckBox("📦 Input is Archive (Not Yet Implemented)")
-        self.archive_input_cb.setEnabled(False)  # Disable until implemented
+        self.archive_input_cb = QCheckBox("📦 Input is Archive")
         if not ARCHIVE_AVAILABLE:
+            self.archive_input_cb.setEnabled(False)
             self.archive_input_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
             self.archive_input_cb.setStyleSheet("color: gray;")
         else:
-            self.archive_input_cb.setToolTip("⚠️ Archive support is not yet implemented for background remover")
+            self.archive_input_cb.setToolTip("Extract images from archive file (ZIP, 7Z, RAR, TAR)")
             self._set_tooltip(self.archive_input_cb, 'input_archive_checkbox')
         archive_layout.addWidget(self.archive_input_cb)
         
-        self.archive_output_cb = QCheckBox("📦 Export to Archive (Not Yet Implemented)")
-        self.archive_output_cb.setEnabled(False)  # Disable until implemented
+        self.archive_output_cb = QCheckBox("📦 Export to Archive")
         if not ARCHIVE_AVAILABLE:
+            self.archive_output_cb.setEnabled(False)
             self.archive_output_cb.setToolTip("⚠️ Archive support not available. Install: pip install py7zr rarfile")
             self.archive_output_cb.setStyleSheet("color: gray;")
         else:
-            self.archive_output_cb.setToolTip("⚠️ Archive support is not yet implemented for background remover")
+            self.archive_output_cb.setToolTip("Save processed images to archive file")
             self._set_tooltip(self.archive_output_cb, 'output_archive_checkbox')
         archive_layout.addWidget(self.archive_output_cb)
         
@@ -231,24 +234,74 @@ class BackgroundRemoverPanelQt(QWidget):
         layout.addStretch()
     
     def load_image(self):
-        """Load an image file."""
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select Image",
-            "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
-        )
-        
-        if file_path:
-            self.current_image = file_path
+        """Load an image file or extract from archive."""
+        # Check if loading from archive
+        if ARCHIVE_AVAILABLE and self.archive_input_cb.isChecked():
+            # Select archive file
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select Archive",
+                "",
+                "Archives (*.zip *.7z *.rar *.tar *.tar.gz)"
+            )
             
-            # Update preview if available
-            if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
-                pixmap = QPixmap(file_path)
-                self.preview_widget.set_before_image(pixmap)
+            if file_path:
+                try:
+                    from utils.archive_handler import ArchiveHandler
+                    import tempfile
+                    
+                    archive_handler = ArchiveHandler()
+                    
+                    # Extract to temp directory
+                    temp_dir = Path(tempfile.mkdtemp(prefix="bg_remover_"))
+                    archive_handler.extract_archive(Path(file_path), temp_dir)
+                    
+                    # Find first image in extracted files
+                    image_extensions = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
+                    for img_file in temp_dir.rglob('*'):
+                        if img_file.suffix.lower() in image_extensions:
+                            self.current_image = str(img_file)
+                            self._temp_extract_dir = temp_dir  # Store for cleanup
+                            
+                            # Update preview
+                            if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
+                                pixmap = QPixmap(str(img_file))
+                                self.preview_widget.set_before_image(pixmap)
+                            
+                            if self.image_loaded:
+                                self.image_loaded.emit(str(img_file))
+                            
+                            QMessageBox.information(
+                                self,
+                                "Archive Extracted",
+                                f"Loaded image from archive: {img_file.name}"
+                            )
+                            return
+                    
+                    QMessageBox.warning(self, "No Images", "No image files found in archive")
+                    
+                except Exception as e:
+                    logger.error(f"Error extracting archive: {e}")
+                    QMessageBox.critical(self, "Error", f"Failed to extract archive:\n{str(e)}")
+        else:
+            # Normal file selection
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Select Image",
+                "",
+                "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
+            )
             
-            if self.image_loaded:
-                self.image_loaded.emit(file_path)
+            if file_path:
+                self.current_image = file_path
+                
+                # Update preview if available
+                if SLIDER_AVAILABLE and hasattr(self, 'preview_widget'):
+                    pixmap = QPixmap(file_path)
+                    self.preview_widget.set_before_image(pixmap)
+                
+                if self.image_loaded:
+                    self.image_loaded.emit(file_path)
     
     def save_image(self):
         """Save the processed image with transparency."""
@@ -256,26 +309,73 @@ class BackgroundRemoverPanelQt(QWidget):
             QMessageBox.warning(self, "No Image", "No image to save. Please load an image first.")
             return
         
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            "Save Image",
-            "",
-            "PNG Image (*.png);;JPEG Image (*.jpg)"
-        )
-        
-        if file_path:
-            try:
-                # Ensure proper file extension
-                if not any(file_path.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg']):
-                    file_path += '.png'
-                
-                # Load the image to save (processed if available, else current)
-                if not PIL_AVAILABLE:
-                    QMessageBox.critical(self, "Error", "PIL/Pillow not installed. Cannot save image.")
-                    return
-                
-                img_path = self.processed_image if self.processed_image else self.current_image
-                img = Image.open(img_path)
+        # Check if saving to archive
+        if ARCHIVE_AVAILABLE and self.archive_output_cb.isChecked():
+            archive_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Archive",
+                "",
+                "ZIP Archive (*.zip);;7Z Archive (*.7z)"
+            )
+            
+            if archive_path:
+                try:
+                    from utils.archive_handler import ArchiveHandler
+                    import tempfile
+                    
+                    # Ensure proper extension
+                    if not any(archive_path.lower().endswith(ext) for ext in ['.zip', '.7z']):
+                        archive_path += '.zip'
+                    
+                    # Save image to temp file first
+                    temp_dir = Path(tempfile.mkdtemp(prefix="bg_remover_save_"))
+                    temp_image = temp_dir / "processed_image.png"
+                    
+                    if not PIL_AVAILABLE:
+                        QMessageBox.critical(self, "Error", "PIL/Pillow not installed. Cannot save image.")
+                        return
+                    
+                    img_path = self.processed_image if self.processed_image else self.current_image
+                    img = Image.open(img_path)
+                    img = img.convert('RGBA')
+                    img.save(temp_image, 'PNG')
+                    
+                    # Create archive
+                    archive_handler = ArchiveHandler()
+                    archive_handler.create_archive(temp_dir, Path(archive_path))
+                    
+                    # Cleanup temp
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    
+                    QMessageBox.information(self, "Saved", f"Image saved to archive: {archive_path}")
+                    if self.processing_complete:
+                        self.processing_complete.emit()
+                        
+                except Exception as e:
+                    logger.error(f"Error creating archive: {e}")
+                    QMessageBox.critical(self, "Error", f"Failed to create archive:\n{str(e)}")
+        else:
+            # Normal file save
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Image",
+                "",
+                "PNG Image (*.png);;JPEG Image (*.jpg)"
+            )
+            
+            if file_path:
+                try:
+                    # Ensure proper file extension
+                    if not any(file_path.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg']):
+                        file_path += '.png'
+                    
+                    # Load the image to save (processed if available, else current)
+                    if not PIL_AVAILABLE:
+                        QMessageBox.critical(self, "Error", "PIL/Pillow not installed. Cannot save image.")
+                        return
+                    
+                    img_path = self.processed_image if self.processed_image else self.current_image
+                    img = Image.open(img_path)
                 
                 # Convert to RGBA if saving as PNG
                 if file_path.lower().endswith('.png') and img.mode != 'RGBA':
