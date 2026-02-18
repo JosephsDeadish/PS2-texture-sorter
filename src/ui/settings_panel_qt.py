@@ -533,6 +533,9 @@ class SettingsPanelQt(QWidget):
     
     def create_ai_models_tab(self):
         """Create AI models management tab"""
+        error_msg = None
+        error_type = "general"
+        
         try:
             try:
                 from .ai_models_settings_tab import AIModelsSettingsTab
@@ -540,31 +543,37 @@ class SettingsPanelQt(QWidget):
                 from ui.ai_models_settings_tab import AIModelsSettingsTab
             return AIModelsSettingsTab(self.config)
         except ImportError as e:
-            logger.warning(f"AI Models settings tab import error: {e}")
+            # Specific handling for import errors
             error_msg = str(e)
+            if "PyQt6" in error_msg or "QtWidgets" in error_msg:
+                error_type = "pyqt6"
+            elif "model_manager" in error_msg or "upscaler" in error_msg:
+                error_type = "model_manager"
+            else:
+                error_type = "dependencies"
+            logger.warning(f"AI Models settings tab import error ({error_type}): {e}")
         except Exception as e:
-            logger.error(f"AI Models settings tab error: {e}", exc_info=True)
+            # Other errors
             error_msg = str(e)
+            error_type = "general"
+            logger.error(f"AI Models settings tab error: {e}", exc_info=True)
         
         # Return a placeholder widget with detailed error info
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.addStretch()
         
-        # Create error message with install instructions
-        error_text = (
-            "🤖 AI Models Management\n\n"
-            "Could not load AI Models settings.\n\n"
-        )
-        
-        if "PyQt6" in error_msg:
-            error_text += (
+        # Create error message based on specific error type
+        if error_type == "pyqt6":
+            error_text = (
+                "🤖 AI Models Management\n\n"
                 "❌ Missing PyQt6\n\n"
                 "💡 Install with:\n"
                 "   pip install PyQt6\n\n"
             )
-        elif "model_manager" in error_msg or "upscaler" in error_msg:
-            error_text += (
+        elif error_type == "model_manager":
+            error_text = (
+                "🤖 AI Models Management\n\n"
                 "❌ Model manager module not available\n\n"
                 "This is OK - the AI models tab is optional.\n"
                 "The application works fine without it.\n\n"
@@ -573,13 +582,21 @@ class SettingsPanelQt(QWidget):
                 "2. Install dependencies:\n"
                 "   pip install torch transformers\n\n"
             )
-        else:
-            error_text += (
-                f"❌ Error: {error_msg}\n\n"
+        elif error_type == "dependencies":
+            error_text = (
+                "🤖 AI Models Management\n\n"
+                "❌ Missing AI dependencies\n\n"
                 "💡 Try installing AI dependencies:\n"
                 "   pip install torch transformers\n\n"
                 "Or use minimal install:\n"
                 "   pip install -r requirements-minimal.txt\n\n"
+            )
+        else:
+            error_text = (
+                f"🤖 AI Models Management\n\n"
+                f"❌ Error: {error_msg}\n\n"
+                "💡 Try installing dependencies:\n"
+                "   pip install torch transformers\n\n"
             )
         
         label = QLabel(error_text)

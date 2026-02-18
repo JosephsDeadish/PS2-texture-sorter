@@ -413,6 +413,7 @@ class FileBrowserPanelQt(QWidget):
         # Open file with default application
         import subprocess
         import platform
+        import os
         
         try:
             if platform.system() == 'Darwin':  # macOS
