@@ -10,6 +10,11 @@ import sys
 
 print("[PIL hook] Starting PIL/Pillow collection...")
 
+# Initialize required hook attributes
+datas = []
+binaries = []
+excludedimports = []
+
 # Collect all PIL submodules
 hiddenimports = collect_submodules('PIL')
 

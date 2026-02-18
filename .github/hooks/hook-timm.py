@@ -8,6 +8,10 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 print("[timm hook] Starting timm collection...")
 
+# Initialize required hook attributes
+binaries = []
+excludedimports = []
+
 # Collect all timm submodules
 hiddenimports = collect_submodules('timm')
 

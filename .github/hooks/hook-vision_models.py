@@ -8,6 +8,11 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 print("[vision_models hook] Starting vision models package collection...")
 
+# Initialize required hook attributes
+datas = []
+binaries = []
+excludedimports = []
+
 # Collect all vision_models submodules
 hiddenimports = collect_submodules('vision_models')
 
@@ -64,7 +69,7 @@ for imp in critical_imports:
         hiddenimports.append(imp)
 
 # Collect data files for all vision model dependencies
-datas = []
+# datas initialized at module level (line 12), extend it here with dependency data
 
 # Collect transformers data
 try:

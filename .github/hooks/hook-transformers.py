@@ -9,6 +9,10 @@ import sys
 
 print("[transformers hook] Starting HuggingFace transformers collection...")
 
+# Initialize required hook attributes
+binaries = []
+excludedimports = []
+
 # Collect all transformers submodules
 hiddenimports = collect_submodules('transformers')
 
