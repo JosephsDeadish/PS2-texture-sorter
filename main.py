@@ -105,6 +105,67 @@ except ImportError as e:
     UI_PANELS_AVAILABLE = False
 
 
+class DraggableTabWidget(QTabWidget):
+    """QTabWidget that supports drag-and-drop tab extraction."""
+    
+    tab_detached = pyqtSignal(int, str, QWidget)  # index, name, widget
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMovable(True)  # Allow tab reordering
+        self.setTabsClosable(False)  # We handle closing via detachment
+        self._drag_start_pos = None
+        self._dragging = False
+        self._dragging_tab_index = -1
+        
+        # Get tab bar and enable mouse tracking
+        tab_bar = self.tabBar()
+        tab_bar.setMouseTracking(True)
+        
+    def mousePressEvent(self, event):
+        """Start drag operation when clicking on tab."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Check if click is on a tab
+            tab_bar = self.tabBar()
+            for i in range(self.count()):
+                if tab_bar.tabRect(i).contains(event.pos()):
+                    self._drag_start_pos = event.pos()
+                    self._dragging_tab_index = i
+                    break
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """Detect drag motion and create floating window."""
+        if (self._drag_start_pos is not None and 
+            event.buttons() == Qt.MouseButton.LeftButton):
+            
+            # Check if drag distance is significant
+            drag_distance = (event.pos() - self._drag_start_pos).manhattanLength()
+            
+            if drag_distance > 20 and not self._dragging:  # Threshold to start drag
+                self._dragging = True
+                
+                # Get tab info
+                index = self._dragging_tab_index
+                tab_text = self.tabText(index)
+                tab_widget = self.widget(index)
+                
+                # Emit signal to parent to handle detachment
+                self.tab_detached.emit(index, tab_text, tab_widget)
+                
+                # Reset drag state
+                self._drag_start_pos = None
+                self._dragging = False
+                
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """End drag operation."""
+        self._drag_start_pos = None
+        self._dragging = False
+        super().mouseReleaseEvent(event)
+
+
 class WorkerThread(QThread):
     """Background worker thread for long-running operations."""
     
@@ -226,9 +287,10 @@ class TextureSorterMainWindow(QMainWindow):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(10)
         
-        # Create tabs
-        self.tabs = QTabWidget()
+        # Create draggable tabs
+        self.tabs = DraggableTabWidget()
         self.tabs.setDocumentMode(True)
+        self.tabs.tab_detached.connect(self.on_tab_detached)
         content_layout.addWidget(self.tabs)
         
         # Create main tab (dashboard/welcome)
@@ -1558,6 +1620,52 @@ class TextureSorterMainWindow(QMainWindow):
                 event.ignore()
         else:
             event.accept()
+    
+    def on_tab_detached(self, index: int, tab_name: str, widget: QWidget):
+        """Handle tab being dragged out - create floating dock widget."""
+        if index < 0 or widget is None:
+            return
+        
+        # Remove emoji and clean up name for tracking
+        clean_name = tab_name.replace("🛠️", "").replace("🐼", "").replace("📁", "").replace("📝", "").strip()
+        
+        # Store reference
+        self.tab_widgets[clean_name] = widget
+        
+        # Remove from tabs
+        self.tabs.removeTab(index)
+        
+        # Create dock widget
+        dock = QDockWidget(tab_name, self)
+        dock.setWidget(widget)
+        dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable |
+            QDockWidget.DockWidgetFeature.DockWidgetClosable
+        )
+        
+        # Connect close event to restore tab
+        dock.visibilityChanged.connect(
+            lambda visible, name=clean_name, original_name=tab_name: 
+                self._on_dock_visibility_changed(visible, name, original_name)
+        )
+        
+        # Store dock reference
+        self.docked_widgets[clean_name] = dock
+        
+        # Add as floating dock (detached)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        dock.setFloating(True)
+        
+        # Position near mouse cursor
+        cursor_pos = self.mapFromGlobal(self.cursor().pos())
+        dock.move(self.pos().x() + cursor_pos.x(), self.pos().y() + cursor_pos.y())
+        
+        # Update restore menu
+        self._update_restore_menu()
+        
+        self.statusbar.showMessage(f"Tab detached: {clean_name}", 3000)
+        logger.info(f"Tab dragged out and detached: {tab_name}")
     
     def popout_current_tab(self):
         """Pop out the currently selected tab into a floating dock widget."""
