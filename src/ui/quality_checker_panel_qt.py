@@ -47,7 +47,7 @@ class QualityCheckWorker(QThread):
             for i, filepath in enumerate(self.files):
                 self.progress.emit(f"Checking {i+1}/{len(self.files)}: {Path(filepath).name}")
                 
-                report = self.checker.check_image(filepath)
+                report = self.checker.check_quality(filepath)
                 self.results.append((filepath, report))
                 self.result.emit(report, Path(filepath).name)
             
