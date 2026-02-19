@@ -468,7 +468,9 @@ class BatchFormatNormalizer:
         else:
             # Preserve existing metadata if available
             if hasattr(img, 'info') and img.info:
-                save_kwargs['exif'] = img.info.get('exif', b'')
+                exif_data = img.info.get('exif')
+                if exif_data:  # Only add if EXIF data actually exists
+                    save_kwargs['exif'] = exif_data
         
         # Save with format-specific options
         if output_format == 'JPEG':

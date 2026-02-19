@@ -141,18 +141,17 @@ class ImageQualityChecker:
             has_alpha = mode in ('RGBA', 'LA', 'PA')
             color_depth = len(mode) * 8
             
+            # Calculate these once regardless of conditional checks
+            min_dim = min(width, height)
+            max_dim = max(width, height)
+            aspect_ratio = width / height if height > 0 else 1.0
+            
             # Resolution analysis (conditional)
             if options.check_resolution:
-                min_dim = min(width, height)
-                max_dim = max(width, height)
-                aspect_ratio = width / height if height > 0 else 1.0
                 is_low_res = min_dim < self.LOW_RES_THRESHOLD
                 resolution_score = self._calculate_resolution_score(min_dim, max_dim)
             else:
                 # Use defaults when skipped
-                min_dim = min(width, height)
-                max_dim = max(width, height)
-                aspect_ratio = width / height if height > 0 else 1.0
                 is_low_res = False
                 resolution_score = 100.0
             
