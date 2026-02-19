@@ -9,7 +9,14 @@ import logging
 from pathlib import Path
 from typing import Optional, Tuple, Union, BinaryIO
 from PIL import Image, ImageOps, ImageFile
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None
+    HAS_NUMPY = False
+    import logging as _logging
+    _logging.getLogger(__name__).error("numpy not available - install with: pip install numpy")
 import cv2
 
 # Allow loading of truncated images

@@ -16,7 +16,6 @@ from typing import List, Optional
 import logging
 import os
 from PIL import Image
-import numpy as np
 
 from preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets
 

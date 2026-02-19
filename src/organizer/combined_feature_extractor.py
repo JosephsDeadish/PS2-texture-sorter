@@ -10,7 +10,14 @@ Author: GitHub Copilot for PR #168
 import logging
 from typing import List, Optional, Tuple, Dict, Any
 from pathlib import Path
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None
+    HAS_NUMPY = False
+    import logging as _logging
+    _logging.getLogger(__name__).error("numpy not available - install with: pip install numpy")
 
 logger = logging.getLogger(__name__)
 
