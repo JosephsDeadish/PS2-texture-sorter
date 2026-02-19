@@ -441,35 +441,87 @@ class BackgroundRemoverPanelQt(QWidget):
             rembg_available = False
         
         if not rembg_available:
-            from PyQt6.QtWidgets import QMessageBox
             QMessageBox.information(
                 self,
                 "Feature Not Available",
                 "Automatic background removal requires the 'rembg' library.\n\n"
                 "To enable this feature, install it with:\n"
-                "pip install rembg\n\n"
-                "This feature is planned for a future release."
+                "pip install 'rembg[cpu]'\n\n"
+                "For GPU support:\n"
+                "pip install 'rembg[gpu]'"
             )
             return
         
-        # TODO: Implement actual background removal when rembg is available
-        # Basic implementation would be:
-        # 1. Load image with PIL
-        # 2. Process with rembg.remove()
-        # 3. Save with alpha transparency
-        # 4. Update preview
-        # 5. Add to history
+        # Implement actual background removal
+        if not self.current_image:
+            QMessageBox.warning(
+                self,
+                "No Image",
+                "Please load an image first before removing background."
+            )
+            return
         
-        from PyQt6.QtWidgets import QMessageBox
-        QMessageBox.information(
-            self,
-            "Feature Coming Soon",
-            "Automatic background removal is available but not yet integrated.\n\n"
-            "Manual tools (Brush, Eraser, Fill) are available now."
-        )
-        
-        if self.processing_complete:
-            self.processing_complete.emit()
+        try:
+            from PyQt6.QtWidgets import QProgressDialog
+            from PyQt6.QtCore import Qt, QBuffer
+            from PyQt6.QtGui import QImage
+            from PIL import Image
+            import io
+            
+            # Show progress dialog
+            progress = QProgressDialog("Removing background...", "Cancel", 0, 0, self)
+            progress.setWindowModality(Qt.WindowModality.WindowModal)
+            progress.setWindowTitle("Processing")
+            progress.show()
+            
+            # Convert QImage to PIL Image
+            buffer = QBuffer()
+            buffer.open(QBuffer.OpenModeFlag.ReadWrite)
+            self.current_image.save(buffer, "PNG")
+            pil_image = Image.open(io.BytesIO(buffer.data()))
+            
+            # Process with rembg
+            output = rembg.remove(pil_image)
+            
+            # Convert back to QImage
+            output_buffer = io.BytesIO()
+            output.save(output_buffer, format='PNG')
+            output_buffer.seek(0)
+            
+            result_image = QImage()
+            result_image.loadFromData(output_buffer.read())
+            
+            # Update current image
+            self.current_image = result_image
+            
+            # Update preview
+            if hasattr(self, 'update_preview'):
+                self.update_preview()
+            
+            # Add to undo history
+            if hasattr(self, 'undo_stack'):
+                self.undo_stack.append(result_image.copy())
+            
+            progress.close()
+            
+            QMessageBox.information(
+                self,
+                "Success",
+                "Background removed successfully!"
+            )
+            
+            if self.processing_complete:
+                self.processing_complete.emit()
+                
+        except Exception as e:
+            logger.error(f"Error removing background: {e}", exc_info=True)
+            
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to remove background:\n{str(e)}"
+            )
+
     
     def clear_all(self):
         """Clear all edits and reset to original."""

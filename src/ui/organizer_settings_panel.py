@@ -1,5 +1,6 @@
 """Organizer Tool Settings Panel - All AI and processing options"""
 
+import logging
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QSlider,
     QPushButton, QCheckBox, QSpinBox, QDoubleSpinBox, QGroupBox,
@@ -7,6 +8,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont
+
+logger = logging.getLogger(__name__)
+
 
 class OrganizerSettingsPanel(QWidget):
     """Settings for Organizer Tool"""
@@ -520,6 +524,26 @@ class OrganizerSettingsPanel(QWidget):
             'case_sensitive': self.case_sensitive_check.isChecked(),
             'conflict_resolution': self.conflict_combo.currentText(),
         }
+    
+    def save_settings(self):
+        """Save current settings to config"""
+        try:
+            # Get current settings
+            settings = self.get_settings()
+            
+            # Update config
+            if 'organizer' not in self.config:
+                self.config['organizer'] = {}
+            
+            self.config['organizer'].update(settings)
+            
+            # Emit settings changed signal
+            self.emit_settings()
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error saving organizer settings: {e}", exc_info=True)
+            return False
 
     
     def _set_tooltip(self, widget, tooltip_key: str):

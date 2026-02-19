@@ -179,6 +179,20 @@ class TextureSorterMainWindow(QMainWindow):
         self.setGeometry(100, 100, 1400, 900)
         self.setMinimumSize(900, 650)
         
+        # Set window icon
+        icon_path = Path(__file__).parent / 'assets' / 'icon.ico'
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
+            logger.info(f"Window icon set from: {icon_path}")
+        else:
+            # Try PNG icon as fallback
+            icon_path = Path(__file__).parent / 'assets' / 'icon.png'
+            if icon_path.exists():
+                self.setWindowIcon(QIcon(str(icon_path)))
+                logger.info(f"Window icon set from PNG: {icon_path}")
+            else:
+                logger.warning("Window icon file not found")
+        
         # Central widget with splitter for panda
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -1163,6 +1177,20 @@ class TextureSorterMainWindow(QMainWindow):
         try:
             logger.info(f"Setting changed: {setting_key} = {value}")
             
+            # Update the config value
+            keys = setting_key.split('.')
+            if len(keys) == 2:
+                config.set(keys[0], keys[1], value)
+            elif len(keys) == 1:
+                # Single-level key - store in general section
+                config.set('general', keys[0], value)
+                logger.debug(f"Single-level setting key '{setting_key}' stored in 'general' section")
+            else:
+                # Multi-level nested keys - only handle first two levels
+                logger.warning(f"Setting key '{setting_key}' has unexpected format (expected 'section.key')")
+                if len(keys) >= 2:
+                    config.set(keys[0], keys[1], value)
+            
             # Handle theme changes
             if setting_key == "ui.theme":
                 self.apply_theme()
@@ -1190,6 +1218,13 @@ class TextureSorterMainWindow(QMainWindow):
                 app = QApplication.instance()
                 if app:
                     app.setFont(QFont(font_family, font_size))
+            
+            # Save config after changes
+            try:
+                config.save()
+                logger.debug(f"Config saved after setting change: {setting_key}")
+            except Exception as save_error:
+                logger.error(f"Error saving config after settings change: {save_error}", exc_info=True)
             
         except Exception as e:
             logger.error(f"Error handling settings change: {e}", exc_info=True)
@@ -1305,6 +1340,13 @@ class TextureSorterMainWindow(QMainWindow):
     
     def closeEvent(self, event):
         """Handle window close event."""
+        # Save settings before closing
+        try:
+            config.save()
+            logger.info("Settings saved on exit")
+        except Exception as e:
+            logger.error(f"Error saving settings on exit: {e}", exc_info=True)
+        
         if self.worker and self.worker.isRunning():
             reply = QMessageBox.question(
                 self,
@@ -1576,6 +1618,20 @@ def main():
     app.setApplicationName(APP_NAME)
     app.setOrganizationName("JosephsDeadish")
     app.setOrganizationDomain("github.com/JosephsDeadish")
+    
+    # Set application icon for taskbar
+    icon_path = Path(__file__).parent / 'assets' / 'icon.ico'
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+        logger.info(f"Application icon set from: {icon_path}")
+    else:
+        # Try PNG icon as fallback
+        icon_path = Path(__file__).parent / 'assets' / 'icon.png'
+        if icon_path.exists():
+            app.setWindowIcon(QIcon(str(icon_path)))
+            logger.info(f"Application icon set from PNG: {icon_path}")
+        else:
+            logger.warning("Application icon file not found")
     
     # Set application-wide font
     font = QFont("Segoe UI", 10)

@@ -3,9 +3,11 @@ Qt implementation of the customization panel.
 Pure PyQt6 UI for texture customization options.
 """
 
+import logging
+
 try:
     from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-                                  QLabel, QSlider, QComboBox, QColorDialog, QGroupBox)
+                                  QLabel, QSlider, QComboBox, QColorDialog, QGroupBox, QMessageBox)
     from PyQt6.QtCore import Qt, pyqtSignal
     from PyQt6.QtGui import QColor
     PYQT_AVAILABLE = True
@@ -13,6 +15,9 @@ except ImportError:
     PYQT_AVAILABLE = False
     class QWidget: pass
     class pyqtSignal: pass
+
+logger = logging.getLogger(__name__)
+
 
 
 class CustomizationPanelQt(QWidget):
@@ -150,9 +155,36 @@ class CustomizationPanelQt(QWidget):
     
     def apply_customization(self):
         """Apply current customization settings."""
-        # Update panda appearance
-        if hasattr(self.panda_widget, 'update_appearance'):
-            self.panda_widget.update_appearance()
+        try:
+            # Update panda appearance
+            if self.panda_widget and hasattr(self.panda_widget, 'update_appearance'):
+                self.panda_widget.update_appearance()
+            
+            # Save customization to config
+            if hasattr(self, 'config') and self.config:
+                if 'customization' not in self.config:
+                    self.config['customization'] = {}
+                
+                self.config['customization'].update({
+                    'body_color': self.current_color.getRgb()[:3] if hasattr(self, 'current_color') else (255, 255, 255),
+                    'trail_type': self.trail_combo.currentText() if hasattr(self, 'trail_combo') else 'None',
+                    'trail_length': self.trail_slider.value() if hasattr(self, 'trail_slider') else 10,
+                })
+            
+            # Visual feedback - customization applied
+            logger.info("Customization settings applied and saved")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error applying customization: {e}", exc_info=True)
+            
+            QMessageBox.warning(
+                self,
+                "Error",
+                f"Failed to apply customization:\n{str(e)}"
+            )
+            return False
     
     def reset_customization(self):
         """Reset to default customization."""
