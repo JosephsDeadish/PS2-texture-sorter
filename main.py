@@ -1792,10 +1792,12 @@ class TextureSorterMainWindow(QMainWindow):
             elif setting_key == "ui.tooltip_mode":
                 if self.tooltip_manager:
                     from features.tutorial_system import TooltipMode
+                    # Canonical config value is 'dumbed-down'; accept 'dumbed_down' for
+                    # backward compatibility with configs written by older versions.
                     mode_map = {
                         'normal': TooltipMode.NORMAL,
-                        'dumbed-down': TooltipMode.BEGINNER,
-                        'dumbed_down': TooltipMode.BEGINNER,
+                        'dumbed-down': TooltipMode.BEGINNER,   # canonical
+                        'dumbed_down': TooltipMode.BEGINNER,   # legacy alias
                         'vulgar_panda': TooltipMode.PROFANE,
                     }
                     mode = mode_map.get(value)
