@@ -4,6 +4,8 @@ Analyzes images for resolution, compression artifacts, DPI, and quality scoring
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import numpy as np
 from pathlib import Path

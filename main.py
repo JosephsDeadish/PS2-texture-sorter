@@ -218,6 +218,7 @@ class TextureSorterMainWindow(QMainWindow):
         self.performance_manager = None
         self.threading_manager = None
         self.cache_manager = None
+        self.memory_manager = None
         
         # Worker thread
         self.worker = None
@@ -634,6 +635,24 @@ class TextureSorterMainWindow(QMainWindow):
                 
             except Exception as e:
                 logger.error(f"Error creating tool dock panels: {e}", exc_info=True)
+        
+        # Add Performance Dashboard dock (independent of UI_PANELS_AVAILABLE)
+        try:
+            from ui.performance_dashboard import PerformanceDashboard
+            unlockables = getattr(self, 'unlockables_system', None)
+            self.perf_dashboard = PerformanceDashboard(
+                parent=self,
+                unlockables_system=unlockables,
+                tooltip_manager=self.tooltip_manager
+            )
+            self._add_tool_dock(
+                'perf_dashboard', '📊 Performance Monitor',
+                self.perf_dashboard,
+                Qt.DockWidgetArea.RightDockWidgetArea
+            )
+            logger.info("✅ Performance dashboard added as dockable widget")
+        except Exception as e:
+            logger.warning(f"Performance dashboard unavailable: {e}")
         
         # Update View menu with tool panel toggles
         self._update_tool_panels_menu()
@@ -1508,6 +1527,16 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize cache manager: {e}")
             
+            # Initialize memory manager
+            try:
+                from utils.memory_manager import MemoryManager
+                memory_limit_mb = config.get('performance', 'memory_limit_mb', default=2048)
+                self.memory_manager = MemoryManager(max_memory_mb=memory_limit_mb)
+                self.memory_manager.start_monitoring()
+                logger.info(f"Memory manager initialized with {memory_limit_mb}MB limit")
+            except Exception as e:
+                logger.warning(f"Could not initialize memory manager: {e}")
+            
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -1540,6 +1569,14 @@ class TextureSorterMainWindow(QMainWindow):
                     logger.info(f"✅ Applied cache size: {cache_size_mb}MB")
                 except Exception as e:
                     logger.error(f"Failed to apply cache size: {e}")
+            
+            # Update memory manager limit
+            if self.memory_manager:
+                try:
+                    self.memory_manager.max_memory_bytes = memory_limit_mb * 1024 * 1024
+                    logger.info(f"✅ Applied memory limit: {memory_limit_mb}MB")
+                except Exception as e:
+                    logger.error(f"Failed to apply memory limit: {e}")
             
             # Apply thumbnail quality to image_processing module
             try:
@@ -1827,7 +1864,11 @@ class TextureSorterMainWindow(QMainWindow):
                     logger.info(f"Cache size updated to: {value}MB")
             
             elif setting_key == 'performance.memory_limit_mb':
-                logger.info(f"Memory limit updated to: {value}MB (applied on next operation)")
+                if self.memory_manager:
+                    self.memory_manager.max_memory_bytes = int(value) * 1024 * 1024
+                    logger.info(f"Memory limit updated to: {value}MB")
+                else:
+                    logger.info(f"Memory limit updated to: {value}MB (applied on next operation)")
             
             elif setting_key == 'performance.thumbnail_quality':
                 try:

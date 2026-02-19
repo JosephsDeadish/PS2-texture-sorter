@@ -7,6 +7,8 @@ resource usage based on user preferences and system capabilities.
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import platform
 import psutil

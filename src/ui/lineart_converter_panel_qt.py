@@ -3,6 +3,8 @@ Line Art Converter UI Panel - PyQt6 Version
 Provides UI for converting images to line art and stencils
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import List, Optional

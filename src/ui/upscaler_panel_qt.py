@@ -3,6 +3,8 @@ Image Upscaler UI Panel - PyQt6 Version
 Provides UI for upscaling images using various methods (bicubic, lanczos, etc.)
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import List, Optional

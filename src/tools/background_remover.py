@@ -4,6 +4,8 @@ Removes backgrounds from images using AI-powered subject isolation
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import numpy as np
 from pathlib import Path

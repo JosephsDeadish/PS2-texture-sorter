@@ -25,6 +25,14 @@ try:
     GUI_AVAILABLE = True
 except ImportError:
     GUI_AVAILABLE = False
+    # Provide stub base classes so class definitions that inherit from Qt widgets
+    # don't fail when PyQt6 is unavailable (e.g. during non-GUI imports or headless testing).
+    class QWidget:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QDialog(QWidget):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
 
 # Tooltip definitions with normal and vulgar variants per widget
 # (Previously stored in panda_mode.py – inlined here so the file can be removed)

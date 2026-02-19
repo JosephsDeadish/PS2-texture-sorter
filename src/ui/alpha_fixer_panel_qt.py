@@ -3,6 +3,8 @@ Alpha Fixer UI Panel - PyQt6 Version
 Provides UI for comprehensive alpha channel editing and fixing
 """
 
+
+from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QFrame, QFileDialog, QMessageBox, QProgressBar,

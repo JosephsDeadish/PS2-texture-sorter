@@ -4,6 +4,8 @@ Normalize images to consistent format, size, and naming patterns
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import numpy as np
 from pathlib import Path

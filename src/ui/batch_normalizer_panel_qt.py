@@ -3,6 +3,8 @@ Batch Normalizer UI Panel - PyQt6 Version
 Provides UI for batch format normalization with live preview
 """
 
+
+from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QFrame, QFileDialog, QMessageBox, QProgressBar,

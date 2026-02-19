@@ -4,6 +4,8 @@ AI-powered texture classification with learning system
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import time
 import threading

@@ -3,6 +3,8 @@ Archive Settings Widget and Processing Queue System - PyQt6 Version
 Provides archive support with ZIP/file mode selection and batch processing queue
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import List, Optional, Callable, Dict, Any

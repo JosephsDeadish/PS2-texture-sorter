@@ -1,5 +1,7 @@
 """AI Models Settings Tab - Manage model downloads with beautiful UI"""
 
+
+from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QProgressBar, QScrollArea, QFrame, QMessageBox, QSizePolicy

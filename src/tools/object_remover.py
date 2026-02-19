@@ -3,6 +3,8 @@ Object Remover - Interactive object removal with mask painting
 Allows users to highlight/paint objects they want to remove from images
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Optional, Tuple, List

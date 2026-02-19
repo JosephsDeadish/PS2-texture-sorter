@@ -4,6 +4,8 @@ Convert images to pure black line work, 1-bit stencils, and clean line art
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import numpy as np
 from pathlib import Path

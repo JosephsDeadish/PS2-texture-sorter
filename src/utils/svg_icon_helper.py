@@ -4,6 +4,8 @@ Provides easy integration of SVG icons into Qt UI panels.
 Uses QIcon and QPixmap with Qt's native SVG support.
 """
 
+
+from __future__ import annotations
 from PyQt6.QtGui import QIcon, QPixmap, QPainter
 from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtCore import QSize, QByteArray, Qt

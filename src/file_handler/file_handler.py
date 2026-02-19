@@ -4,6 +4,8 @@ Handles file operations, conversions, and integrity checks
 Extended format support for SVG, JPEG, WEBP, and more
 """
 
+from __future__ import annotations
+
 import shutil
 import hashlib
 import logging

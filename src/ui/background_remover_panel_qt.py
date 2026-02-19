@@ -3,6 +3,8 @@ Qt implementation of the background remover panel.
 Pure PyQt6 UI for AI-powered background removal.
 """
 
+
+from __future__ import annotations
 import logging
 import shutil
 from pathlib import Path

@@ -4,6 +4,8 @@ Provides comprehensive file browsing with thumbnails, filtering, and preview
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import List, Optional, Set

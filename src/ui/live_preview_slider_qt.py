@@ -3,6 +3,8 @@ Live Preview with Comparison Slider - PyQt6
 Provides before/after comparison with draggable vertical slider
 """
 
+
+from __future__ import annotations
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
 from PyQt6.QtGui import QPainter, QPen, QPixmap, QColor, QCursor
