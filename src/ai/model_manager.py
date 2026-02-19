@@ -4,6 +4,8 @@ Implements fallback logic and confidence-weighted blending
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 from pathlib import Path

@@ -23,11 +23,11 @@ logger = logging.getLogger(__name__)
 
 # Try to import model manager
 try:
-    from src.upscaler.model_manager import AIModelManager, ModelStatus
+    from upscaler.model_manager import AIModelManager, ModelStatus
     MODEL_MANAGER_AVAILABLE = True
 except ImportError:
     try:
-        from upscaler.model_manager import AIModelManager, ModelStatus
+        from src.upscaler.model_manager import AIModelManager, ModelStatus
         MODEL_MANAGER_AVAILABLE = True
     except ImportError:
         logger.debug("Model manager not available")

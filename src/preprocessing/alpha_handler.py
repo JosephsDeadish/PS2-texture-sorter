@@ -4,7 +4,11 @@ Separate, analyze, and manipulate alpha channels in textures
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from typing import Optional, Tuple, Dict, Any
 try:
     import numpy as np
@@ -15,7 +19,6 @@ except ImportError:
     logger.error("Install with: pip install numpy")
 import cv2
 
-logger = logging.getLogger(__name__)
 
 
 class AlphaChannelHandler:

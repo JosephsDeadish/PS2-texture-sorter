@@ -4,7 +4,11 @@ Handles upscaling, sharpening, denoising, color normalization for PS2 textures
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Optional, Dict, Any, Union
 try:
@@ -21,7 +25,6 @@ from .upscaler import TextureUpscaler
 from .filters import TextureFilters
 from .alpha_handler import AlphaChannelHandler
 
-logger = logging.getLogger(__name__)
 
 
 class PreprocessingPipeline:

@@ -13,6 +13,8 @@ Features:
     - Dynamic animations (tilt, squash, stretch)
 """
 
+from __future__ import annotations
+
 try:
     from OpenGL.GL import *
     from OpenGL.GLU import *
@@ -217,7 +219,7 @@ class ClothingMesh:
 
 
     def _draw_cube(self, sx, sy, sz):
-        """Draw a simple cube."""
+        """Draw a simple cube with all 6 faces."""
         glBegin(GL_QUADS)
         # Front
         glVertex3f(-sx, -sy, sz)
@@ -229,7 +231,26 @@ class ClothingMesh:
         glVertex3f(-sx, sy, -sz)
         glVertex3f(sx, sy, -sz)
         glVertex3f(sx, -sy, -sz)
-        # ... (other faces omitted for brevity)
+        # Top
+        glVertex3f(-sx, sy, -sz)
+        glVertex3f(-sx, sy, sz)
+        glVertex3f(sx, sy, sz)
+        glVertex3f(sx, sy, -sz)
+        # Bottom
+        glVertex3f(-sx, -sy, -sz)
+        glVertex3f(sx, -sy, -sz)
+        glVertex3f(sx, -sy, sz)
+        glVertex3f(-sx, -sy, sz)
+        # Right
+        glVertex3f(sx, -sy, -sz)
+        glVertex3f(sx, sy, -sz)
+        glVertex3f(sx, sy, sz)
+        glVertex3f(sx, -sy, sz)
+        # Left
+        glVertex3f(-sx, -sy, -sz)
+        glVertex3f(-sx, -sy, sz)
+        glVertex3f(-sx, sy, sz)
+        glVertex3f(-sx, sy, -sz)
         glEnd()
 
 

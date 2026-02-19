@@ -1549,34 +1549,6 @@ class TextureSorterMainWindow(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to apply performance settings: {e}", exc_info=True)
     
-    def on_settings_changed(self, setting_key: str, value):
-        """Handle settings changes from settings panel."""
-        try:
-            logger.debug(f"Setting changed: {setting_key} = {value}")
-            
-            # Performance settings
-            if setting_key == 'performance.max_threads':
-                if self.threading_manager:
-                    self.threading_manager.set_thread_count(value)
-                    logger.info(f"Thread count updated to: {value}")
-            
-            elif setting_key == 'performance.cache_size_mb':
-                if self.cache_manager:
-                    self.cache_manager.max_size_bytes = value * 1024 * 1024
-                    logger.info(f"Cache size updated to: {value}MB")
-            
-            elif setting_key == 'performance.memory_limit_mb':
-                logger.info(f"Memory limit updated to: {value}MB (will apply on next operation)")
-            
-            # Theme settings
-            elif setting_key.startswith('ui.theme') or setting_key.startswith('ui.accent'):
-                self.apply_theme()
-            
-            # Other settings can be handled here
-            
-        except Exception as e:
-            logger.error(f"Error handling settings change: {e}", exc_info=True)
-    
     def browse_input(self):
         """Browse for input folder."""
         folder = QFileDialog.getExistingDirectory(
@@ -1795,8 +1767,8 @@ class TextureSorterMainWindow(QMainWindow):
                 if len(keys) >= 2:
                     config.set(keys[0], keys[1], value)
             
-            # Handle theme changes
-            if setting_key == "ui.theme":
+            # Handle theme / accent color changes
+            if setting_key in ("ui.theme", "ui.accent_color"):
                 self.apply_theme()
             
             # Handle opacity changes
@@ -1809,19 +1781,38 @@ class TextureSorterMainWindow(QMainWindow):
                     from features.tutorial_system import TooltipMode
                     mode_map = {
                         'normal': TooltipMode.NORMAL,
-                        'dumbed_down': TooltipMode.DUMBED_DOWN,
-                        'vulgar_panda': TooltipMode.UNHINGED_PANDA
+                        'dumbed-down': TooltipMode.BEGINNER,
+                        'dumbed_down': TooltipMode.BEGINNER,
+                        'vulgar_panda': TooltipMode.PROFANE,
                     }
-                    if value in mode_map:
-                        self.tooltip_manager.set_mode(mode_map[value])
+                    mode = mode_map.get(value)
+                    if mode:
+                        self.tooltip_manager.set_mode(mode)
             
             # Handle font changes
-            elif setting_key in ["ui.font_family", "ui.font_size"]:
+            elif setting_key in ("ui.font_family", "ui.font_size"):
                 font_family = config.get('ui', 'font_family', default='Segoe UI')
                 font_size = config.get('ui', 'font_size', default=12)
                 app = QApplication.instance()
                 if app:
                     app.setFont(QFont(font_family, font_size))
+            
+            # Handle performance settings — apply immediately to live managers
+            elif setting_key == 'performance.max_threads':
+                if self.threading_manager:
+                    try:
+                        self.threading_manager.set_thread_count(int(value))
+                        logger.info(f"Thread count updated to: {value}")
+                    except Exception as e:
+                        logger.error(f"Failed to update thread count: {e}")
+            
+            elif setting_key == 'performance.cache_size_mb':
+                if self.cache_manager:
+                    self.cache_manager.max_size_bytes = int(value) * 1024 * 1024
+                    logger.info(f"Cache size updated to: {value}MB")
+            
+            elif setting_key == 'performance.memory_limit_mb':
+                logger.info(f"Memory limit updated to: {value}MB (applied on next operation)")
             
             # Save config after changes
             try:

@@ -203,9 +203,14 @@ class FileHandler:
         Convert SVG file to PNG with fallback chain.
         
         Tries:
-        1. cairosvg (if available) - Best quality
-        2. PIL direct open (if PIL supports SVG)
-        3. Returns None if all methods fail
+        1. cairosvg (if available) - Best quality, full SVG rendering
+        2. PIL direct open (if PIL / installed plugins support SVG)
+        3. stdlib XML parse to extract canvas dimensions, then write a
+           transparent-background PNG of the correct size (placeholder).
+           Note: this fallback does NOT render SVG shapes; it ensures a
+           valid PNG file is always produced so downstream code never
+           receives None from a missing-dependency error.
+        4. Returns None if all methods fail
         
         Args:
             svg_path: Path to SVG file
@@ -249,7 +254,7 @@ class FileHandler:
                 except Exception as e:
                     logger.warning(f"cairosvg conversion failed: {e}, trying fallback...")
             
-            # Method 2: Try PIL direct (some PIL builds support SVG)
+            # Method 2: Try PIL direct (some PIL builds / plugins support SVG)
             try:
                 with Image.open(svg_path) as img:
                     # Resize if dimensions specified
@@ -262,8 +267,8 @@ class FileHandler:
                         img = img.resize((width, height), Image.Resampling.LANCZOS)
                     
                     # Convert to RGB if needed
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGBA')
                     
                     img.save(output_path, 'PNG')
                 
@@ -271,7 +276,45 @@ class FileHandler:
                 logger.info(f"Successfully converted SVG with PIL: {svg_path} -> {output_path}")
                 return output_path
             except Exception as e:
-                logger.warning(f"PIL direct SVG conversion failed: {e}")
+                logger.warning(f"PIL direct SVG conversion failed: {e}, trying native fallback...")
+            
+            # Method 3: stdlib XML parse — extract canvas size, write transparent PNG placeholder.
+            # Does NOT render SVG shapes; guarantees a valid PNG when Cairo/PIL are both unavailable.
+            if HAS_PIL:
+                try:
+                    import re as _re
+                    import xml.etree.ElementTree as ET
+
+                    def _parse_svg_length(value: str, default: int) -> int:
+                        """Parse an SVG length attribute, stripping any CSS unit suffix."""
+                        m = _re.match(r'^\s*([0-9]*\.?[0-9]+)', str(value))
+                        return int(float(m.group(1))) if m else default
+
+                    tree = ET.parse(svg_path)
+                    root = tree.getroot()
+
+                    # viewBox takes priority over width/height attributes
+                    vb = root.get('viewBox', '')
+                    if vb:
+                        parts = vb.split()
+                        if len(parts) == 4:
+                            svg_w = width or int(float(parts[2]))
+                            svg_h = height or int(float(parts[3]))
+                        else:
+                            svg_w = width or _parse_svg_length(root.get('width', '256'), 256)
+                            svg_h = height or _parse_svg_length(root.get('height', '256'), 256)
+                    else:
+                        svg_w = width or _parse_svg_length(root.get('width', '256'), 256)
+                        svg_h = height or _parse_svg_length(root.get('height', '256'), 256)
+
+                    img = Image.new('RGBA', (max(1, svg_w), max(1, svg_h)), (255, 255, 255, 0))
+                    img.save(output_path, 'PNG')
+
+                    self.operations_log.append(f"Converted {svg_path} to {output_path} (xml-placeholder)")
+                    logger.info(f"SVG converted via XML-placeholder fallback: {svg_path} -> {output_path}")
+                    return output_path
+                except Exception as e:
+                    logger.warning(f"XML placeholder SVG fallback failed: {e}")
             
             # All methods failed
             logger.error(f"All SVG conversion methods failed for: {svg_path}")

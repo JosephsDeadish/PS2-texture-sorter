@@ -9,6 +9,8 @@ Provides various color correction and enhancement features:
 - LUT support (.cube files)
 """
 
+from __future__ import annotations
+
 import logging
 from PIL import Image
 try:

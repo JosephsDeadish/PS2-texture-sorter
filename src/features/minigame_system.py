@@ -128,12 +128,12 @@ class MiniGame(ABC):
     @abstractmethod
     def get_name(self) -> str:
         """Get game name."""
-        pass
+        ...
     
     @abstractmethod
     def get_description(self) -> str:
         """Get game description."""
-        pass
+        ...
     
     def _calculate_xp(self) -> int:
         """Calculate XP reward based on score and difficulty."""

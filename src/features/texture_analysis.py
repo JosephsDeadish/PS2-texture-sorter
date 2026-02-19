@@ -4,6 +4,8 @@ Advanced texture analysis including color extraction, alpha detection, and optim
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
 from pathlib import Path

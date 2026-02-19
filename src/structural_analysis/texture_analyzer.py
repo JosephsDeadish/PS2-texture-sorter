@@ -4,7 +4,11 @@ Size, aspect ratio, color histogram analysis
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Dict, Any, Union, Tuple
 try:
@@ -18,7 +22,6 @@ from PIL import Image
 import cv2
 from sklearn.cluster import KMeans
 
-logger = logging.getLogger(__name__)
 
 
 class TextureStructuralAnalyzer:
