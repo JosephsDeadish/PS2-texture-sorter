@@ -37,9 +37,9 @@ try:
         QLabel, QPushButton, QProgressBar, QTextEdit, QTabWidget,
         QFileDialog, QMessageBox, QStatusBar, QMenuBar, QMenu,
         QSplitter, QFrame, QComboBox, QGridLayout, QStackedWidget,
-        QScrollArea
+        QScrollArea, QDockWidget, QToolBar
     )
-    from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSize
+    from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSize, QByteArray
     from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
 except ImportError as e:
     print("=" * 70)
@@ -167,6 +167,10 @@ class TextureSorterMainWindow(QMainWindow):
         
         # Tooltip manager (will be initialized later)
         self.tooltip_manager = None
+        
+        # Docking system - track floating panels
+        self.docked_widgets = {}  # {tab_name: QDockWidget}
+        self.tab_widgets = {}  # {tab_name: widget} - original tab widgets
         
         # Setup UI
         self.setup_ui()
@@ -832,6 +836,30 @@ class TextureSorterMainWindow(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+        
+        # View menu - for docking controls
+        view_menu = menubar.addMenu("&View")
+        
+        self.view_menu = view_menu  # Store reference for dynamic updates
+        
+        # Add "Pop Out Tab" action
+        popout_action = QAction("Pop Out Current Tab", self)
+        popout_action.setShortcut("Ctrl+Shift+P")
+        popout_action.triggered.connect(self.popout_current_tab)
+        view_menu.addAction(popout_action)
+        
+        view_menu.addSeparator()
+        
+        # Submenu for restoring docked tabs
+        self.restore_menu = view_menu.addMenu("Restore Docked Tab")
+        self.restore_menu.setEnabled(False)  # Disabled until tabs are popped out
+        
+        view_menu.addSeparator()
+        
+        # Reset layout action
+        reset_layout_action = QAction("Reset Window Layout", self)
+        reset_layout_action.triggered.connect(self.reset_window_layout)
+        view_menu.addAction(reset_layout_action)
         
         # Help menu
         help_menu = menubar.addMenu("&Help")
@@ -1545,6 +1573,108 @@ class TextureSorterMainWindow(QMainWindow):
                 event.ignore()
         else:
             event.accept()
+    
+    def popout_current_tab(self):
+        """Pop out the currently selected tab into a floating dock widget."""
+        current_index = self.tabs.currentIndex()
+        if current_index < 0:
+            return
+        
+        tab_name = self.tabs.tabText(current_index)
+        # Remove emoji and clean up name
+        clean_name = tab_name.replace("🛠️", "").replace("🐼", "").replace("📁", "").replace("📝", "").strip()
+        
+        # Get the widget from the current tab
+        widget = self.tabs.widget(current_index)
+        
+        # Store reference
+        self.tab_widgets[clean_name] = widget
+        
+        # Remove from tabs
+        self.tabs.removeTab(current_index)
+        
+        # Create dock widget
+        dock = QDockWidget(tab_name, self)
+        dock.setWidget(widget)
+        dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable |
+            QDockWidget.DockWidgetFeature.DockWidgetClosable
+        )
+        
+        # Connect close event to restore tab
+        dock.visibilityChanged.connect(
+            lambda visible, name=clean_name, original_name=tab_name: 
+                self._on_dock_visibility_changed(visible, name, original_name)
+        )
+        
+        # Store dock reference
+        self.docked_widgets[clean_name] = dock
+        
+        # Add as floating dock
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        dock.setFloating(True)
+        
+        # Update restore menu
+        self._update_restore_menu()
+        
+        self.statusbar.showMessage(f"Popped out: {clean_name}", 3000)
+    
+    def _on_dock_visibility_changed(self, visible: bool, name: str, original_name: str):
+        """Handle dock widget visibility changes (when user closes dock)."""
+        if not visible:
+            # User closed the dock widget - restore to tabs
+            self.restore_docked_tab(name, original_name)
+    
+    def restore_docked_tab(self, name: str, original_name: str = None):
+        """Restore a docked tab back to the main tab widget."""
+        if name not in self.docked_widgets:
+            return
+        
+        dock = self.docked_widgets[name]
+        widget = dock.widget()
+        
+        # Remove from dock
+        dock.setWidget(None)  # Prevent widget deletion
+        self.removeDockWidget(dock)
+        del self.docked_widgets[name]
+        
+        # Restore to tabs
+        if widget and widget in self.tab_widgets.values():
+            tab_name = original_name if original_name else name
+            self.tabs.addTab(widget, tab_name)
+            self.statusbar.showMessage(f"Restored: {name}", 3000)
+        
+        # Update restore menu
+        self._update_restore_menu()
+    
+    def _update_restore_menu(self):
+        """Update the restore menu with currently docked tabs."""
+        self.restore_menu.clear()
+        
+        if not self.docked_widgets:
+            self.restore_menu.setEnabled(False)
+            return
+        
+        self.restore_menu.setEnabled(True)
+        
+        for name, dock in self.docked_widgets.items():
+            action = QAction(f"Restore {name}", self)
+            action.triggered.connect(
+                lambda checked, n=name, orig=dock.windowTitle(): 
+                    self.restore_docked_tab(n, orig)
+            )
+            self.restore_menu.addAction(action)
+    
+    def reset_window_layout(self):
+        """Reset all docked windows back to tabs."""
+        # Restore all docked widgets
+        docked_names = list(self.docked_widgets.keys())
+        for name in docked_names:
+            dock = self.docked_widgets[name]
+            self.restore_docked_tab(name, dock.windowTitle())
+        
+        self.statusbar.showMessage("Window layout reset", 3000)
 
 
 def check_feature_availability():
