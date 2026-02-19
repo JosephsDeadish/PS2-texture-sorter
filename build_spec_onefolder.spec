@@ -106,6 +106,7 @@ a = Analysis(
         (str(ASSETS_DIR), 'assets'),
         # Include resources
         (str(RESOURCES_DIR / 'icons'), 'resources/icons'),
+        (str(RESOURCES_DIR / 'icons' / 'svg'), 'resources/icons/svg'),  # Explicitly include SVG icons
         (str(RESOURCES_DIR / 'cursors'), 'resources/cursors'),
         (str(RESOURCES_DIR / 'sounds'), 'resources/sounds'),
         (str(RESOURCES_DIR / 'translations'), 'resources/translations'),
