@@ -15,16 +15,16 @@ Author: Dead On The Inside / JosephsDeadish
 
 import sys
 
-# Save the original sys.exit
-_original_exit = sys.exit
 
-def _patched_exit(code=0):
+def pre_safe_import_module(api):  # noqa: ARG001 - api not needed for sys.exit patch
     """
-    Patched sys.exit that raises SystemExit instead of calling os._exit().
-    This allows PyInstaller to catch the exception and continue building.
-    """
-    raise SystemExit(code)
+    Pre-safe-import-module hook for rembg.
 
-# Patch sys.exit BEFORE rembg is imported
-# Note: This patch remains in effect for the subprocess lifetime
-sys.exit = _patched_exit
+    Patches sys.exit() so that rembg's import-time sys.exit(1) call (triggered
+    when onnxruntime is unavailable) raises SystemExit instead of terminating
+    the PyInstaller analysis process.
+    """
+    def _patched_exit(code=0):
+        raise SystemExit(code)
+
+    sys.exit = _patched_exit

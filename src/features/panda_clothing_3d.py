@@ -20,6 +20,7 @@ try:
     OPENGL_AVAILABLE = True
 except ImportError:
     OPENGL_AVAILABLE = False
+    np = None
 
 import math
 from enum import Enum

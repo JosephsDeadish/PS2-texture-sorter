@@ -9,17 +9,19 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from collections import Counter
+
+logger = logging.getLogger(__name__)
+
 try:
     import numpy as np
     HAS_NUMPY = True
 except ImportError:
     HAS_NUMPY = False
-    logger.error("numpy not available - limited functionality")
-    logger.error("Install with: pip install numpy")
+    np = None
+    logger.error("numpy not available - limited functionality. Install with: pip install numpy")
+
 from PIL import Image
 import cv2
-
-logger = logging.getLogger(__name__)
 
 
 class TextureAnalyzer:

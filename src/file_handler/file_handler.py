@@ -444,9 +444,15 @@ class FileHandler:
                         png_bytes = cairosvg.svg2png(url=str(image_path))
                         return Image.open(BytesIO(png_bytes))
                     except Exception as e:
-                        logger.warning(f"Cairo SVG loading failed: {e}")
+                        logger.warning(f"Cairo SVG loading failed: {e}, trying PIL fallback...")
                 
-                logger.error(f"Cannot load SVG file {image_path}: cairosvg required for SVG-to-raster")
+                # Fallback: try PIL direct open (some PIL builds / plugins support SVG)
+                try:
+                    return Image.open(image_path)
+                except Exception as e:
+                    logger.warning(f"PIL SVG loading failed: {e}")
+                
+                logger.error(f"Cannot load SVG file {image_path}: all SVG-to-raster methods failed")
                 return None
             
             # Handle raster formats
