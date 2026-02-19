@@ -347,6 +347,24 @@ a = Analysis(
         'setuptools',
         'distutils',
     ],
+    excludedimports=[
+        # rembg - prevent PyInstaller from following imports during analysis
+        # rembg calls sys.exit(1) at import time if onnxruntime fails to load
+        # This kills the PyInstaller subprocess during binary dependency analysis
+        # The hook-rembg.py will collect rembg modules safely without importing
+        'rembg',
+        'rembg.bg',
+        'rembg.session',
+        'rembg.sessions',
+        
+        # Additional problematic imports
+        'onnxscript',  # Not needed, causes warnings in torch.onnx
+        'torch.onnx._internal.exporter._torchlib.ops',  # Tries to use onnxscript
+        
+        # Upscaler modules - will download at runtime
+        'basicsr',
+        'realesrgan',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
