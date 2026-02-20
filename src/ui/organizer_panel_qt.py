@@ -414,8 +414,9 @@ class OrganizerPanelQt(QWidget):
     - Settings panel
     """
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, tooltip_manager=None):
         super().__init__(parent)
+        self.tooltip_manager = tooltip_manager
         
         if not ORGANIZER_AVAILABLE:
             self._show_unavailable()

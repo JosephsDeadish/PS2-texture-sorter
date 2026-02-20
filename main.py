@@ -220,6 +220,7 @@ class TextureSorterMainWindow(QMainWindow):
         self.cache_manager = None
         self.memory_manager = None
         self.hotkey_manager = None
+        self.sound_manager = None
         
         # Worker thread
         self.worker = None
@@ -1578,6 +1579,17 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize hotkey manager: {e}")
 
+            # Initialize sound manager
+            try:
+                from features.sound_manager import SoundManager
+                self.sound_manager = SoundManager()
+                # Apply saved volume from config
+                saved_volume = config.get('ui', 'sound_volume', default=0.7)
+                self.sound_manager.set_volume(float(saved_volume))
+                logger.info(f"Sound manager initialized (volume={saved_volume})")
+            except Exception as e:
+                logger.warning(f"Could not initialize sound manager: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -1923,6 +1935,27 @@ class TextureSorterMainWindow(QMainWindow):
                     logger.info(f"Thumbnail quality updated to: {value} ({_img_proc.THUMBNAIL_QUALITY})")
                 except Exception as e:
                     logger.error(f"Failed to update thumbnail quality: {e}")
+
+            elif setting_key == 'ui.sound_volume':
+                # Apply live volume change to SoundManager
+                if self.sound_manager:
+                    try:
+                        self.sound_manager.set_volume(float(value))
+                        logger.info(f"Sound volume updated to: {value}")
+                    except Exception as e:
+                        logger.warning(f"Could not update sound volume: {e}")
+
+            elif setting_key == 'ui.animation_speed':
+                # Store animation speed in config; individual animated widgets read it on play.
+                # 0.0 = paused/disabled, 1.0 = normal, 4.0 = maximum safe speed (above this
+                # Qt timers fire too fast and animations become visually indistinguishable).
+                try:
+                    speed = float(value)
+                    speed = max(0.0, min(4.0, speed))
+                    config.set('ui', 'animation_speed', speed)
+                    logger.info(f"Animation speed updated to: {speed}x")
+                except Exception as e:
+                    logger.warning(f"Could not update animation speed: {e}")
 
             elif setting_key.startswith('hotkeys.'):
                 # Apply live hotkey rebinding to HotkeyManager when available
