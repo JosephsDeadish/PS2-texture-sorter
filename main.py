@@ -940,9 +940,15 @@ class TextureSorterMainWindow(QMainWindow):
             from features.enemy_manager import EnemyManager
 
             self.integrated_dungeon = IntegratedDungeon()
-            self.enemy_manager = EnemyManager()
             dungeon_view = DungeonGraphicsView(tooltip_manager=self.tooltip_manager)
             dungeon_view.set_dungeon(self.integrated_dungeon)
+            # EnemyManager needs parent widget, panda_widget, and enemy_collection
+            panda_wgt = getattr(self, 'panda_widget', None)
+            self.enemy_manager = EnemyManager(
+                parent=dungeon_view,
+                panda_widget=panda_wgt,
+                enemy_collection=self.integrated_dungeon.enemy_collection,
+            )
             panda_tabs.addTab(dungeon_view, "⚔️ Adventure")
             logger.info("✅ Adventure/Dungeon panel added to panda tab")
         except Exception as e:
@@ -3013,7 +3019,7 @@ def main():
     # Show first-run tutorial if this is a new installation
     try:
         from features.tutorial_system import TutorialManager
-        _tm = TutorialManager()
+        _tm = TutorialManager(master_window=window, config=config)
         if _tm.should_show_tutorial():
             _tm.start_tutorial(window)
     except Exception as _te:
