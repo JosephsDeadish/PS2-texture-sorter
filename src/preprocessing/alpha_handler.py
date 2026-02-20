@@ -40,7 +40,7 @@ class AlphaChannelHandler:
     
     def __init__(self):
         """Initialize alpha channel handler."""
-        pass
+        self.logger = logging.getLogger(__name__)
     
     def separate_alpha(
         self,

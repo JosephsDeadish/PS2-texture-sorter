@@ -40,7 +40,7 @@ class TextureFilters:
     
     def __init__(self):
         """Initialize texture filters."""
-        pass
+        self.logger = logging.getLogger(__name__)
     
     def sharpen(
         self,

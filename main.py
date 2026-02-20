@@ -280,6 +280,7 @@ class TextureSorterMainWindow(QMainWindow):
         self.tool_panels = {}           # {panel_id: widget}
         self.tool_dock_widgets = {}     # {panel_id: QDockWidget}
         self._last_sorted_count = 0     # files moved in last sort (for achievements)
+        self._sort_style_key = None     # organisation style key captured before worker starts
         self.view_menu = None           # Set by setup_menubar(); guarded in _update_tool_panels_menu
         self.file_browser_panel = None  # FileBrowserPanelQt tab widget
         self.notepad_panel = None       # NotepadPanelQt tab widget
@@ -318,6 +319,8 @@ class TextureSorterMainWindow(QMainWindow):
 
         # Persistent data paths (stored once; reused in initialize_components and closeEvent)
         _app_data = Path(__file__).parent / 'app_data'
+        self._app_data_dir = _app_data               # base dir for all app data files
+        self._db_path = _app_data / 'textures.db'    # SQLite texture index
         self._adventure_level_path = _app_data / 'adventure_level.json'
         self._weapon_collection_path = _app_data / 'weapons.json'
         self._skill_tree_path = _app_data / 'skill_tree.json'
@@ -1889,9 +1892,17 @@ class TextureSorterMainWindow(QMainWindow):
             self.classifier = TextureClassifier(config=config)
             self.lod_detector = LODDetector()
             self.file_handler = FileHandler(create_backup=True, config=config)
-            # Note: OrganizationEngine requires output_dir and style_class parameters.
-            # It will be created on-demand in perform_sorting() once the output directory
-            # is selected by the user via browse_output().
+            # OrganizationEngine requires output_dir + style_class; created on-demand in
+            # perform_sorting() once the user has selected an output folder and style.
+            # TextureDatabase is initialized once per session — here if app_data exists,
+            # or on first sort run if the directory isn't created yet.
+            try:
+                self._app_data_dir.mkdir(parents=True, exist_ok=True)
+                self.database = TextureDatabase(self._db_path)
+                logger.info("Texture database initialized at %s", self._db_path)
+            except Exception as _e:
+                logger.warning("Texture database unavailable: %s", _e)
+                self.database = None
             self.log("✅ Core components initialized")
             
             # Initialize tooltip manager
@@ -2352,6 +2363,12 @@ class TextureSorterMainWindow(QMainWindow):
         except Exception:
             pass
 
+        # Capture selected style key on the main thread (QComboBox is not thread-safe)
+        try:
+            self._sort_style_key = self.style_combo.currentData()
+        except Exception:
+            self._sort_style_key = None
+
         # Create worker thread
         self.worker = WorkerThread(self.perform_sorting)
         self.worker.progress.connect(self.update_progress)
@@ -2369,7 +2386,21 @@ class TextureSorterMainWindow(QMainWindow):
         """Perform actual sorting (runs in worker thread)."""
         try:
             from pathlib import Path
-            
+
+            # Resolve the selected organization style (main thread set self._sort_style_key)
+            style_key = getattr(self, '_sort_style_key', None)
+            org_style_cls = ORGANIZATION_STYLES.get(style_key) if style_key else None
+            if org_style_cls:
+                try:
+                    self.organizer = OrganizationEngine(
+                        style_class=org_style_cls,
+                        output_dir=str(self.output_path),
+                    )
+                    log_callback(f"🗂️ Using organisation style: {self.organizer.get_style_name()}")
+                except Exception as _e:
+                    log_callback(f"⚠️ Could not create OrganizationEngine: {_e}")
+                    self.organizer = None
+
             # Try to import AI classifier, fall back gracefully
             try:
                 from organizer.combined_feature_extractor import CombinedFeatureExtractor
@@ -2431,15 +2462,61 @@ class TextureSorterMainWindow(QMainWindow):
                         category, confidence = self._pattern_classify(file_path.name)
                 else:
                     category, confidence = self._pattern_classify(file_path.name)
-                
-                # Determine target folder
+
+                # Detect LOD group/level for this file
+                lod_group = None
+                lod_level = None
+                if self.lod_detector:
+                    try:
+                        _lod = self.lod_detector.detect_lod_level(file_path.name)
+                        if _lod:
+                            lod_group = getattr(_lod, 'group', None)
+                            lod_level = getattr(_lod, 'level', None)
+                    except Exception:
+                        pass
+
+                # Determine target folder via OrganizationEngine or flat fallback
+                if self.organizer:
+                    try:
+                        from organizer.organization_engine import TextureInfo as _TI
+                        _ti = _TI(
+                            file_path=str(file_path),
+                            filename=file_path.name,
+                            category=category,
+                            confidence=confidence,
+                            lod_group=lod_group,
+                            lod_level=lod_level,
+                            file_size=file_path.stat().st_size if file_path.exists() else 0,
+                            format=file_path.suffix.lstrip('.').upper(),
+                        )
+                        _result = self.organizer.organize_textures([_ti])
+                        # organize_textures moves the file itself; skip our own rename below
+                        _org_moved = _result.get('processed', _result.get('moved', 0)) if isinstance(_result, dict) else 0
+                        if _org_moved:
+                            moved_count += 1
+                            progress_callback(idx + 1, total_files, f"Organised {file_path.name} → {category}")
+                            if self.statistics_tracker:
+                                try:
+                                    self.statistics_tracker.record_file_processed(
+                                        category, _ti.file_size, 0.0, success=True
+                                    )
+                                except Exception:
+                                    pass
+                            self._index_texture_in_db(
+                                file_path, category, confidence, lod_group, lod_level
+                            )
+                            continue  # organizer already moved the file
+                        # fall through to manual move if organizer didn't move it
+                    except Exception as _oe:
+                        logger.debug("OrganizationEngine error: %s", _oe)
+
                 target_folder = self.output_path / category
                 target_folder.mkdir(parents=True, exist_ok=True)
-                
+
                 # Move file
                 try:
                     target_path = target_folder / file_path.name
-                    
+
                     # Handle duplicate filenames
                     if target_path.exists():
                         base = target_path.stem
@@ -2455,11 +2532,19 @@ class TextureSorterMainWindow(QMainWindow):
                     _elapsed = _time.monotonic() - _t0
                     moved_count += 1
                     progress_callback(idx + 1, total_files, f"Moved {file_path.name} to {category}")
+                    # Index in database (best-effort; never raises)
+                    self._index_texture_in_db(
+                        file_path, category, confidence, lod_group, lod_level
+                    )
                     # Record success in statistics tracker
                     if self.statistics_tracker:
                         try:
+                            _fsize = file_path.stat().st_size
+                        except OSError:
+                            _fsize = 0
+                        try:
                             self.statistics_tracker.record_file_processed(
-                                category, file_path.stat().st_size, _elapsed, success=True
+                                category, _fsize, _elapsed, success=True
                             )
                         except Exception:
                             pass
@@ -2467,6 +2552,10 @@ class TextureSorterMainWindow(QMainWindow):
                     failed_count += 1
                     log_callback(f"⚠️ Failed to move {file_path.name}: {e}")
                     progress_callback(idx + 1, total_files, f"Failed: {file_path.name}")
+                    self._index_texture_in_db(
+                        file_path, category, confidence, lod_group, lod_level,
+                        operation='sort', error=str(e)
+                    )
                     # Record failure in statistics tracker
                     if self.statistics_tracker:
                         try:
@@ -2486,7 +2575,25 @@ class TextureSorterMainWindow(QMainWindow):
             import traceback
             log_callback(f"❌ Sorting failed: {str(e)}")
             log_callback(f"Traceback: {traceback.format_exc()}")
-    
+
+    def _index_texture_in_db(self, file_path: 'Path', category: str,
+                             confidence: float, lod_group, lod_level,
+                             operation: str = 'sort', error: str = '') -> None:
+        """Index a processed texture in the SQLite database (best-effort, never raises)."""
+        if not self.database:
+            return
+        try:
+            self.database.add_texture(file_path, {
+                'category': category,
+                'confidence': confidence,
+                'lod_group': lod_group,
+                'lod_level': lod_level,
+            })
+            status = 'ok' if not error else 'error'
+            self.database.log_operation(operation, file_path, status, error)
+        except Exception as _e:
+            logger.debug("Database index error: %s", _e)
+
     def _pattern_classify(self, filename: str) -> tuple:
         """Fallback pattern-based classification."""
         filename_lower = filename.lower()
@@ -3233,6 +3340,12 @@ class TextureSorterMainWindow(QMainWindow):
             try:
                 if self.weapon_collection:
                     self.weapon_collection.save_to_file(self._weapon_collection_path)
+            except Exception:
+                pass
+            # Close texture database cleanly
+            try:
+                if self.database:
+                    self.database.close()
             except Exception:
                 pass
     
