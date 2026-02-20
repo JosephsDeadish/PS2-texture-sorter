@@ -114,6 +114,7 @@ class SettingsPanelQt(QWidget):
         self.tabs.addTab(self.create_behavior_tab(), "⚡ Behavior")
         self.tabs.addTab(self.create_performance_tab(), "🚀 Performance")
         self.tabs.addTab(self.create_ai_models_tab(), "🤖 AI Models")
+        self.tabs.addTab(self.create_hotkeys_tab(), "⌨️ Hotkeys")
         self.tabs.addTab(self.create_advanced_tab(), "🔧 Advanced")
         
         # Bottom buttons
@@ -759,7 +760,61 @@ class SettingsPanelQt(QWidget):
         )
         guide.setStandardButtons(QMessageBox.StandardButton.Ok)
         guide.exec()
-    
+
+    def create_hotkeys_tab(self):
+        """Create hotkeys settings tab with HotkeyDisplayWidget."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(8, 8, 8, 8)
+
+        try:
+            try:
+                from .hotkey_display_qt import HotkeyDisplayWidget
+            except ImportError:
+                from ui.hotkey_display_qt import HotkeyDisplayWidget
+
+            self.hotkey_widget = HotkeyDisplayWidget(
+                parent=tab,
+                tooltip_manager=self.tooltip_manager,
+            )
+
+            # Persist key rebindings: save to config and emit settingsChanged
+            def _on_hotkey_changed(action_id: str, new_key: str) -> None:
+                try:
+                    self.config.set('hotkeys', action_id, value=new_key)
+                    self.config.save()
+                    self.settingsChanged.emit(f"hotkeys.{action_id}", new_key)
+                except Exception as _e:
+                    logger.error(f"Failed to save hotkey {action_id}: {_e}")
+
+            self.hotkey_widget.hotkey_changed.connect(_on_hotkey_changed)
+
+            # Pre-populate widget from saved config
+            saved = {}
+            try:
+                hotkeys_section = self.config.config_parser.options('hotkeys') \
+                    if self.config.config_parser.has_section('hotkeys') else []
+                for key in hotkeys_section:
+                    saved[key] = self.config.get('hotkeys', key, default='')
+            except Exception:
+                pass
+            if saved:
+                self.hotkey_widget.load_hotkeys(saved)
+
+            layout.addWidget(self.hotkey_widget)
+        except ImportError as e:
+            logger.warning(f"HotkeyDisplayWidget unavailable: {e}")
+            self.hotkey_widget = None
+            info = QLabel(
+                "⌨️ Hotkey configuration requires PyQt6.\n"
+                "Install with: pip install PyQt6"
+            )
+            info.setWordWrap(True)
+            layout.addWidget(info)
+
+        layout.addStretch()
+        return tab
+
     def create_advanced_tab(self):
         """Create advanced settings tab"""
         tab = QWidget()

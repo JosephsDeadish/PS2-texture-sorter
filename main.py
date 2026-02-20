@@ -219,6 +219,7 @@ class TextureSorterMainWindow(QMainWindow):
         self.threading_manager = None
         self.cache_manager = None
         self.memory_manager = None
+        self.hotkey_manager = None
         
         # Worker thread
         self.worker = None
@@ -1569,6 +1570,14 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize memory manager: {e}")
             
+            # Initialize hotkey manager
+            try:
+                from features.hotkey_manager import HotkeyManager
+                self.hotkey_manager = HotkeyManager()
+                logger.info("Hotkey manager initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize hotkey manager: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -1914,7 +1923,17 @@ class TextureSorterMainWindow(QMainWindow):
                     logger.info(f"Thumbnail quality updated to: {value} ({_img_proc.THUMBNAIL_QUALITY})")
                 except Exception as e:
                     logger.error(f"Failed to update thumbnail quality: {e}")
-            
+
+            elif setting_key.startswith('hotkeys.'):
+                # Apply live hotkey rebinding to HotkeyManager when available
+                action_id = setting_key[len('hotkeys.'):]
+                if self.hotkey_manager:
+                    try:
+                        self.hotkey_manager.rebind_hotkey(action_id, str(value))
+                        logger.info(f"Hotkey '{action_id}' rebound to '{value}'")
+                    except Exception as e:
+                        logger.warning(f"Could not rebind hotkey '{action_id}': {e}")
+
             # Save config after changes
             try:
                 config.save()

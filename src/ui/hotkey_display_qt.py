@@ -199,13 +199,24 @@ class HotkeyDisplayWidget(QWidget):
                 current_item.setText(default_item.text())
                 
     def save_config(self):
-        """Save hotkey configuration"""
-        config = {}
+        """Save hotkey configuration — persists via hotkey_changed signals."""
+        new_config = {}
         for row in range(self.table.rowCount()):
             action_id = self.get_action_id_from_row(row)
-            current_key = self.table.item(row, 2).text()
-            config[action_id] = current_key
-        self.hotkeys = config
+            item = self.table.item(row, 2)
+            if item is None:
+                logger.warning(f"Row {row} has no key-binding item; keeping previous value")
+                new_config[action_id] = self.hotkeys.get(action_id, '')
+            else:
+                new_config[action_id] = item.text()
+
+        # Emit hotkey_changed for every binding that differs from the stored state
+        # so that the settings panel can persist them to config.
+        for action_id, new_key in new_config.items():
+            if new_key != self.hotkeys.get(action_id):
+                self.hotkey_changed.emit(action_id, new_key)
+
+        self.hotkeys = new_config
         QMessageBox.information(self, "Saved", "Hotkey configuration saved!")
     
     def _set_tooltip(self, widget, tooltip_key: str):

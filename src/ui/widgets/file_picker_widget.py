@@ -1,18 +1,41 @@
 """Universal File Picker Widget - Used by all tools"""
+from __future__ import annotations
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QFileDialog, QListWidget, QListWidgetItem, QCheckBox,
-    QFrame, QProgressBar, QMessageBox, QScrollArea, QMenu,
-    QTabWidget
-)
-from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QThread, QSize
-from PyQt6.QtGui import QIcon, QPixmap, QFont, QColor
-from PyQt6.QtCore import QMimeData, QUrl
 from pathlib import Path
 import json
 import logging
 from typing import List, Optional, Callable, Tuple
+
+try:
+    from PyQt6.QtWidgets import (
+        QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
+        QFileDialog, QListWidget, QListWidgetItem, QCheckBox,
+        QFrame, QProgressBar, QMessageBox, QScrollArea, QMenu,
+        QTabWidget
+    )
+    from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QThread, QSize, QMimeData, QUrl
+    from PyQt6.QtGui import QIcon, QPixmap, QFont, QColor
+    PYQT_AVAILABLE = True
+except ImportError:
+    PYQT_AVAILABLE = False
+    class QWidget: pass  # noqa: E701
+    class QFrame: pass  # noqa: E701
+    class QThread: pass  # noqa: E701
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
+    class Qt:  # noqa: E301
+        AlignCenter = 0; AlignLeft = 0; AlignRight = 0
+    class QTimer: pass  # noqa: E701
+    class QSize: pass  # noqa: E701
+    class QIcon: pass  # noqa: E701
+    class QPixmap: pass  # noqa: E701
+    class QFont: pass  # noqa: E701
+    class QColor: pass  # noqa: E701
 
 logger = logging.getLogger(__name__)
 
