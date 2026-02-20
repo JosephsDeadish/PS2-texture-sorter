@@ -9,7 +9,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont
-import psutil
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+    HAS_PSUTIL = False
 import time
 from typing import Dict, Optional
 from collections import deque
@@ -68,19 +73,25 @@ class PerformanceMetrics:
         self.timestamps.append(now)
         
         # Memory usage
-        process = psutil.Process()
-        memory_mb = process.memory_info().rss / (1024 * 1024)
+        if HAS_PSUTIL:
+            process = psutil.Process()
+            memory_mb = process.memory_info().rss / (1024 * 1024)
+        else:
+            memory_mb = 0.0
         self.memory_usage.append(memory_mb)
         self.peak_memory = max(self.peak_memory, memory_mb)
         
         # CPU usage
-        try:
-            cpu_percent = process.cpu_percent(interval=None)
-            self.cpu_usage.append(cpu_percent)
-            self.peak_cpu = max(self.peak_cpu, cpu_percent)
-        except Exception as e:
-            # If CPU monitoring fails, append 0
-            logger.debug(f"Could not get CPU usage: {e}")
+        if HAS_PSUTIL:
+            try:
+                cpu_percent = psutil.Process().cpu_percent(interval=None)
+                self.cpu_usage.append(cpu_percent)
+                self.peak_cpu = max(self.peak_cpu, cpu_percent)
+            except Exception as e:
+                # If CPU monitoring fails, append 0
+                logger.debug(f"Could not get CPU usage: {e}")
+                self.cpu_usage.append(0)
+        else:
             self.cpu_usage.append(0)
         
         # Processing speed (files per second)
@@ -161,7 +172,7 @@ class PerformanceDashboard(QFrame):
         self.update_timer.timeout.connect(self._update)
         
         # Parallel processing control
-        self.max_workers = psutil.cpu_count()
+        self.max_workers = psutil.cpu_count() if HAS_PSUTIL else 4
         self.current_workers = 1
         
         self._tooltips = []
@@ -231,7 +242,7 @@ class PerformanceDashboard(QFrame):
         self.cpu_label.setFont(normal_font)
         resources_layout.addWidget(self.cpu_label)
         
-        available_memory = psutil.virtual_memory().available / (1024 * 1024 * 1024)
+        available_memory = psutil.virtual_memory().available / (1024 * 1024 * 1024) if HAS_PSUTIL else 0.0
         self.available_label = QLabel(f"Available: {available_memory:.1f} GB")
         self.available_label.setFont(normal_font)
         resources_layout.addWidget(self.available_label)

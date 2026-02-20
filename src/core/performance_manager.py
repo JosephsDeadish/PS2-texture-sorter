@@ -11,7 +11,12 @@ Author: Dead On The Inside / JosephsDeadish
 from __future__ import annotations
 import logging
 import platform
-import psutil
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+    HAS_PSUTIL = False
 from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional, Any, List
@@ -138,10 +143,14 @@ class PerformanceManager:
     def _detect_system_info(self) -> None:
         """Detect system capabilities and resources including GPU."""
         try:
-            cpu_count = psutil.cpu_count(logical=True) or 4
-            memory = psutil.virtual_memory()
-            total_memory_mb = memory.total / (1024 * 1024)
-            available_memory_mb = memory.available / (1024 * 1024)
+            cpu_count = psutil.cpu_count(logical=True) or 4 if HAS_PSUTIL else 4
+            if HAS_PSUTIL:
+                memory = psutil.virtual_memory()
+                total_memory_mb = memory.total / (1024 * 1024)
+                available_memory_mb = memory.available / (1024 * 1024)
+            else:
+                total_memory_mb = 2048.0
+                available_memory_mb = 1024.0
             
             # Detect GPUs
             gpu_info = {}

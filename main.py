@@ -1480,7 +1480,39 @@ class TextureSorterMainWindow(QMainWindow):
             }}
             """
         self.setStyleSheet(stylesheet)
-    
+        self.apply_cursor()
+
+    def apply_cursor(self):
+        """Apply the cursor style saved in config to the whole application."""
+        try:
+            from PyQt6.QtGui import QCursor
+            from PyQt6.QtCore import Qt
+            cursor_name = str(config.get('ui', 'cursor', default='default')).lower().strip()
+            _cursor_map = {
+                'default':   Qt.CursorShape.ArrowCursor,
+                'arrow':     Qt.CursorShape.ArrowCursor,
+                'hand':      Qt.CursorShape.PointingHandCursor,
+                'cross':     Qt.CursorShape.CrossCursor,
+                'wait':      Qt.CursorShape.WaitCursor,
+                'text':      Qt.CursorShape.IBeamCursor,
+                'forbidden': Qt.CursorShape.ForbiddenCursor,
+                'move':      Qt.CursorShape.SizeAllCursor,
+                'zoom_in':   Qt.CursorShape.SizeBDiagCursor,   # diagonal resize - closest native Qt shape for zoom
+                'zoom_out':  Qt.CursorShape.SizeFDiagCursor,   # opposite diagonal - visually distinct from zoom_in
+            }
+            shape = _cursor_map.get(cursor_name, Qt.CursorShape.ArrowCursor)
+            app = QApplication.instance()
+            if app:
+                # Restore any previous override so we don't stack overrides
+                while app.overrideCursor():
+                    app.restoreOverrideCursor()
+                # For non-default cursors set an application-wide override
+                if cursor_name not in ('default', 'arrow'):
+                    app.setOverrideCursor(QCursor(shape))
+            logger.debug(f"Cursor applied: {cursor_name} → {shape.name if hasattr(shape, 'name') else shape}")
+        except Exception as e:
+            logger.warning(f"Could not apply cursor: {e}")
+
     def initialize_components(self):
         """Initialize core components."""
         try:
@@ -1841,6 +1873,10 @@ class TextureSorterMainWindow(QMainWindow):
                     if mode:
                         self.tooltip_manager.set_mode(mode)
             
+            # Handle cursor changes — apply immediately
+            elif setting_key == "ui.cursor":
+                self.apply_cursor()
+
             # Handle font changes
             elif setting_key in ("ui.font_family", "ui.font_size"):
                 font_family = config.get('ui', 'font_family', default='Segoe UI')

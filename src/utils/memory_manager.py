@@ -3,7 +3,12 @@ Memory Manager - Monitor and control memory usage
 Author: Dead On The Inside / JosephsDeadish
 """
 
-import psutil
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+    HAS_PSUTIL = False
 import gc
 import threading
 import time
@@ -29,7 +34,7 @@ class MemoryManager:
         """
         self.max_memory_bytes = max_memory_mb * 1024 * 1024
         self.cleanup_threshold = cleanup_threshold
-        self.process = psutil.Process()
+        self.process = psutil.Process() if HAS_PSUTIL else None
         self.monitoring = False
         self.monitor_thread = None
         self.cleanup_callbacks = []
@@ -41,6 +46,13 @@ class MemoryManager:
         Returns:
             Dictionary with memory stats
         """
+        if not HAS_PSUTIL or self.process is None:
+            return {
+                'rss_mb': 0, 'vms_mb': 0, 'percent': 0,
+                'system_available_mb': 0, 'system_percent': 0,
+                'max_allowed_mb': self.max_memory_bytes / (1024 * 1024),
+                'usage_of_max': 0
+            }
         mem_info = self.process.memory_info()
         system_mem = psutil.virtual_memory()
         
@@ -61,6 +73,8 @@ class MemoryManager:
         Returns:
             True if memory usage exceeds threshold
         """
+        if not HAS_PSUTIL or self.process is None:
+            return False
         mem_info = self.process.memory_info()
         usage_ratio = mem_info.rss / self.max_memory_bytes
         return usage_ratio >= self.cleanup_threshold
