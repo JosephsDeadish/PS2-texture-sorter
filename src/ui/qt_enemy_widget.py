@@ -7,6 +7,8 @@ Uses QLabel with animated QPixmap for 2D enemies, or QOpenGLWidget for 3D.
 
 
 from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
 try:
     from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -239,8 +241,8 @@ class EnemyListWidget(QWidget):
         self.enemy_widgets = []
         
         self._setup_ui()
-        
-    def _setup_ui(self):
+        # Default handler logs clicks; callers can add their own handlers
+        self.enemy_clicked.connect(lambda e: logger.debug(f"EnemyListWidget: enemy clicked {getattr(e, 'name', e)}"))
         """Create UI layout."""
         from PyQt6.QtWidgets import QHBoxLayout, QScrollArea
         

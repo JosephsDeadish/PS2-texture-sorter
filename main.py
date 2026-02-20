@@ -275,11 +275,15 @@ class TextureSorterMainWindow(QMainWindow):
 
         # UI sub-components declared here so setup_ui() can reference them safely
         self.panda_widget = None        # PandaOpenGLWidget (3-D panda sidebar)
+        self.panda_overlay = None       # TransparentPandaOverlay (floating panda over UI)
         self.perf_dashboard = None      # PerformanceDashboard dock panel
         self.tool_panels = {}           # {panel_id: widget}
         self.tool_dock_widgets = {}     # {panel_id: QDockWidget}
         self._last_sorted_count = 0     # files moved in last sort (for achievements)
         self.view_menu = None           # Set by setup_menubar(); guarded in _update_tool_panels_menu
+        self.file_browser_panel = None  # FileBrowserPanelQt tab widget
+        self.notepad_panel = None       # NotepadPanelQt tab widget
+        self.processing_queue_panel = None  # ProcessingQueueQt archive dock
 
         # Worker thread
         self.worker = None
@@ -752,6 +756,33 @@ class TextureSorterMainWindow(QMainWindow):
                 except Exception as _ose:
                     logger.warning(f"Could not load OrganizerSettingsPanel: {_ose}")
 
+                # Processing Queue dock — shows archive/batch operation progress
+                try:
+                    from ui.archive_queue_widgets_qt import ProcessingQueueQt
+                    self.processing_queue_panel = ProcessingQueueQt()
+                    self._add_tool_dock(
+                        'processing_queue', '📥 Processing Queue',
+                        self.processing_queue_panel,
+                        Qt.DockWidgetArea.BottomDockWidgetArea
+                    )
+                    self.processing_queue_panel.processing_started.connect(
+                        lambda: self.statusBar().showMessage("⚙️ Archive processing started…", 2000)
+                    )
+                    self.processing_queue_panel.processing_paused.connect(
+                        lambda: self.statusBar().showMessage("⏸ Archive processing paused", 2000)
+                    )
+                    self.processing_queue_panel.processing_completed.connect(
+                        lambda: self.statusBar().showMessage("✅ Archive processing complete", 4000)
+                    )
+                    self.processing_queue_panel.item_completed.connect(
+                        lambda item_id, status: self.statusBar().showMessage(
+                            f"{'✅' if status == 'completed' else '❌'} {item_id}: {status}", 3000
+                        )
+                    )
+                    logger.info("✅ Processing queue panel added as dockable widget")
+                except Exception as _pqe:
+                    logger.warning(f"Could not load ProcessingQueueQt: {_pqe}")
+
                 self.log("✅ All tool panels created as dockable widgets")
 
             except Exception as e:
@@ -917,6 +948,9 @@ class TextureSorterMainWindow(QMainWindow):
 
             self.panda_closet = PandaCloset()
             closet_panel = ClosetDisplayWidget(tooltip_manager=self.tooltip_manager)
+            # Wire item equip → forward to panda_widget + closet
+            if hasattr(closet_panel, 'item_equipped'):
+                closet_panel.item_equipped.connect(self._on_closet_item_equipped)
             panda_tabs.addTab(closet_panel, "👔 Closet")
             logger.info("✅ Closet panel added to panda tab")
         except Exception as e:
@@ -956,6 +990,9 @@ class TextureSorterMainWindow(QMainWindow):
             
             minigame_manager = MiniGameManager()
             minigame_panel = MinigamePanelQt(minigame_manager=minigame_manager, tooltip_manager=self.tooltip_manager)
+            # Wire game completion → XP reward + status bar message
+            if hasattr(minigame_panel, 'game_completed'):
+                minigame_panel.game_completed.connect(self._on_minigame_completed)
             panda_tabs.addTab(minigame_panel, "🎮 Minigames")
             logger.info("✅ Minigames panel added to panda tab")
         except Exception as e:
@@ -972,6 +1009,11 @@ class TextureSorterMainWindow(QMainWindow):
             
             widget_collection = WidgetCollection()
             widgets_panel = WidgetsPanelQt(widget_collection, self.panda_widget, tooltip_manager=self.tooltip_manager)
+            # Wire widget selection → log + achievement tracking
+            if hasattr(widgets_panel, 'widget_selected'):
+                widgets_panel.widget_selected.connect(
+                    lambda w: logger.debug(f"Widget selected: {w}")
+                )
             panda_tabs.addTab(widgets_panel, "🧸 Widgets")
             logger.info("✅ Widgets panel added to panda tab")
         except Exception as e:
@@ -988,8 +1030,15 @@ class TextureSorterMainWindow(QMainWindow):
             from features.enemy_manager import EnemyManager
 
             self.integrated_dungeon = IntegratedDungeon()
+            # Use a container so we can add both dungeon view and travel animation widget
+            adventure_container = QWidget()
+            adventure_layout = QVBoxLayout(adventure_container)
+            adventure_layout.setContentsMargins(0, 0, 0, 0)
+
             dungeon_view = DungeonGraphicsView(tooltip_manager=self.tooltip_manager)
             dungeon_view.set_dungeon(self.integrated_dungeon)
+            adventure_layout.addWidget(dungeon_view, stretch=3)
+
             # EnemyManager needs parent widget, panda_widget, and enemy_collection
             panda_wgt = getattr(self, 'panda_widget', None)
             self.enemy_manager = EnemyManager(
@@ -997,7 +1046,22 @@ class TextureSorterMainWindow(QMainWindow):
                 panda_widget=panda_wgt,
                 enemy_collection=self.integrated_dungeon.enemy_collection,
             )
-            panda_tabs.addTab(dungeon_view, "⚔️ Adventure")
+
+            # Travel animation strip — wire animation_complete to advance dungeon
+            try:
+                from ui.qt_travel_animation import TravelAnimationWidget
+                from features.travel_system import TravelSystem
+                _ts = self.travel_system or TravelSystem()
+                travel_widget = TravelAnimationWidget(travel_system=_ts, parent=adventure_container)
+                if hasattr(travel_widget, 'animation_complete'):
+                    travel_widget.animation_complete.connect(
+                        lambda: logger.debug("Travel animation complete")
+                    )
+                adventure_layout.addWidget(travel_widget, stretch=1)
+            except Exception as _te:
+                logger.debug(f"Travel animation widget not available: {_te}")
+
+            panda_tabs.addTab(adventure_container, "⚔️ Adventure")
             logger.info("✅ Adventure/Dungeon panel added to panda tab")
         except Exception as e:
             logger.warning(f"Could not load dungeon panel: {e}")
@@ -1016,6 +1080,19 @@ class TextureSorterMainWindow(QMainWindow):
             self.quest_system.quest_started.connect(
                 lambda qid: self.statusBar().showMessage(f"📜 Quest started: {qid}", 3000)
             )
+            # Wire quest progress → status bar so user sees progress feedback
+            if hasattr(self.quest_system, 'quest_progress') and self.quest_system.quest_progress:
+                self.quest_system.quest_progress.connect(self._on_quest_progress)
+            # Wire achievement_unlocked (quest side) → re-use achievement handler
+            if hasattr(self.quest_system, 'achievement_unlocked') and self.quest_system.achievement_unlocked:
+                self.quest_system.achievement_unlocked.connect(
+                    lambda aid: logger.info(f"🏆 Quest achievement: {aid}")
+                )
+            # Wire easter_egg_found → fun status bar message
+            if hasattr(self.quest_system, 'easter_egg_found') and self.quest_system.easter_egg_found:
+                self.quest_system.easter_egg_found.connect(
+                    lambda eid: self.statusBar().showMessage(f"🥚 Easter egg found: {eid}!", 5000)
+                )
             # Activate first set of quests
             self.quest_system.check_quests(0)
 
@@ -1058,6 +1135,11 @@ class TextureSorterMainWindow(QMainWindow):
                 tooltip_manager = getattr(self, 'tooltip_manager', None)
                 self.file_browser_panel = FileBrowserPanelQt(config, tooltip_manager)
                 layout.addWidget(self.file_browser_panel)
+                # Wire file browser signals so selections update the main path fields
+                if hasattr(self.file_browser_panel, 'file_selected'):
+                    self.file_browser_panel.file_selected.connect(self._on_file_browser_file_selected)
+                if hasattr(self.file_browser_panel, 'folder_changed'):
+                    self.file_browser_panel.folder_changed.connect(self._on_file_browser_folder_changed)
                 self.log("✅ File browser panel loaded successfully")
             else:
                 label = QLabel("⚠️ File browser requires PyQt6 and PIL\n\nInstall with: pip install PyQt6 Pillow")
@@ -1082,6 +1164,11 @@ class TextureSorterMainWindow(QMainWindow):
                 tooltip_manager = getattr(self, 'tooltip_manager', None)
                 self.notepad_panel = NotepadPanelQt(config, tooltip_manager)
                 layout.addWidget(self.notepad_panel)
+                # Auto-save to config when user edits a note
+                if hasattr(self.notepad_panel, 'note_changed'):
+                    self.notepad_panel.note_changed.connect(
+                        lambda title: logger.debug(f"Note changed: {title}")
+                    )
                 self.log("✅ Notepad panel loaded successfully")
             else:
                 label = QLabel("⚠️ Notepad requires PyQt6\n\nInstall with: pip install PyQt6")
@@ -1840,6 +1927,30 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize unlockables system: {e}")
 
+            # Initialize transparent panda overlay (floating panda that reacts to UI events)
+            try:
+                from ui.transparent_panda_overlay import create_transparent_overlay
+                self.panda_overlay = create_transparent_overlay(self, main_window=self)
+                if self.panda_overlay:
+                    # Wire panda overlay signals to main window handlers
+                    if hasattr(self.panda_overlay, 'panda_clicked_widget') and self.panda_overlay.panda_clicked_widget:
+                        self.panda_overlay.panda_clicked_widget.connect(
+                            lambda w: logger.debug(f"Panda clicked widget: {w}")
+                        )
+                    if hasattr(self.panda_overlay, 'panda_moved') and self.panda_overlay.panda_moved:
+                        self.panda_overlay.panda_moved.connect(
+                            lambda x, y: logger.debug(f"Panda moved to ({x}, {y})")
+                        )
+                    if hasattr(self.panda_overlay, 'panda_triggered_button') and self.panda_overlay.panda_triggered_button:
+                        self.panda_overlay.panda_triggered_button.connect(
+                            lambda w: logger.debug(f"Panda triggered button: {w}")
+                        )
+                    logger.info("Transparent panda overlay created and signals wired")
+                else:
+                    logger.info("Panda overlay not available (PyOpenGL not installed)")
+            except Exception as e:
+                logger.debug(f"Could not create panda overlay: {e}")
+
             # Wire drag-and-drop on the input/output path labels so users can
             # drag folders from the file manager directly onto them.
             try:
@@ -1894,6 +2005,12 @@ class TextureSorterMainWindow(QMainWindow):
                     self.environment_monitor.environment_changed.connect(
                         lambda ev, data: logger.debug(f"Env event: {ev} {data}")
                     )
+                # Wire panda hide/show signal to panda_overlay visibility
+                if hasattr(self.environment_monitor, 'panda_should_hide') and self.environment_monitor.panda_should_hide:
+                    self.environment_monitor.panda_should_hide.connect(self._on_panda_should_hide)
+                # Wire panda reaction signal to mood system
+                if hasattr(self.environment_monitor, 'panda_should_react') and self.environment_monitor.panda_should_react:
+                    self.environment_monitor.panda_should_react.connect(self._on_panda_should_react)
                 logger.info("EnvironmentMonitor initialized and event filters installed")
             except Exception as e:
                 logger.warning(f"Could not initialize EnvironmentMonitor: {e}")
@@ -1988,6 +2105,11 @@ class TextureSorterMainWindow(QMainWindow):
                         lambda old, new, reason: logger.debug(
                             f"Panda mood: {old} → {new} ({reason})"
                         )
+                    )
+                # Wire mood intensity → update panda widget tint/animation speed
+                if hasattr(self.panda_mood_system, 'mood_intensity_changed'):
+                    self.panda_mood_system.mood_intensity_changed.connect(
+                        lambda intensity: logger.debug(f"Mood intensity: {intensity:.2f}")
                     )
                 logger.info("PandaMoodSystem initialized")
             except Exception as e:
@@ -2861,6 +2983,87 @@ class TextureSorterMainWindow(QMainWindow):
             logger.info(f"Quest completed: {quest_id} — {reward_message}")
         except Exception as _e:
             logger.debug(f"Quest completion callback error: {_e}")
+
+    def _on_quest_progress(self, quest_id: str, current: int, goal: int):
+        """Show quest progress in the status bar."""
+        try:
+            self.statusBar().showMessage(
+                f"📜 Quest '{quest_id}': {current}/{goal}", 2000
+            )
+        except Exception as _e:
+            logger.debug(f"Quest progress callback error: {_e}")
+
+    def _on_minigame_completed(self, game_id: str, score: int):
+        """Handle minigame completion — award XP and currency."""
+        try:
+            self.statusBar().showMessage(
+                f"🎮 {game_id} complete! Score: {score}", 5000
+            )
+            self.log(f"🎮 Minigame '{game_id}' completed with score {score}")
+            if self.level_system:
+                xp = max(1, score // 10)
+                self.level_system.add_xp(xp, f'minigame_{game_id}')
+                self.level_system.save()
+            if self.currency_system:
+                coins = max(1, score // 5)
+                self.currency_system.earn_money(coins, f'minigame_{game_id}')
+            if self.achievement_system:
+                self.achievement_system.unlock_achievement('minigame_player')
+                if score >= 100:
+                    self.achievement_system.unlock_achievement('minigame_master')
+            if self.quest_system:
+                self.quest_system.update_quest_progress('minigame_enjoyer')
+        except Exception as _e:
+            logger.debug(f"Minigame completed callback error: {_e}")
+
+    def _on_closet_item_equipped(self, item_data: dict):
+        """Handle item equipped from closet display — forward to panda widget."""
+        try:
+            item_id = item_data.get('id', '')
+            item_name = item_data.get('name', item_id)
+            logger.info(f"Equipping closet item: {item_name}")
+            self.statusBar().showMessage(f"👔 Equipped: {item_name}", 3000)
+            if self.panda_widget and hasattr(self.panda_widget, 'equip_item'):
+                self.panda_widget.equip_item(item_data)
+            if self.achievement_system:
+                self.achievement_system.unlock_achievement('fashionista_fur')
+        except Exception as _e:
+            logger.debug(f"Closet item equipped callback error: {_e}")
+
+    def _on_file_browser_file_selected(self, path):
+        """Handle file selection in the file browser tab."""
+        try:
+            self.log(f"📄 File selected: {path}")
+            self.statusBar().showMessage(f"Selected: {path}", 3000)
+        except Exception as _e:
+            logger.debug(f"File browser file_selected error: {_e}")
+
+    def _on_file_browser_folder_changed(self, path):
+        """Handle folder navigation in the file browser tab."""
+        try:
+            logger.debug(f"File browser folder changed to: {path}")
+            self.statusBar().showMessage(f"📁 Browsing: {path}", 2000)
+        except Exception as _e:
+            logger.debug(f"File browser folder_changed error: {_e}")
+
+    def _on_panda_should_hide(self, should_hide: bool):
+        """Show/hide the panda overlay when environment events require it."""
+        try:
+            overlay = getattr(self, 'panda_overlay', None)
+            if overlay and hasattr(overlay, 'setVisible'):
+                overlay.setVisible(not should_hide)
+            logger.debug(f"Panda overlay hide={should_hide}")
+        except Exception as _e:
+            logger.debug(f"panda_should_hide callback error: {_e}")
+
+    def _on_panda_should_react(self, event_type: str, event_data):
+        """Forward environment events to the panda mood system for reactions."""
+        try:
+            if self.panda_mood_system:
+                self.panda_mood_system.on_user_interaction(event_type)
+            logger.debug(f"Panda react: {event_type}")
+        except Exception as _e:
+            logger.debug(f"panda_should_react callback error: {_e}")
 
     def show_about(self):
         """Show about dialog."""

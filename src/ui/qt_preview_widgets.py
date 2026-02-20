@@ -4,6 +4,9 @@ Qt Preview Widgets - Unified preview system for tool panels
 Replaces canvas-based previews in customization, closet, widgets panels
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtWidgets import (QWidget, QLabel, QVBoxLayout, QHBoxLayout,
                                   QScrollArea, QGridLayout, QListWidget,
@@ -83,6 +86,8 @@ class ColorPreviewWidget(QWidget):
         self.setMinimumSize(150, 150)
         self.setMaximumSize(200, 200)
         self._setup_ui()
+        # Default handler logs selection; parent widgets can connect their own handlers
+        self.color_selected.connect(lambda c: logger.debug(f"ColorPreviewWidget: color selected {c}"))
     
     def _setup_ui(self):
         """Setup UI"""
@@ -136,6 +141,8 @@ class ItemPreviewWidget(QWidget):
         self.current_item = None
         self.setMinimumSize(200, 200)
         self._setup_ui()
+        # Default handler logs clicks; parent widgets can connect their own handlers
+        self.item_clicked.connect(lambda d: logger.debug(f"ItemPreviewWidget: item clicked {d.get('name', d)}"))
     
     def _setup_ui(self):
         """Setup UI"""

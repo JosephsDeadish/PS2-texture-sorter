@@ -4,6 +4,9 @@ Qt Travel Animation Widget - Replaces canvas travel animation
 Uses Qt animations and QLabel for clean widget-based animation
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve
@@ -90,11 +93,14 @@ class TravelAnimationWidget(QWidget):
     
     animation_complete = pyqtSignal()
     
-    def __init__(self, scenes: List[TravelScene] = None, parent=None):
+    def __init__(self, scenes: List[TravelScene] = None, travel_system=None, parent=None):
         super().__init__(parent)
+        self.travel_system = travel_system
         self.scenes = scenes or self._get_default_scenes()
         self.current_scene = 0
         self._setup_ui()
+        # Default handler logs completion; callers can connect their own handlers
+        self.animation_complete.connect(lambda: logger.debug("TravelAnimationWidget: animation complete"))
         
     def _setup_ui(self):
         """Setup the widget UI"""

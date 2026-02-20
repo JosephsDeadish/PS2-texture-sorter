@@ -420,6 +420,11 @@ class ColorCorrectionPanelQt(QWidget):
         self.preview_widget = ComparisonSliderWidget()
         self.preview_widget.setMinimumHeight(300)
         self._set_tooltip(self.preview_widget, "Drag slider to compare before/after color correction")
+        # Log slider position changes for debugging
+        if hasattr(self.preview_widget, 'slider_moved'):
+            self.preview_widget.slider_moved.connect(
+                lambda pos: logger.debug(f"Color correction preview slider: {pos}%")
+            )
         group_layout.addWidget(self.preview_widget)
         
         group.setLayout(group_layout)
