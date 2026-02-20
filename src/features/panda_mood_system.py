@@ -23,6 +23,17 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     QObject = object
+    class _SignalStub:
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()
+    class QTimer:
+        timeout = _SignalStub()
+        def start(self, *a): pass
+        def stop(self): pass
+        @staticmethod
+        def singleShot(ms, cb): pass
 
 import logging
 import random
@@ -64,13 +75,10 @@ class PandaMoodSystem(QObject if PYQT_AVAILABLE else object):
     """
     
     # Signals
-    mood_changed = pyqtSignal(str, str, str) if PYQT_AVAILABLE else None  # old_mood, new_mood, reason
-    mood_intensity_changed = pyqtSignal(float) if PYQT_AVAILABLE else None
+    mood_changed = pyqtSignal(str, str, str)
+    mood_intensity_changed = pyqtSignal(float)
     
     def __init__(self, panda_overlay=None):
-        if not PYQT_AVAILABLE:
-            raise ImportError("PyQt6 required for PandaMoodSystem")
-        
         super().__init__()
         
         self.panda_overlay = panda_overlay
@@ -373,10 +381,6 @@ def create_mood_system(panda_overlay=None):
         panda_overlay: Optional TransparentPandaOverlay instance
         
     Returns:
-        PandaMoodSystem instance or None
+        PandaMoodSystem instance (always; signals are stubs when PyQt6 absent)
     """
-    if not PYQT_AVAILABLE:
-        logger.warning("PyQt6 not available, cannot create mood system")
-        return None
-    
     return PandaMoodSystem(panda_overlay)

@@ -299,6 +299,11 @@ class TextureSorterMainWindow(QMainWindow):
         self.batch_queue = None          # BatchQueue – priority operation queue
         self.panda_character = None      # PandaCharacter – panda personality/animations
         self.panda_stats = None          # PandaStats – panda happiness/hunger/energy
+        self.panda_mood_system = None    # PandaMoodSystem – mood-based behaviour
+        self.skill_tree = None           # SkillTree – RPG skill progression
+        self.travel_system = None        # TravelSystem – location/dungeon navigation
+        self.adventure_level = None      # AdventureLevel – combat XP tracking
+        self.weapon_collection = None    # WeaponCollection – panda weapons
         
         # Paths
         self.input_path = None
@@ -306,6 +311,12 @@ class TextureSorterMainWindow(QMainWindow):
         
         # Tooltip manager (will be initialized later)
         self.tooltip_manager = None
+
+        # Persistent data paths (stored once; reused in initialize_components and closeEvent)
+        _app_data = Path(__file__).parent / 'app_data'
+        self._adventure_level_path = _app_data / 'adventure_level.json'
+        self._weapon_collection_path = _app_data / 'weapons.json'
+        self._skill_tree_path = _app_data / 'skill_tree.json'
         
         # Docking system - track floating panels
         self.docked_widgets = {}  # {tab_name: QDockWidget}
@@ -724,6 +735,22 @@ class TextureSorterMainWindow(QMainWindow):
                 organizer_panel.log.connect(lambda msg: self.log(msg))
                 organizer_panel.finished.connect(lambda ok, msg, _stats: self.statusBar().showMessage(
                     f"{'✅' if ok else '❌'} Organizer: {msg}", 4000))
+
+                # Organizer Settings (sub-panel — add alongside the organizer)
+                try:
+                    from ui.organizer_settings_panel import OrganizerSettingsPanel
+                    org_settings_panel = OrganizerSettingsPanel(
+                        config=None, tooltip_manager=self.tooltip_manager
+                    )
+                    self._add_tool_dock(
+                        'organizer_settings', '⚙️ Organizer Settings',
+                        org_settings_panel, Qt.DockWidgetArea.BottomDockWidgetArea
+                    )
+                    org_settings_panel.settings_changed.connect(
+                        lambda s: logger.debug(f"Organizer settings changed: {s}")
+                    )
+                except Exception as _ose:
+                    logger.warning(f"Could not load OrganizerSettingsPanel: {_ose}")
 
                 self.log("✅ All tool panels created as dockable widgets")
 
@@ -1951,6 +1978,62 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize PandaStats: {e}")
 
+            # Initialize PandaMoodSystem — mood-based behaviour modifiers
+            try:
+                from features.panda_mood_system import PandaMoodSystem
+                panda_overlay = getattr(self, 'panda_overlay', None)
+                self.panda_mood_system = PandaMoodSystem(panda_overlay)
+                if hasattr(self.panda_mood_system, 'mood_changed'):
+                    self.panda_mood_system.mood_changed.connect(
+                        lambda old, new, reason: logger.debug(
+                            f"Panda mood: {old} → {new} ({reason})"
+                        )
+                    )
+                logger.info("PandaMoodSystem initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize PandaMoodSystem: {e}")
+
+            # Initialize SkillTree — RPG skill progression system
+            try:
+                from features.skill_tree import SkillTree
+                self.skill_tree = SkillTree()
+                if self._skill_tree_path.exists():
+                    import json as _json_st
+                    self.skill_tree.load_from_dict(
+                        _json_st.loads(self._skill_tree_path.read_text(encoding='utf-8'))
+                    )
+                logger.info("SkillTree initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize SkillTree: {e}")
+
+            # Initialize TravelSystem — location / dungeon navigation
+            try:
+                from features.travel_system import TravelSystem
+                self.travel_system = TravelSystem()
+                logger.info("TravelSystem initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize TravelSystem: {e}")
+
+            # Initialize AdventureLevel — combat XP and levelling
+            try:
+                from features.combat_system import AdventureLevel
+                self.adventure_level = AdventureLevel(
+                    save_path=self._adventure_level_path
+                )
+                logger.info("AdventureLevel initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize AdventureLevel: {e}")
+
+            # Initialize WeaponCollection — equippable weapons for dungeon
+            try:
+                from features.weapon_system import WeaponCollection
+                self.weapon_collection = WeaponCollection(
+                    save_path=self._weapon_collection_path
+                )
+                logger.info("WeaponCollection initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize WeaponCollection: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -2070,6 +2153,15 @@ class TextureSorterMainWindow(QMainWindow):
             if self.panda_character:
                 from features.panda_character import PandaMood
                 self.panda_character.set_mood(PandaMood.WORKING)
+        except Exception:
+            pass
+
+        # Trigger mood system — sort start is a high-energy interactive event
+        try:
+            if self.panda_mood_system:
+                from features.panda_mood_system import PandaMood as _PMood
+                self.panda_mood_system.on_user_interaction('sort_start')
+                self.panda_mood_system.force_mood(_PMood.HAPPY)
         except Exception:
             pass
 
@@ -2342,6 +2434,22 @@ class TextureSorterMainWindow(QMainWindow):
                     self.panda_character.set_mood(PandaMood.HAPPY)
             except Exception:
                 pass
+            # Award AdventureLevel XP — 1 XP per file sorted, source 'texture_sort'
+            try:
+                if self.adventure_level and files_processed > 0:
+                    leveled_up, new_level = self.adventure_level.add_xp(files_processed, 'texture_sort')
+                    if leveled_up:
+                        self.statusBar().showMessage(
+                            f"⚔️ Adventure level up! Now level {new_level}", 5000
+                        )
+            except Exception:
+                pass
+            # Update mood system — sort complete is a positive event
+            try:
+                if self.panda_mood_system:
+                    self.panda_mood_system.on_quest_completed()
+            except Exception:
+                pass
         else:
             self.log(f"❌ {message}")
             QMessageBox.critical(self, "Error", message)
@@ -2359,6 +2467,13 @@ class TextureSorterMainWindow(QMainWindow):
                 if self.panda_character:
                     from features.panda_character import PandaMood
                     self.panda_character.set_mood(PandaMood.TIRED)
+            except Exception:
+                pass
+            # Mood system — error makes panda annoyed
+            try:
+                if self.panda_mood_system:
+                    from features.panda_mood_system import PandaMood as _PMood
+                    self.panda_mood_system.force_mood(_PMood.ANNOYED)
             except Exception:
                 pass
     
@@ -2537,6 +2652,13 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception:
                 pass
 
+            # Notify mood system — click is a positive user interaction
+            try:
+                if self.panda_mood_system:
+                    self.panda_mood_system.on_user_interaction('click')
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling panda click: {e}", exc_info=True)
     
@@ -2688,6 +2810,13 @@ class TextureSorterMainWindow(QMainWindow):
         except Exception as _e:
             logger.debug(f"Could not show achievement popup: {_e}")
 
+        # Achievement = positive event → move mood toward HAPPY/MISCHIEVOUS
+        try:
+            if self.panda_mood_system:
+                self.panda_mood_system.on_quest_completed()
+        except Exception:
+            pass
+
     # Coins awarded per new level on level-up (e.g. reaching level 10 gives 500 coins)
     _COINS_PER_LEVEL = 50
 
@@ -2814,6 +2943,28 @@ class TextureSorterMainWindow(QMainWindow):
             try:
                 if self.threading_manager:
                     self.threading_manager.stop()
+            except Exception:
+                pass
+            # Save skill tree progression
+            try:
+                if self.skill_tree:
+                    import json as _json
+                    self._skill_tree_path.parent.mkdir(parents=True, exist_ok=True)
+                    self._skill_tree_path.write_text(
+                        _json.dumps(self.skill_tree.to_dict(), indent=2), encoding='utf-8'
+                    )
+            except Exception:
+                pass
+            # Save adventure level progression
+            try:
+                if self.adventure_level:
+                    self.adventure_level.save_to_file(self._adventure_level_path)
+            except Exception:
+                pass
+            # Save weapon collection state
+            try:
+                if self.weapon_collection:
+                    self.weapon_collection.save_to_file(self._weapon_collection_path)
             except Exception:
                 pass
     
