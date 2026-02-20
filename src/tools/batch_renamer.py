@@ -19,8 +19,18 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Callable
-from PIL import Image
-import piexif
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+try:
+    import piexif
+    HAS_PIEXIF = True
+except ImportError:
+    HAS_PIEXIF = False
+    piexif = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +113,8 @@ class BatchRenamer:
             
         elif pattern == RenamePattern.DATE_EXIF:
             try:
+                if not HAS_PIEXIF:
+                    raise ImportError("piexif not available")
                 img = Image.open(filepath)
                 exif_dict = piexif.load(img.info.get('exif', b''))
                 if piexif.ExifIFD.DateTimeOriginal in exif_dict['Exif']:

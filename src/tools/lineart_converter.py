@@ -11,7 +11,12 @@ import numpy as np
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any, Callable
 from dataclasses import dataclass
-from PIL import Image, ImageFilter, ImageOps, ImageEnhance
+try:
+    from PIL import Image, ImageFilter, ImageOps, ImageEnhance
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 from enum import Enum
 
 logger = logging.getLogger(__name__)

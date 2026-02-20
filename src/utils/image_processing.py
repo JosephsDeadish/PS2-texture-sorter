@@ -4,21 +4,48 @@ Efficient image operations including thumbnails, conversions, and validation
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
+
 import io
 import logging
 from pathlib import Path
 from typing import Optional, Tuple, Union, BinaryIO
-from PIL import Image, ImageOps, ImageFile
-import numpy as np
-import cv2
 
-# Allow loading of truncated images
-ImageFile.LOAD_TRUNCATED_IMAGES = True
+logger = logging.getLogger(__name__)
+
+try:
+    from PIL import Image, ImageOps, ImageFile
+    HAS_PIL = True
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+except ImportError:
+    HAS_PIL = False
+    Image = None       # type: ignore[assignment]
+    ImageOps = None    # type: ignore[assignment]
+    ImageFile = None   # type: ignore[assignment]
+    logger.warning("Pillow not available — image processing disabled. "
+                   "Install with: pip install Pillow")
+
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False
+    np = None  # type: ignore[assignment]
+    logger.warning("numpy not available — image processing limited. "
+                   "Install with: pip install numpy")
+
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
+    logger.warning("OpenCV not available — advanced image ops disabled. "
+                   "Install with: pip install opencv-python")
 
 # Module-level thumbnail quality (1-100).  Updated at runtime by apply_performance_settings().
 THUMBNAIL_QUALITY: int = 85
-
-logger = logging.getLogger(__name__)
 
 
 # Supported image formats
@@ -31,6 +58,9 @@ SUPPORTED_FORMATS = {
 PS2_MAX_DIMENSION = 1024
 PS2_COMMON_SIZES = [16, 32, 64, 128, 256, 512, 1024]
 
+# Safe resampling constant — resolved at import time if PIL is available
+_LANCZOS = Image.Resampling.LANCZOS if HAS_PIL else None
+
 
 def validate_image(image_path: Path) -> Tuple[bool, Optional[str]]:
     """
@@ -42,6 +72,8 @@ def validate_image(image_path: Path) -> Tuple[bool, Optional[str]]:
     Returns:
         Tuple of (is_valid, error_message)
     """
+    if not HAS_PIL:
+        return False, "Pillow not available. Install with: pip install Pillow"
     try:
         if not image_path.exists():
             return False, "File does not exist"
@@ -81,6 +113,8 @@ def get_image_info(image_path: Path) -> Optional[dict]:
     Returns:
         Dictionary with image info or None if error
     """
+    if not HAS_PIL:
+        return None
     try:
         with Image.open(image_path) as img:
             return {
@@ -191,6 +225,8 @@ def convert_image_format(
     Returns:
         True if successful, False otherwise
     """
+    if not HAS_PIL:
+        return False
     try:
         with Image.open(source_path) as img:
             # Handle format-specific conversions
@@ -230,7 +266,7 @@ def resize_image(
     output_path: Path,
     target_size: Tuple[int, int],
     maintain_aspect: bool = True,
-    resample_method: Image.Resampling = Image.Resampling.LANCZOS
+    resample_method=None
 ) -> bool:
     """
     Resize image to target dimensions.
@@ -245,6 +281,10 @@ def resize_image(
     Returns:
         True if successful, False otherwise
     """
+    if not HAS_PIL:
+        return None
+    if resample_method is None:
+        resample_method = _LANCZOS
     try:
         with Image.open(image_path) as img:
             if maintain_aspect:
@@ -284,6 +324,8 @@ def normalize_for_ps2(
     Returns:
         True if successful, False otherwise
     """
+    if not HAS_PIL:
+        return False
     try:
         with Image.open(image_path) as img:
             width, height = img.size
@@ -326,6 +368,8 @@ def extract_alpha_channel(
     Returns:
         True if successful, False otherwise
     """
+    if not HAS_PIL:
+        return False
     try:
         with Image.open(image_path) as img:
             if img.mode not in ('RGBA', 'LA'):
@@ -363,6 +407,8 @@ def merge_alpha_channel(
     Returns:
         True if successful, False otherwise
     """
+    if not HAS_PIL:
+        return False
     try:
         with Image.open(rgb_path) as rgb_img:
             with Image.open(alpha_path) as alpha_img:
@@ -410,6 +456,8 @@ def optimize_image(
     Returns:
         True if successful, False otherwise
     """
+    if not HAS_PIL:
+        return False
     try:
         if output_path is None:
             output_path = image_path
@@ -455,6 +503,8 @@ def load_image_stream(
     Returns:
         PIL Image or None if error
     """
+    if not HAS_PIL:
+        return None
     try:
         if isinstance(stream, bytes):
             stream = io.BytesIO(stream)
@@ -486,6 +536,8 @@ def image_to_bytes(
     Returns:
         Image as bytes or None if error
     """
+    if not HAS_PIL:
+        return None
     try:
         buffer = io.BytesIO()
         save_kwargs = {'format': format}
@@ -517,6 +569,8 @@ def compare_images(
     Returns:
         Similarity score or None if error
     """
+    if not HAS_PIL:
+        return None
     try:
         img1 = cv2.imread(str(image1_path))
         img2 = cv2.imread(str(image2_path))
@@ -596,6 +650,8 @@ def batch_process_images(
         results['total'] = len(image_files)
         
         for img_path in image_files:
+            if not HAS_PIL:
+                return None
             try:
                 # Create relative output path
                 rel_path = img_path.relative_to(input_dir)

@@ -8,7 +8,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Optional, Tuple, List
-from PIL import Image, ImageDraw
+try:
+    from PIL import Image, ImageDraw
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import numpy as np
 
 logger = logging.getLogger(__name__)

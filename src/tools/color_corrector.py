@@ -14,7 +14,12 @@ from __future__ import annotations
 import logging
 
 logger = logging.getLogger(__name__)
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 try:
     import numpy as np
     HAS_NUMPY = True

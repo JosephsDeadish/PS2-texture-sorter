@@ -13,7 +13,12 @@ from PyQt6.QtGui import QPixmap, QImage, QFont
 from pathlib import Path
 from typing import List, Optional
 import logging
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 from tools.quality_checker import ImageQualityChecker, format_quality_report, QualityLevel, QualityCheckOptions
 

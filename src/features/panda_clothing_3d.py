@@ -29,6 +29,9 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
+# Identity matrix used as a safe fallback when OpenGL/numpy are unavailable
+_IDENTITY_MATRIX_4X4 = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+
 
 class BoneType(Enum):
     """Panda skeleton bones."""
@@ -85,7 +88,7 @@ class Bone:
     def get_world_transform(self):
         """Get world space transformation matrix."""
         if not OPENGL_AVAILABLE:
-            return [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+            return _IDENTITY_MATRIX_4X4
         # Build local transform
         local_transform = self._build_transform_matrix()
         

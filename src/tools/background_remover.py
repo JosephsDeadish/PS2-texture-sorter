@@ -11,7 +11,12 @@ import numpy as np
 from pathlib import Path
 from typing import List, Optional, Tuple, Callable
 from dataclasses import dataclass
-from PIL import Image, ImageFilter
+try:
+    from PIL import Image, ImageFilter
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import threading
 import queue
 

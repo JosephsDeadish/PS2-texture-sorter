@@ -1100,10 +1100,9 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
             # Necklace: small spheres in a arc at front of neck
             glPushMatrix()
             glTranslatef(0.0, 0.58, 0.22)
-            import math as _math
             for i in range(7):
                 angle = (i - 3) * 15.0
-                rad = _math.radians(angle)
+                rad = math.radians(angle)
                 glPushMatrix()
                 glTranslatef(_math.sin(rad) * 0.18, 0.0, 0.0)
                 self._draw_sphere(0.025, 6, 6)

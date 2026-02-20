@@ -11,7 +11,12 @@ import numpy as np
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass
-from PIL import Image, ImageStat
+try:
+    from PIL import Image, ImageStat
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import threading
 from enum import Enum
 

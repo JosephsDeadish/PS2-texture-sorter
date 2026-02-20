@@ -17,7 +17,12 @@ from pathlib import Path
 from typing import List, Optional
 import logging
 import os
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 from preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets
 

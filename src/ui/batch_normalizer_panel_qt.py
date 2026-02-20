@@ -15,7 +15,12 @@ from PyQt6.QtGui import QPixmap, QImage
 from pathlib import Path
 from typing import List, Optional
 import logging
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 from tools.batch_normalizer import (
     BatchFormatNormalizer, NormalizationSettings,

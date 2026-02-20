@@ -9,7 +9,12 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Callable
 from enum import Enum
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import io
 
 logger = logging.getLogger(__name__)

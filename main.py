@@ -1497,8 +1497,8 @@ class TextureSorterMainWindow(QMainWindow):
                 'text':      Qt.CursorShape.IBeamCursor,
                 'forbidden': Qt.CursorShape.ForbiddenCursor,
                 'move':      Qt.CursorShape.SizeAllCursor,
-                'zoom_in':   Qt.CursorShape.SizeBDiagCursor,   # diagonal resize - closest native Qt shape for zoom
-                'zoom_out':  Qt.CursorShape.SizeFDiagCursor,   # opposite diagonal - visually distinct from zoom_in
+                'zoom_in':   Qt.CursorShape.PointingHandCursor,  # "click to zoom in"
+                'zoom_out':  Qt.CursorShape.ArrowCursor,          # no native zoom-out cursor in Qt
             }
             shape = _cursor_map.get(cursor_name, Qt.CursorShape.ArrowCursor)
             app = QApplication.instance()

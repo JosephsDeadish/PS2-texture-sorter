@@ -20,10 +20,26 @@ try:
 except ImportError:
     HAS_NUMPY = False
     np = None
-    logger.error("numpy not available - limited functionality. Install with: pip install numpy")
+    logger.warning("numpy not available — some texture analysis features disabled. "
+                   "Install with: pip install numpy")
 
-from PIL import Image
-import cv2
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    Image = None  # type: ignore[assignment]
+    logger.warning("Pillow not available — texture analysis disabled. "
+                   "Install with: pip install Pillow")
+
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
+    logger.warning("OpenCV not available — advanced texture analysis disabled. "
+                   "Install with: pip install opencv-python")
 
 
 class TextureAnalyzer:
@@ -60,6 +76,9 @@ class TextureAnalyzer:
         Returns:
             Dictionary containing all analysis results
         """
+        if not HAS_PIL:
+            logger.error("Pillow is required for texture analysis. Install: pip install Pillow")
+            return {'error': 'Pillow not available', 'path': str(image_path)}
         try:
             logger.debug(f"Analyzing texture: {image_path}")
             
@@ -70,8 +89,8 @@ class TextureAnalyzer:
                 alpha_info = self._analyze_alpha(img)
                 quality_info = self._analyze_quality(img)
             
-            # Load with OpenCV for advanced analysis
-            cv_img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+            # Load with OpenCV for advanced analysis (optional)
+            cv_img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED) if HAS_CV2 else None
             corruption_info = self._detect_corruption(cv_img)
             
             # Calculate file hashes
@@ -271,19 +290,32 @@ class TextureAnalyzer:
         Returns quality metrics and artifact detection.
         """
         try:
+            if not HAS_NUMPY:
+                return {'error': 'numpy not available', 'quality_estimate': 'unknown'}
             # Convert to numpy array for analysis
             img_array = np.array(img.convert('RGB'))
-            
-            # Calculate sharpness using Laplacian variance
-            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-            laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-            sharpness = laplacian.var()
-            
-            # Detect compression artifacts using frequency analysis
-            dct = cv2.dct(np.float32(gray))
-            high_freq_energy = np.sum(np.abs(dct[int(dct.shape[0]/2):, int(dct.shape[1]/2):]))
-            total_energy = np.sum(np.abs(dct))
-            high_freq_ratio = high_freq_energy / total_energy if total_energy > 0 else 0
+
+            if HAS_CV2:
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+                laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+                sharpness = laplacian.var()
+                dct = cv2.dct(np.float32(gray))
+                high_freq_energy = np.sum(np.abs(dct[int(dct.shape[0]/2):, int(dct.shape[1]/2):]))
+                total_energy = np.sum(np.abs(dct))
+                high_freq_ratio = high_freq_energy / total_energy if total_energy > 0 else 0
+                block_artifacts = self._detect_blocking_artifacts(gray)
+                noise_level = round(self._estimate_noise_level(gray), 2)
+                dynamic_range = int(gray.max()) - int(gray.min())
+            else:
+                # Fallback: compute sharpness via pure numpy
+                gray_f = np.mean(img_array.astype(float), axis=2)
+                dy = np.diff(gray_f, axis=0)
+                dx = np.diff(gray_f, axis=1)
+                sharpness = float(np.var(dy) + np.var(dx))
+                high_freq_ratio = 0.0
+                block_artifacts = False
+                noise_level = 0.0
+                dynamic_range = int(gray_f.max()) - int(gray_f.min())
             
             # Estimate quality level
             if sharpness > 500:
@@ -293,16 +325,13 @@ class TextureAnalyzer:
             else:
                 quality_estimate = 'low'
             
-            # Detect blocking artifacts (8x8 blocks typical in JPEG)
-            block_artifacts = self._detect_blocking_artifacts(gray)
-            
             return {
                 'sharpness': round(sharpness, 2),
                 'quality_estimate': quality_estimate,
                 'high_frequency_ratio': round(high_freq_ratio, 4),
                 'has_blocking_artifacts': block_artifacts,
-                'noise_level': round(self._estimate_noise_level(gray), 2),
-                'dynamic_range': int(gray.max()) - int(gray.min())
+                'noise_level': noise_level,
+                'dynamic_range': dynamic_range,
             }
             
         except Exception as e:

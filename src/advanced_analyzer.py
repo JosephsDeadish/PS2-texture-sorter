@@ -8,7 +8,12 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 import numpy as np
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 logger = logging.getLogger(__name__)
 

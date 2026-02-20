@@ -20,7 +20,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QThread
 from PyQt6.QtGui import QPixmap
-from PIL import Image, ImageEnhance
+try:
+    from PIL import Image, ImageEnhance
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 logger = logging.getLogger(__name__)
 

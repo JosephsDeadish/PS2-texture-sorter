@@ -10,8 +10,19 @@ import logging
 from typing import Optional, Union
 from pathlib import Path
 import numpy as np
-from PIL import Image
-import cv2
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
+
 
 logger = logging.getLogger(__name__)
 

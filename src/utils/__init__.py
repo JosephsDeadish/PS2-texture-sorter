@@ -4,26 +4,13 @@ Includes caching, memory management, performance utilities, and image processing
 """
 
 from .cache_manager import CacheManager
-
-# Optional imports (may not be available)
-try:
-    from .memory_manager import MemoryManager
-except ImportError:
-    MemoryManager = None
-
-try:
-    from .performance import PerformanceMonitor
-except ImportError:
-    PerformanceMonitor = None
-
-try:
-    from . import image_processing
-except ImportError:
-    image_processing = None
+from .memory_manager import MemoryManager
+from .performance import PerformanceMonitor
+from . import image_processing
 
 __all__ = [
     'CacheManager',
-    'MemoryManager', 
+    'MemoryManager',
     'PerformanceMonitor',
-    'image_processing'
+    'image_processing',
 ]
