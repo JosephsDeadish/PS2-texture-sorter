@@ -137,7 +137,7 @@ class FileHandler:
             Path to converted PNG file or None if conversion failed
         """
         if not HAS_PIL:
-            print("PIL/Pillow not available. Cannot convert images.")
+            logger.warning("PIL/Pillow not available. Cannot convert images.")
             return None
         
         try:
@@ -174,7 +174,7 @@ class FileHandler:
             Path to converted DDS file or None if conversion failed
         """
         if not HAS_PIL:
-            print("PIL/Pillow not available. Cannot convert images.")
+            logger.warning("PIL/Pillow not available. Cannot convert images.")
             return None
         
         try:
@@ -700,7 +700,7 @@ class FileHandler:
             
             # Check if destination exists
             if destination.exists() and not overwrite:
-                print(f"Destination {destination} already exists. Skipping.")
+                logger.debug(f"Destination {destination} already exists. Skipping.")
                 return False
             
             # Create backup if enabled
@@ -714,7 +714,7 @@ class FileHandler:
             return True
             
         except Exception as e:
-            print(f"Error copying {source} to {destination}: {e}")
+            logger.error(f"Error copying {source} to {destination}: {e}")
             return False
     
     def safe_move(self, source: Path, destination: Path, overwrite=False) -> bool:
@@ -735,7 +735,7 @@ class FileHandler:
             
             # Check if destination exists
             if destination.exists() and not overwrite:
-                print(f"Destination {destination} already exists. Skipping.")
+                logger.debug(f"Destination {destination} already exists. Skipping.")
                 return False
             
             # Move file
@@ -744,7 +744,7 @@ class FileHandler:
             return True
             
         except Exception as e:
-            print(f"Error moving {source} to {destination}: {e}")
+            logger.error(f"Error moving {source} to {destination}: {e}")
             return False
     
     def safe_delete(self, file_path: Path, use_trash=True) -> bool:
@@ -771,7 +771,7 @@ class FileHandler:
             return True
             
         except Exception as e:
-            print(f"Error deleting {file_path}: {e}")
+            logger.error(f"Error deleting {file_path}: {e}")
             return False
     
     def get_operations_log(self) -> List[str]:

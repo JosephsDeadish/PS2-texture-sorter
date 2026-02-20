@@ -4,6 +4,10 @@ Qt6 Achievement Popup Widget
 Pure Qt6 implementation using widgets with CSS styling for modern appearance.
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtWidgets import (QDialog, QLabel, QVBoxLayout, QHBoxLayout, 
                                   QFrame, QPushButton)
@@ -191,7 +195,7 @@ def show_achievement_popup(achievement_data, parent=None, parent_geometry=None):
         AchievementPopup instance
     """
     if not PYQT_AVAILABLE:
-        print(f"Achievement: {achievement_data.get('name')} - {achievement_data.get('description')}")
+        logger.info(f"Achievement: {achievement_data.get('name')} - {achievement_data.get('description')}")
         return None
         
     popup = AchievementPopup(achievement_data, parent)

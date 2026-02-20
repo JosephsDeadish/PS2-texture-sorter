@@ -7,6 +7,9 @@ import re
 from pathlib import Path
 from typing import List, Dict, Set, Tuple, Optional
 from collections import defaultdict
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class LODDetector:
@@ -181,7 +184,7 @@ class LODDetector:
             return similarity >= threshold
             
         except Exception as e:
-            print(f"Error comparing images: {e}")
+            logger.warning(f"Error comparing images: {e}")
             return False
     
     def detect_unnumbered_lods(self, file_paths: List[Path], similarity_threshold=0.85) -> Dict[str, List[Path]]:
@@ -197,7 +200,7 @@ class LODDetector:
         """
         # This is computationally expensive, so only use on small sets
         if len(file_paths) > 100:
-            print("Warning: Visual similarity detection is slow for large sets")
+            logger.warning("Visual similarity detection is slow for large sets")
         
         groups = defaultdict(list)
         processed = set()

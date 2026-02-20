@@ -785,18 +785,16 @@ class SoundManager:
         
         import time
         
-        print(f"\nTesting sound pack: {self.sound_pack.value}")
-        print("=" * 50)
+        logger.info(f"Testing sound pack: {self.sound_pack.value}")
         
         for event in SoundEvent:
             sound = self._get_sound(event)
             if sound:
-                print(f"Playing: {event.value:20s} - {sound.description}")
+                logger.debug(f"Playing: {event.value:20s} - {sound.description}")
                 self.play_sound(event, async_play=False)
                 time.sleep(0.5)
         
-        print("=" * 50)
-        print("Test complete!\n")
+        logger.info("Sound pack test complete")
         
         if pack:
             self.set_sound_pack(original_pack)

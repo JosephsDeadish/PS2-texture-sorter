@@ -19,6 +19,10 @@ Features:
     - Persistent progress (optional)
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QPoint
     from PyQt6.QtWidgets import QLabel, QGraphicsOpacityEffect
@@ -276,7 +280,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
                 if self.quest_started:
                     self.quest_started.emit(quest_id)
                 
-                print(f"Quest started: {quest.name}")
+                logger.info(f"Quest started: {quest.name}")
     
     def update_quest_progress(self, quest_id, amount=1):
         """
@@ -324,7 +328,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
             # Check achievements
             self._check_achievements()
             
-            print(f"Quest completed: {quest.name} - {quest.reward_message}")
+            logger.info(f"Quest completed: {quest.name} - {quest.reward_message}")
     
     def on_widget_interaction(self, widget_type, widget_name):
         """
@@ -366,7 +370,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
             item_type: Type of item (food, toy, etc.)
             item_name: Name of item
         """
-        print(f"Panda found: {item_name} ({item_type})")
+        logger.debug(f"Panda found: {item_name} ({item_type})")
         
         # Update relevant quests
         if item_type == 'food':
@@ -463,7 +467,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
                 message = f"{achievement.icon_emoji} {achievement.name}\n{achievement.description}"
                 self._show_reward_tooltip(message)
                 
-                print(f"Achievement unlocked: {achievement.name}")
+                logger.info(f"Achievement unlocked: {achievement.name}")
     
     def _show_reward_tooltip(self, message):
         """Show reward tooltip on screen."""
@@ -546,7 +550,7 @@ def create_quest_system(main_window=None):
         QuestSystem instance or None
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6 not available, cannot create quest system")
+        logger.warning("PyQt6 not available, cannot create quest system")
         return None
     
     return QuestSystem(main_window)

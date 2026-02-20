@@ -12,6 +12,10 @@ Features:
     - Mischievous personality behaviors
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtCore import QTimer, QPoint
     from PyQt6.QtWidgets import QPushButton, QSlider, QTabBar, QComboBox, QCheckBox
@@ -217,7 +221,7 @@ class PandaInteractionBehavior:
         # Start moving to widget
         self.is_moving_to_widget = True
         
-        print(f"Panda starting behavior: {behavior.value} on {self.target_widget.__class__.__name__}")
+        logger.info(f"Panda starting behavior: {behavior.value} on {self.target_widget.__class__.__name__}")
     
     def _update_movement(self, delta_time):
         """
@@ -305,37 +309,37 @@ class PandaInteractionBehavior:
     
     def _animate_bite(self):
         """Animate panda biting."""
-        print("Panda biting!")
+        logger.debug("Panda biting!")
         self.overlay.set_animation_state('biting')
         # Open mouth wide animation would be implemented in overlay
     
     def _animate_jump(self):
         """Animate panda jumping."""
-        print("Panda jumping!")
+        logger.debug("Panda jumping!")
         self.overlay.set_animation_state('jumping')
         # Jump animation
     
     def _animate_tap(self):
         """Animate panda tapping."""
-        print("Panda tapping!")
+        logger.debug("Panda tapping!")
         self.overlay.set_animation_state('tapping')
         # Tap animation with paw
     
     def _animate_push(self):
         """Animate panda pushing."""
-        print("Panda pushing!")
+        logger.debug("Panda pushing!")
         self.overlay.set_animation_state('pushing')
         # Push animation
     
     def _animate_spin(self):
         """Animate panda spinning around."""
-        print("Panda spinning!")
+        logger.debug("Panda spinning!")
         self.overlay.set_animation_state('spinning')
         # Spin animation
     
     def _animate_look(self):
         """Animate panda looking mischievously."""
-        print("Panda looking mischievous!")
+        logger.debug("Panda looking mischievous!")
         self.overlay.set_animation_state('mischievous')
         # Mischievous expression
     
@@ -349,7 +353,7 @@ class PandaInteractionBehavior:
         """
         def do_click():
             if widget and hasattr(widget, 'click'):
-                print(f"Triggering click on {widget.__class__.__name__}")
+                logger.debug(f"Triggering click on {widget.__class__.__name__}")
                 widget.click()
                 
                 # Apply squash effect
@@ -376,7 +380,7 @@ class PandaInteractionBehavior:
                 
                 # Move slider slightly
                 new_value = random.randint(min_val, max_val)
-                print(f"Changing slider from {current} to {new_value}")
+                logger.debug(f"Changing slider from {current} to {new_value}")
                 slider.setValue(new_value)
                 
                 # Apply squash effect
@@ -395,7 +399,7 @@ class PandaInteractionBehavior:
         """
         def do_open():
             if combobox and isinstance(combobox, QComboBox):
-                print(f"Opening combobox")
+                logger.debug("Opening combobox")
                 combobox.showPopup()
         
         QTimer.singleShot(int(delay * 1000), do_open)
@@ -464,7 +468,7 @@ def create_interaction_behavior(panda_overlay, widget_detector):
         PandaInteractionBehavior instance or None
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6 not available, cannot create interaction behavior")
+        logger.warning("PyQt6 not available, cannot create interaction behavior")
         return None
     
     return PandaInteractionBehavior(panda_overlay, widget_detector)

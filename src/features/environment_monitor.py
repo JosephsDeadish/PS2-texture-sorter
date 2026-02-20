@@ -15,6 +15,11 @@ Features:
     - Immersive environmental responses
 """
 
+import logging
+import time
+
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QEvent
     from PyQt6.QtWidgets import QDialog, QScrollBar, QApplication
@@ -22,8 +27,6 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     QObject = object
-
-import time
 
 
 class EnvironmentalEvent:
@@ -179,7 +182,7 @@ class EnvironmentMonitor(QObject if PYQT_AVAILABLE else object):
         if self.hide_on_dialog:
             # Hide panda when dialog appears
             self.panda_should_hide.emit(True)
-            print(f"Panda hiding due to dialog: {dialog.__class__.__name__}")
+            logger.debug(f"Panda hiding due to dialog: {dialog.__class__.__name__}")
     
     def _on_dialog_closed(self, dialog):
         """Handle dialog closed."""
@@ -194,7 +197,7 @@ class EnvironmentMonitor(QObject if PYQT_AVAILABLE else object):
         # Show panda again if no dialogs remain
         if len(self.active_dialogs) == 0 and self.hide_on_dialog:
             self.panda_should_hide.emit(False)
-            print("Panda reappearing, all dialogs closed")
+            logger.debug("Panda reappearing, all dialogs closed")
     
     def register_file_preview(self, preview_widget):
         """
@@ -279,7 +282,7 @@ class EnvironmentMonitor(QObject if PYQT_AVAILABLE else object):
         """Emit environmental event signal."""
         if self.environment_changed:
             self.environment_changed.emit(event_type, data)
-            print(f"Environmental event: {event_type}")
+            logger.debug(f"Environmental event: {event_type}")
     
     def set_hide_on_dialog(self, hide):
         """Set whether panda should hide when dialogs appear."""
@@ -322,7 +325,7 @@ def create_environment_monitor(main_window, panda_overlay):
         EnvironmentMonitor instance or None
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6 not available, cannot create environment monitor")
+        logger.warning("PyQt6 not available, cannot create environment monitor")
         return None
     
     return EnvironmentMonitor(main_window, panda_overlay)

@@ -24,9 +24,12 @@ except ImportError:
     PYQT_AVAILABLE = False
     QObject = object
 
+import logging
 import random
 import time
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class PandaMood(Enum):
@@ -180,7 +183,7 @@ class PandaMoodSystem(QObject if PYQT_AVAILABLE else object):
         if self.mood_changed:
             self.mood_changed.emit(old_mood.value, new_mood.value, reason.value)
         
-        print(f"Panda mood changed: {old_mood.value} → {new_mood.value} (reason: {reason.value})")
+        logger.info(f"Panda mood changed: {old_mood.value} → {new_mood.value} (reason: {reason.value})")
         
         # Update overlay animation if available
         if self.panda_overlay:
@@ -373,7 +376,7 @@ def create_mood_system(panda_overlay=None):
         PandaMoodSystem instance or None
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6 not available, cannot create mood system")
+        logger.warning("PyQt6 not available, cannot create mood system")
         return None
     
     return PandaMoodSystem(panda_overlay)

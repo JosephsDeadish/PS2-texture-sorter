@@ -611,45 +611,63 @@ class TextureSorterMainWindow(QMainWindow):
                 # Background Remover
                 bg_panel = BackgroundRemoverPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('bg_remover', '🎭 Background Remover', bg_panel, Qt.DockWidgetArea.LeftDockWidgetArea)
-                
+                bg_panel.processing_complete.connect(lambda: self.statusBar().showMessage("🎭 Background removal complete", 4000))
+                bg_panel.image_loaded.connect(lambda p: self.statusBar().showMessage(f"🎭 Loaded: {p}", 3000))
+
                 # Alpha Fixer
                 alpha_panel = AlphaFixerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('alpha_fixer', '✨ Alpha Fixer', alpha_panel, Qt.DockWidgetArea.LeftDockWidgetArea)
-                
+                alpha_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Alpha Fixer: {msg}", 4000))
+
                 # Color Correction
                 color_panel = ColorCorrectionPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('color', '🎨 Color Correction', color_panel, Qt.DockWidgetArea.RightDockWidgetArea)
-                
+                color_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Color Correction: {msg}", 4000))
+
                 # Batch Normalizer
                 norm_panel = BatchNormalizerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('normalizer', '⚙️ Batch Normalizer', norm_panel, Qt.DockWidgetArea.RightDockWidgetArea)
-                
+                norm_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Batch Normalizer: {msg}", 4000))
+
                 # Quality Checker
                 quality_panel = QualityCheckerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('quality', '✓ Quality Checker', quality_panel, Qt.DockWidgetArea.RightDockWidgetArea)
-                
+                quality_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Quality Check: {msg}", 4000))
+
                 # Image Upscaler
                 upscaler_panel = ImageUpscalerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('upscaler', '🔍 Image Upscaler', upscaler_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                upscaler_panel.error.connect(lambda msg: self.statusBar().showMessage(f"❌ Upscaler: {msg}", 5000))
+
                 # Line Art Converter
                 line_panel = LineArtConverterPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('lineart', '✏️ Line Art Converter', line_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                line_panel.error.connect(lambda msg: self.statusBar().showMessage(f"❌ Line Art: {msg}", 5000))
+
                 # Batch Rename
                 rename_panel = BatchRenamePanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('rename', '📝 Batch Rename', rename_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                rename_panel.finished.connect(lambda ok, errs: self.statusBar().showMessage(
+                    f"📝 Renamed {ok} files" + (f" ({len(errs)} errors)" if errs else ""), 4000))
+
                 # Image Repair
                 repair_panel = ImageRepairPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('repair', '🔧 Image Repair', repair_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                repair_panel.error.connect(lambda msg: self.statusBar().showMessage(f"❌ Image Repair: {msg}", 5000))
+
                 # Texture Organizer
                 organizer_panel = OrganizerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('organizer', '📁 Texture Organizer', organizer_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                organizer_panel.log.connect(lambda msg: self.log(msg))
+                organizer_panel.finished.connect(lambda ok, msg, _stats: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Organizer: {msg}", 4000))
+
                 self.log("✅ All tool panels created as dockable widgets")
-                
+
             except Exception as e:
                 logger.error(f"Error creating tool dock panels: {e}", exc_info=True)
         
