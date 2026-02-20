@@ -2385,6 +2385,7 @@ class TextureSorterMainWindow(QMainWindow):
     def perform_sorting(self, progress_callback, log_callback, check_cancelled):
         """Perform actual sorting (runs in worker thread)."""
         try:
+            import time as _time
             from pathlib import Path
 
             # Resolve the selected organization style (main thread set self._sort_style_key)
@@ -2479,6 +2480,10 @@ class TextureSorterMainWindow(QMainWindow):
                 if self.organizer:
                     try:
                         from organizer.organization_engine import TextureInfo as _TI
+                        try:
+                            _ti_size = file_path.stat().st_size
+                        except OSError:
+                            _ti_size = 0
                         _ti = _TI(
                             file_path=str(file_path),
                             filename=file_path.name,
@@ -2486,10 +2491,12 @@ class TextureSorterMainWindow(QMainWindow):
                             confidence=confidence,
                             lod_group=lod_group,
                             lod_level=lod_level,
-                            file_size=file_path.stat().st_size if file_path.exists() else 0,
+                            file_size=_ti_size,
                             format=file_path.suffix.lstrip('.').upper(),
                         )
+                        _t0_org = _time.monotonic()
                         _result = self.organizer.organize_textures([_ti])
+                        _elapsed_org = _time.monotonic() - _t0_org
                         # organize_textures moves the file itself; skip our own rename below
                         _org_moved = _result.get('processed', _result.get('moved', 0)) if isinstance(_result, dict) else 0
                         if _org_moved:
@@ -2498,7 +2505,7 @@ class TextureSorterMainWindow(QMainWindow):
                             if self.statistics_tracker:
                                 try:
                                     self.statistics_tracker.record_file_processed(
-                                        category, _ti.file_size, 0.0, success=True
+                                        category, _ti.file_size, _elapsed_org, success=True
                                     )
                                 except Exception:
                                     pass
@@ -2526,7 +2533,6 @@ class TextureSorterMainWindow(QMainWindow):
                             target_path = target_folder / f"{base}_{counter}{ext}"
                             counter += 1
 
-                    import time as _time
                     _t0 = _time.monotonic()
                     file_path.rename(target_path)
                     _elapsed = _time.monotonic() - _t0
