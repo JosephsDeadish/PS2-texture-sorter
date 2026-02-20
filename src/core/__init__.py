@@ -4,6 +4,6 @@ Threading, performance management, and engine coordination
 """
 
 from .threading_manager import ThreadingManager
-from .performance_manager import PerformanceMode, PerformanceManager
+from .performance_manager import PerformanceMode, PerformanceManager, OperationProfiler, ProfileResult
 
-__all__ = ['ThreadingManager', 'PerformanceMode', 'PerformanceManager']
+__all__ = ['ThreadingManager', 'PerformanceMode', 'PerformanceManager', 'OperationProfiler', 'ProfileResult']

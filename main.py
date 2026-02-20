@@ -729,6 +729,8 @@ class TextureSorterMainWindow(QMainWindow):
                 Qt.DockWidgetArea.RightDockWidgetArea
             )
             logger.info("✅ Performance dashboard added as dockable widget")
+            # Start the live-update timer immediately
+            self.perf_dashboard.start()
         except Exception as e:
             logger.warning(f"Performance dashboard unavailable: {e}")
         
@@ -1897,10 +1899,20 @@ class TextureSorterMainWindow(QMainWindow):
         if not self.input_path or not self.output_path:
             QMessageBox.warning(self, "Missing Paths", "Please select both input and output folders.")
             return
-        
+
         self.log("🚀 Starting texture sorting...")
         self.set_operation_running(True)
-        
+
+        # Tell performance dashboard a sort is starting
+        try:
+            if self.perf_dashboard:
+                self.perf_dashboard.update_queue_status(
+                    pending=0, processing=1, completed=0, failed=0
+                )
+                self.perf_dashboard.start_operation_profile("sort_operation")
+        except Exception:
+            pass
+
         # Create worker thread
         self.worker = WorkerThread(self.perform_sorting)
         self.worker.progress.connect(self.update_progress)
@@ -2051,6 +2063,30 @@ class TextureSorterMainWindow(QMainWindow):
         if files_processed == 0:
             files_processed = getattr(self, '_last_sorted_count', 0)
             self._last_sorted_count = 0
+
+        # Stop profiler and update performance dashboard queue status
+        try:
+            if self.perf_dashboard:
+                self.perf_dashboard.stop_operation_profile()
+                completed = files_processed if success else 0
+                failed = 0 if success else files_processed
+                self.perf_dashboard.update_queue_status(
+                    pending=0, processing=0,
+                    completed=completed, failed=failed,
+                )
+                if files_processed > 0:
+                    # Approximate: treat average file as 256 KB
+                    self.perf_dashboard.record_file_processed(files_processed * 256 * 1024)
+        except Exception:
+            pass
+
+        # Run memory optimisation after every sort to release PIL/numpy allocations
+        try:
+            from core.performance_manager import OperationProfiler
+            OperationProfiler.optimize_memory()
+        except Exception:
+            pass
+
 
         # Snapshot app state for auto-backup so it knows "last processed count"
         try:
@@ -2517,6 +2553,11 @@ class TextureSorterMainWindow(QMainWindow):
             try:
                 if self.level_system:
                     self.level_system.save()
+            except Exception:
+                pass
+            try:
+                if self.perf_dashboard:
+                    self.perf_dashboard.stop()
             except Exception:
                 pass
     
