@@ -298,3 +298,6 @@ class AlphaChannelHandler:
         mask = (diff > 10).astype(np.uint8) * 255
         
         return mask
+
+# Alias for backwards compatibility
+AlphaHandler = AlphaChannelHandler
