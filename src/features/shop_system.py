@@ -3667,6 +3667,10 @@ class ShopSystem:
         """Check if item has been purchased."""
         return item_id in self.purchased_items
 
+    def get_item(self, item_id: str) -> Optional[ShopItem]:
+        """Return a ShopItem by ID, or None if not found."""
+        return self.CATALOG.get(item_id)
+
     def get_available_items(self, user_level: int = 0) -> List[ShopItem]:
         """Return all catalog items the user can see (not filtered by category)."""
         return [
@@ -3678,10 +3682,22 @@ class ShopSystem:
         """Return the set of purchased item IDs."""
         return set(self.purchased_items)
 
+    def quick_purchase(self, item_id: str) -> bool:
+        """Purchase an item without needing balance/level from caller (uses CATALOG defaults)."""
+        if item_id in self.purchased_items:
+            return False
+        item = self.CATALOG.get(item_id)
+        if item is None:
+            return False
+        self.purchased_items.add(item_id)
+        self.purchase_history.append({'item_id': item_id, 'price': item.price})
+        self.save()
+        return True
 
+    def get_purchase_history(self, count: int = 10) -> List[Dict]:
         """Get recent purchase history."""
         return self.purchase_history[-count:]
-    
+
     def save(self):
         """Save shop data to file."""
         try:

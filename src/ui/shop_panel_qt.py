@@ -331,8 +331,8 @@ class ShopPanelQt(QWidget):
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            # Purchase
-            success = self.shop_system.purchase_item(item_id)
+            balance = self.currency_system.get_balance()
+            success, msg, _ = self.shop_system.purchase_item(item_id, balance, level=0)
             if success:
                 self.currency_system.subtract('bamboo_bucks', item.price)
                 QMessageBox.information(
@@ -346,7 +346,7 @@ class ShopPanelQt(QWidget):
                 QMessageBox.warning(
                     self,
                     "Purchase Failed",
-                    "Could not complete purchase. Item may already be owned."
+                    msg or "Could not complete purchase. Item may already be owned."
                 )
     
     def _set_tooltip(self, widget, tooltip_key: str):
