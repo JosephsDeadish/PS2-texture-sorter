@@ -230,6 +230,9 @@ class TextureSorterMainWindow(QMainWindow):
         self.level_system = None        # UserLevelSystem – XP / levelling
         self.auto_backup = None         # AutoBackupSystem – periodic state backup
         self.unlockables_system = None  # UnlockablesSystem – cursors/themes/outfits
+        self.quest_system = None        # QuestSystem – quests / easter eggs
+        self.integrated_dungeon = None  # IntegratedDungeon – adventure mode
+        self.enemy_manager = None       # EnemyManager – enemy spawning
 
         # UI sub-components declared here so setup_ui() can reference them safely
         self.panda_widget = None        # PandaOpenGLWidget (3-D panda sidebar)
@@ -890,7 +893,66 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Widgets not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "🧸 Widgets")
-        
+
+        # 8. Adventure / Dungeon Tab
+        try:
+            from ui.dungeon_graphics_view import DungeonGraphicsView
+            from features.integrated_dungeon import IntegratedDungeon
+            from features.enemy_manager import EnemyManager
+
+            self.integrated_dungeon = IntegratedDungeon()
+            self.enemy_manager = EnemyManager()
+            dungeon_view = DungeonGraphicsView(tooltip_manager=self.tooltip_manager)
+            dungeon_view.set_dungeon(self.integrated_dungeon)
+            panda_tabs.addTab(dungeon_view, "⚔️ Adventure")
+            logger.info("✅ Adventure/Dungeon panel added to panda tab")
+        except Exception as e:
+            logger.warning(f"Could not load dungeon panel: {e}")
+            label = QLabel("⚔️ Adventure Mode\n\nDungeon exploration coming soon!\nInstall PyQt6 to enable.")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            panda_tabs.addTab(label, "⚔️ Adventure")
+
+        # 9. Quests Tab
+        try:
+            from features.quest_system import QuestSystem
+
+            self.quest_system = QuestSystem()
+            # Wire quest completion → achievement & currency reward
+            if self.quest_system.quest_completed is not None:
+                self.quest_system.quest_completed.connect(self._on_quest_completed)
+            # Wire quest started notification → status bar
+            if self.quest_system.quest_started is not None:
+                self.quest_system.quest_started.connect(
+                    lambda qid: self.statusBar().showMessage(f"📜 Quest started: {qid}", 3000)
+                )
+            # Activate first set of quests
+            self.quest_system.check_quests(0)
+
+            # Simple quests display widget
+            quests_container = QWidget()
+            quests_layout = QVBoxLayout(quests_container)
+            quests_label = QLabel("📜 Active Quests")
+            quests_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+            quests_layout.addWidget(quests_label)
+            active = self.quest_system.get_active_quests() if hasattr(self.quest_system, 'get_active_quests') else []
+            if active:
+                for q in active[:10]:
+                    name = getattr(q, 'name', str(q))
+                    desc = getattr(q, 'description', '')
+                    q_label = QLabel(f"• {name}\n  {desc}")
+                    q_label.setWordWrap(True)
+                    quests_layout.addWidget(q_label)
+            else:
+                quests_layout.addWidget(QLabel("No active quests — keep using the app to unlock quests!"))
+            quests_layout.addStretch()
+            panda_tabs.addTab(quests_container, "📜 Quests")
+            logger.info("✅ Quests tab added to panda tab")
+        except Exception as e:
+            logger.warning(f"Could not load quests tab: {e}")
+            label = QLabel("📜 Quests\n\nComplete tasks to unlock quests!")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            panda_tabs.addTab(label, "📜 Quests")
+
         layout.addWidget(panda_tabs)
         return tab
     
@@ -1980,6 +2042,14 @@ class TextureSorterMainWindow(QMainWindow):
                     self.level_system.save()
             except Exception:
                 pass
+            # Update quest progress for texture sorting
+            try:
+                if self.quest_system and files_processed > 0:
+                    self.quest_system.update_quest_progress('texture_sorter', files_processed)
+                    self.quest_system.update_quest_progress('bulk_sorter', files_processed)
+                    self.quest_system.check_quests(files_processed)
+            except Exception:
+                pass
         else:
             self.log(f"❌ {message}")
             QMessageBox.critical(self, "Error", message)
@@ -2310,7 +2380,35 @@ class TextureSorterMainWindow(QMainWindow):
                 self.currency_system.earn_money(bonus, f'level_up_{new_level}')
         except Exception as _e:
             logger.debug(f"Level-up callback error: {_e}")
-    
+
+    def _on_quest_completed(self, quest_id: str, reward_message: str):
+        """Callback fired when a quest is completed (QuestSystem.quest_completed signal)."""
+        try:
+            self.statusBar().showMessage(f"📜 Quest completed: {reward_message}", 6000)
+            # Play sound event if sound manager available
+            if self.sound_manager:
+                try:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.ACHIEVEMENT)
+                except Exception:
+                    pass
+            # Award XP for quest completion
+            if self.level_system:
+                try:
+                    self.level_system.add_xp(50, 'quest_completed')
+                    self.level_system.save()
+                except Exception:
+                    pass
+            # Award currency reward
+            if self.currency_system:
+                try:
+                    self.currency_system.earn_money(100, f'quest_{quest_id}')
+                except Exception:
+                    pass
+            logger.info(f"Quest completed: {quest_id} — {reward_message}")
+        except Exception as _e:
+            logger.debug(f"Quest completion callback error: {_e}")
+
     def show_about(self):
         """Show about dialog."""
         QMessageBox.about(

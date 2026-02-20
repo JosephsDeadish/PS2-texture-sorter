@@ -828,7 +828,7 @@ def create_transparent_overlay(parent, main_window=None):
         TransparentPandaOverlay instance or None if PyQt6/OpenGL not available
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6/OpenGL not available, cannot create overlay")
+        logger.warning("PyQt6/OpenGL not available, cannot create overlay")
         return None
     
     overlay = TransparentPandaOverlay(parent, main_window)

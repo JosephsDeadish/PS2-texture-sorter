@@ -362,7 +362,7 @@ class TextureClassifier:
             return category, confidence
             
         except Exception as e:
-            print(f"Error analyzing image {file_path}: {e}")
+            logger.error(f"Error analyzing image {file_path}: {e}")
             return "unclassified", 0.0
     
     def _is_simple_image(self, img_array: 'np.ndarray') -> bool:

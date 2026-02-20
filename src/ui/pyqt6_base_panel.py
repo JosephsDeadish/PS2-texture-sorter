@@ -302,7 +302,35 @@ class BasePyQtPanel(QWidget):
         """Handle operation error (override in subclass)."""
         self.show_progress(False)
         logger.error(f"Operation error: {error}")
-    
+
+    def _set_tooltip(self, widget, text_or_key: str):
+        """
+        Set tooltip on a widget, routing through tooltip_manager when available.
+
+        All panels that inherit BasePyQtPanel can call ``self._set_tooltip(w, key)``
+        without defining their own method.  Individual panels may override this
+        to customise the lookup behaviour (e.g. using a different key schema).
+
+        Args:
+            widget: QWidget to annotate (or None, which is silently ignored).
+            text_or_key: Plain tooltip text **or** a key looked up in the
+                tooltip manager's dictionary.
+        """
+        if widget is None:
+            return
+        tooltip_mgr = getattr(self, 'tooltip_manager', None)
+        if tooltip_mgr is not None:
+            try:
+                tooltip_mgr.set_tooltip(widget, text_or_key)
+                return
+            except Exception:
+                pass
+        # Fallback: treat text_or_key as literal tooltip text
+        try:
+            widget.setToolTip(str(text_or_key))
+        except Exception:
+            pass
+
     # ========================================================================
     # Thread Management
     # ========================================================================

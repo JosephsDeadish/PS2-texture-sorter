@@ -406,7 +406,7 @@ class PandaInteractionBehavior:
     
     def _finish_current_behavior(self):
         """Finish current behavior and reset state."""
-        print(f"Finished behavior: {self.current_behavior.value if self.current_behavior else 'none'}")
+        logger.debug(f"Finished behavior: {self.current_behavior.value if self.current_behavior else 'none'}")
         
         # Reset state
         self.current_behavior = None

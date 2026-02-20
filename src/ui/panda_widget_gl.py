@@ -1472,7 +1472,7 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
             callback: Optional callback function when panda reaches item
             
         Example:
-            widget.walk_to_item(0, lambda: print("Reached item!"))
+            widget.walk_to_item(0, lambda: logger.debug("Reached item!"))
         """
         if not QT_AVAILABLE or item_index >= len(self.items_3d):
             return

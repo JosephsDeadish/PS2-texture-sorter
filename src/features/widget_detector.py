@@ -12,6 +12,10 @@ Features:
     - Center point calculation
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtWidgets import (
         QApplication, QWidget, QPushButton, QSlider, 
@@ -379,7 +383,7 @@ def create_widget_detector(main_window):
         WidgetDetector instance or None if PyQt not available
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6 not available, cannot create widget detector")
+        logger.warning("PyQt6 not available, cannot create widget detector")
         return None
     
     return WidgetDetector(main_window)
