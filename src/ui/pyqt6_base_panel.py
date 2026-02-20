@@ -9,6 +9,8 @@ from __future__ import annotations
 import logging
 from typing import Optional, Callable
 
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtWidgets import (
         QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -278,12 +280,19 @@ class BasePyQtPanel(QWidget):
     # ========================================================================
     
     def _on_status_changed(self, message: str):
-        """Handle status change (override in subclass)."""
-        pass
+        """Handle status change — update status label if available."""
+        try:
+            self.set_status(message)
+        except AttributeError:
+            logger.debug("_on_status_changed: set_status not available on %s", type(self).__name__)
     
     def _on_progress_changed(self, current: int, total: int):
-        """Handle progress change (override in subclass)."""
-        pass
+        """Handle progress change — update progress bar if available."""
+        try:
+            if total > 0:
+                self.update_progress(current, total)
+        except AttributeError:
+            logger.debug("_on_progress_changed: update_progress not available on %s", type(self).__name__)
     
     def _on_operation_complete(self):
         """Handle operation completion (override in subclass)."""

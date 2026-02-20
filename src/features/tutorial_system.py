@@ -5322,11 +5322,16 @@ class TutorialOverlay(QWidget):
             painter.drawRect(self.highlight_rect)
     
     def mousePressEvent(self, event):
-        """Handle mouse clicks on the overlay"""
-        # If clicking outside the highlight area, emit a signal or call parent
-        if self.highlight_rect and not self.highlight_rect.contains(event.pos()):
-            # Click on dark area - do nothing or close tutorial
-            pass
+        """Handle mouse clicks on the overlay — advance tutorial on click outside highlight."""
+        # Click outside the highlighted widget area advances to next step
+        if self.highlight_rect is None or not self.highlight_rect.contains(event.pos()):
+            # Find the TutorialManager parent and advance
+            parent = self.parent()
+            while parent is not None:
+                if hasattr(parent, '_on_overlay_click'):
+                    parent._on_overlay_click(event)
+                    break
+                parent = parent.parent() if hasattr(parent, 'parent') else None
         event.accept()
 
 
@@ -5579,10 +5584,11 @@ class TutorialManager:
             self.overlay = None
     
     def _on_overlay_click(self, event=None):
-        """Handle clicks on the overlay"""
-        # The overlay now handles its own mouse events
-        # This method can be used for additional logic if needed
-        pass
+        """Handle clicks on the overlay — advance to next step."""
+        if self.current_step < len(self.steps) - 1:
+            self._show_step(self.current_step + 1)
+        else:
+            self._complete_tutorial()
     
     def _show_step(self, step_index: int):
         """Display a tutorial step with full Qt6 UI implementation"""

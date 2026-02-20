@@ -501,13 +501,12 @@ Author: {APP_AUTHOR}
                 
                 if not args.dry_run:
                     # Classify the texture
+                    # classify_texture() returns (category: str, confidence: float)
                     if classifier is not None:
                         try:
-                            predictions = classifier.classify_texture(texture_file)
-                            if predictions:
-                                top = predictions[0]
-                                file_result['category'] = top.get('category', 'unclassified')
-                                file_result['confidence'] = top.get('confidence', 0.0)
+                            category, confidence = classifier.classify_texture(texture_file)
+                            file_result['category'] = category or 'unclassified'
+                            file_result['confidence'] = confidence
                         except Exception as classify_err:
                             logger.debug(f"Classification failed for {texture_file}: {classify_err}")
 
