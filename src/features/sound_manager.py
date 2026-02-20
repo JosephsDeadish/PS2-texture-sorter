@@ -17,7 +17,10 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 # Resolve the sounds directory via the centralized path helper
-from ..config import get_resource_path
+try:
+    from ..config import get_resource_path  # relative import when inside src package
+except ImportError:
+    from config import get_resource_path  # absolute import when src/ is on sys.path
 _SOUNDS_DIR = get_resource_path("sounds")
 
 # Platform-specific sound imports

@@ -12,6 +12,16 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QGraphicsView(QWidget):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+
 
 
 class PaintView(QGraphicsView):

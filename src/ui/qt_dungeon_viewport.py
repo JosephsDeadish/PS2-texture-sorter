@@ -17,6 +17,9 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     QOpenGLWidget = object  # Dummy for type hints
+    class QWidget:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
 
 
 class DungeonViewport(QOpenGLWidget):

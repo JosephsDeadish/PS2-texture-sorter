@@ -5,6 +5,8 @@ Pure PyQt6 implementation for enemy display and combat.
 Uses QLabel with animated QPixmap for 2D enemies, or QOpenGLWidget for 3D.
 """
 
+
+from __future__ import annotations
 try:
     from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -12,6 +14,16 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        return None
+
 
 
 class EnemyDisplayWidget(QWidget):

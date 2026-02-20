@@ -3,12 +3,21 @@ Qt-based Performance Optimization Utilities
 Uses Qt native timers (QTimer) for efficient event loop integration.
 """
 
+
+from __future__ import annotations
 try:
     from PyQt6.QtCore import QTimer, QObject, pyqtSignal
     from PyQt6.QtWidgets import QWidget
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        return None
+
 
 from typing import Optional, Callable
 import logging

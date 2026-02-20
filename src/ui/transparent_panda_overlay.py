@@ -30,21 +30,25 @@ Features:
 NO CANVAS DRAWING - Everything uses QOpenGLWidget with OpenGL rendering
 """
 
+import logging
+import math
+import random
+import time
+
 try:
     from PyQt6.QtWidgets import QOpenGLWidget, QWidget
     from PyQt6.QtCore import Qt, QTimer, QPoint, QRect, pyqtSignal
     from PyQt6.QtGui import QPainter, QColor
     from OpenGL.GL import *
     from OpenGL.GLU import *
-    import math
-    import random
-    import logging
-    import time
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
     QOpenGLWidget = object
     QWidget = object
+    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        return None
 
 logger = logging.getLogger(__name__)
 

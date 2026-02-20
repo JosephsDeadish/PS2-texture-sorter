@@ -4,6 +4,8 @@ Provides drag-and-drop functionality for file/folder inputs using Qt6 native API
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 import platform
 from pathlib import Path
@@ -19,6 +21,13 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     logger.warning("PyQt6 not available, drag-and-drop will not work")
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+
 
 
 class DragDropHandler:

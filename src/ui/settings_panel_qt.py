@@ -4,6 +4,8 @@ Provides tabs for Appearance, Cursor, Font, Behavior, Performance, and Advanced 
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -21,9 +23,12 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
-    QWidget = object
-
-logger = logging.getLogger(__name__)
+    class QWidget:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        return None
 
 
 class ColorWheelWidget(QWidget):

@@ -12,8 +12,12 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 import json
 
-from ..config import APP_NAME, APP_VERSION, APP_AUTHOR, config
-from .config_loader import ConfigLoader
+try:
+    from ..config import APP_NAME, APP_VERSION, APP_AUTHOR, config
+    from .config_loader import ConfigLoader
+except ImportError:
+    from config import APP_NAME, APP_VERSION, APP_AUTHOR, config  # type: ignore[no-redef]
+    from cli.config_loader import ConfigLoader  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 

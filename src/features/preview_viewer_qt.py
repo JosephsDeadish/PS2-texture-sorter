@@ -10,6 +10,14 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
+    # Stub base classes so class bodies don't raise NameError at definition time
+    # when PyQt6 is unavailable.
+    class QGraphicsView:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
 
 
 class PreviewViewer(QGraphicsView):

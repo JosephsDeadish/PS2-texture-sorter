@@ -23,7 +23,21 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
-    QWidget = object
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QThread(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QPixmap:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +47,7 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
     logger.warning("PIL not available - thumbnails disabled")
+
 
 
 class ThumbnailGenerator(QThread):

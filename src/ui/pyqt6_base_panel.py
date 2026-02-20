@@ -4,6 +4,8 @@ Provides common functionality for tool panels
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from typing import Optional, Callable
 
@@ -19,8 +21,9 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     QWidget = object
-
-logger = logging.getLogger(__name__)
+    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        return None
 
 
 class BasePyQtPanel(QWidget):
