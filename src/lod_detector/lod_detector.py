@@ -95,8 +95,12 @@ class LODDetector:
             Dictionary mapping base names to lists of LOD files
         """
         return self.group_lods(file_paths)
-    
-    def _lod_sort_key(self, lod_level: Optional[str]) -> int:
+
+    def detect_lod_groups(self, file_paths) -> Dict[str, List[Path]]:
+        """Alias for detect_lods() accepting str or Path entries."""
+        return self.detect_lods([Path(p) for p in file_paths])
+
+    def _lod_sort_key(self, lod_level) -> int:
         """Generate sort key for LOD level"""
         if lod_level is None:
             return 999

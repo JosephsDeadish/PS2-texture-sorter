@@ -2113,16 +2113,16 @@ class TextureSorterMainWindow(QMainWindow):
             # Update the config value
             keys = setting_key.split('.')
             if len(keys) == 2:
-                config.set(keys[0], keys[1], value)
+                config.set(keys[0], keys[1], value=value)
             elif len(keys) == 1:
                 # Single-level key - store in general section
-                config.set('general', keys[0], value)
+                config.set('general', keys[0], value=value)
                 logger.debug(f"Single-level setting key '{setting_key}' stored in 'general' section")
             else:
                 # Multi-level nested keys - only handle first two levels
                 logger.warning(f"Setting key '{setting_key}' has unexpected format (expected 'section.key')")
                 if len(keys) >= 2:
-                    config.set(keys[0], keys[1], value)
+                    config.set(keys[0], keys[1], value=value)
             
             # Handle theme / accent color changes
             if setting_key in ("ui.theme", "ui.accent_color"):
@@ -2206,7 +2206,7 @@ class TextureSorterMainWindow(QMainWindow):
                 try:
                     speed = float(value)
                     speed = max(0.0, min(4.0, speed))
-                    config.set('ui', 'animation_speed', speed)
+                    config.set('ui', 'animation_speed', value=speed)
                     logger.info(f"Animation speed updated to: {speed}x")
                 except Exception as e:
                     logger.warning(f"Could not update animation speed: {e}")
@@ -2666,12 +2666,12 @@ class TextureSorterMainWindow(QMainWindow):
             geometry = self.saveGeometry()
             state = self.saveState()
             
-            config.set('window', 'geometry', geometry.toHex().data().decode())
-            config.set('window', 'state', state.toHex().data().decode())
+            config.set('window', 'geometry', value=geometry.toHex().data().decode())
+            config.set('window', 'state', value=state.toHex().data().decode())
             
             # Save docked tabs info
             docked_tabs = list(self.docked_widgets.keys())
-            config.set('window', 'docked_tabs', ','.join(docked_tabs))
+            config.set('window', 'docked_tabs', value=','.join(docked_tabs))
             
             # Save tool dock visibility
             tool_dock_states = {}
@@ -2680,7 +2680,7 @@ class TextureSorterMainWindow(QMainWindow):
                     'visible': dock.isVisible(),
                     'floating': dock.isFloating(),
                 }
-            config.set('window', 'tool_dock_states', str(tool_dock_states))
+            config.set('window', 'tool_dock_states', value=str(tool_dock_states))
             
             config.save()
             logger.info("Dock layout saved")
