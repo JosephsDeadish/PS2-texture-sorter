@@ -284,6 +284,11 @@ class TextureSorterMainWindow(QMainWindow):
         # Worker thread
         self.worker = None
         
+        # Drag-drop, translation, environment monitor
+        self.drag_drop_handler = None
+        self.translation_manager = None
+        self.environment_monitor = None
+        
         # Paths
         self.input_path = None
         self.output_path = None
@@ -1799,6 +1804,64 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize unlockables system: {e}")
 
+            # Wire drag-and-drop on the input/output path labels so users can
+            # drag folders from the file manager directly onto them.
+            try:
+                from utils.drag_drop_handler import DragDropHandler
+                self.drag_drop_handler = DragDropHandler()
+
+                def _on_input_drop(paths):
+                    folder = next((p for p in paths if Path(p).is_dir()), None)
+                    if folder:
+                        self.input_path = Path(folder)
+                        self.input_path_label.setText(folder)
+                        self.log(f"📁 Input folder (dropped): {folder}")
+                        self.update_button_states()
+
+                def _on_output_drop(paths):
+                    folder = next((p for p in paths if Path(p).is_dir()), None)
+                    if folder:
+                        self.output_path = Path(folder)
+                        self.output_path_label.setText(folder)
+                        self.log(f"📂 Output folder (dropped): {folder}")
+                        self.update_button_states()
+
+                self.drag_drop_handler.enable_drop(
+                    self.input_path_label, _on_input_drop, accept_folders=True, accept_files=False
+                )
+                self.drag_drop_handler.enable_drop(
+                    self.output_path_label, _on_output_drop, accept_folders=True, accept_files=False
+                )
+                logger.info("Drag-and-drop wired to input/output path labels")
+            except Exception as e:
+                logger.warning(f"Could not wire drag-and-drop: {e}")
+
+            # Initialize translation manager
+            try:
+                from features.translation_manager import TranslationManager, Language
+                self.translation_manager = TranslationManager()
+                saved_lang = config.get('ui', 'language', default='en')
+                lang = next((l for l in Language if l.value == saved_lang), Language.ENGLISH)
+                self.translation_manager.set_language(lang)
+                logger.info(f"Translation manager initialized (language={saved_lang})")
+            except Exception as e:
+                logger.warning(f"Could not initialize translation manager: {e}")
+
+            # Initialize EnvironmentMonitor — monitors scroll/dialog/window events
+            # and triggers panda reactions.  Requires both PyQt6 and the panda overlay.
+            try:
+                from features.environment_monitor import EnvironmentMonitor
+                _panda_overlay = getattr(self, 'panda_overlay', None)
+                self.environment_monitor = EnvironmentMonitor(self, _panda_overlay)
+                # Forward environment events to panda widget if it supports them
+                if self.environment_monitor.environment_changed:
+                    self.environment_monitor.environment_changed.connect(
+                        lambda ev, data: logger.debug(f"Env event: {ev} {data}")
+                    )
+                logger.info("EnvironmentMonitor initialized and event filters installed")
+            except Exception as e:
+                logger.warning(f"Could not initialize EnvironmentMonitor: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -2243,6 +2306,20 @@ class TextureSorterMainWindow(QMainWindow):
                         logger.info(f"Sound volume updated to: {value}")
                     except Exception as e:
                         logger.warning(f"Could not update sound volume: {e}")
+
+            elif setting_key == 'ui.language':
+                # Apply language change to TranslationManager
+                if self.translation_manager:
+                    try:
+                        from features.translation_manager import Language
+                        lang = next((l for l in Language if l.value == str(value)), None)
+                        if lang:
+                            self.translation_manager.set_language(lang)
+                            logger.info(f"Language changed to: {value}")
+                        else:
+                            logger.warning(f"Unknown language code: {value}")
+                    except Exception as e:
+                        logger.warning(f"Could not change language: {e}")
 
             elif setting_key == 'ui.animation_speed':
                 # Store animation speed in config; individual animated widgets read it on play.

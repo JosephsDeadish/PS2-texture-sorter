@@ -221,6 +221,22 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
                 goal_value=10,
                 reward_message="You've mastered the UI with panda! 🎯",
             ),
+            Quest(
+                id="texture_sorter",
+                name="Texture Sorter",
+                description="Sort your first 10 textures",
+                quest_type=QuestType.INTERACT_COUNT,
+                goal_value=10,
+                reward_message="Textures organized! Panda approves! 🗂️",
+            ),
+            Quest(
+                id="bulk_sorter",
+                name="Bulk Sorter",
+                description="Sort 100 textures in total",
+                quest_type=QuestType.INTERACT_COUNT,
+                goal_value=100,
+                reward_message="100 textures sorted — you're a sorting legend! 🏆",
+            ),
         ]
         
         for quest in quests:
