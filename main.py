@@ -221,6 +221,12 @@ class TextureSorterMainWindow(QMainWindow):
         self.memory_manager = None
         self.hotkey_manager = None
         self.sound_manager = None
+
+        # Gamification systems (initialised in create_panda_features_tab)
+        self.achievement_system = None
+        self.currency_system = None
+        self.shop_system = None
+        self.panda_closet = None
         
         # Worker thread
         self.worker = None
@@ -745,16 +751,16 @@ class TextureSorterMainWindow(QMainWindow):
             from ui.shop_panel_qt import ShopPanelQt
             from features.shop_system import ShopSystem
             from features.currency_system import CurrencySystem
-            
-            # Initialize systems
-            shop_system = ShopSystem()
-            currency_system = CurrencySystem()
-            
-            shop_panel = ShopPanelQt(shop_system, currency_system, tooltip_manager=self.tooltip_manager)
-            
+
+            # Initialize systems and store as instance vars so other methods can use them
+            self.shop_system = ShopSystem()
+            self.currency_system = CurrencySystem()
+
+            shop_panel = ShopPanelQt(self.shop_system, self.currency_system, tooltip_manager=self.tooltip_manager)
+
             # Connect shop panel signals
             shop_panel.item_purchased.connect(self.on_shop_item_purchased)
-            
+
             panda_tabs.addTab(shop_panel, "🛒 Shop")
             logger.info("✅ Shop panel added to panda tab")
         except Exception as e:
@@ -763,18 +769,21 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Shop not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "🛒 Shop")
-        
+
         # 3. Inventory Tab
         try:
             from ui.inventory_panel_qt import InventoryPanelQt
-            from features.shop_system import ShopSystem
-            
-            shop_system = ShopSystem()  # Reuse or get existing
-            inventory_panel = InventoryPanelQt(shop_system, tooltip_manager=self.tooltip_manager)
-            
+
+            # Reuse self.shop_system if already created above, else create fresh
+            _shop = self.shop_system
+            if _shop is None:
+                from features.shop_system import ShopSystem as _ShopSystem
+                _shop = _ShopSystem()
+            inventory_panel = InventoryPanelQt(_shop, tooltip_manager=self.tooltip_manager)
+
             # Connect inventory panel signals
             inventory_panel.item_selected.connect(self.on_inventory_item_selected)
-            
+
             panda_tabs.addTab(inventory_panel, "📦 Inventory")
             logger.info("✅ Inventory panel added to panda tab")
         except Exception as e:
@@ -783,10 +792,13 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Inventory not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "📦 Inventory")
-        
+
         # 4. Closet Tab
         try:
             from ui.closet_display_qt import ClosetDisplayWidget
+            from features.panda_closet import PandaCloset
+
+            self.panda_closet = PandaCloset()
             closet_panel = ClosetDisplayWidget(tooltip_manager=self.tooltip_manager)
             panda_tabs.addTab(closet_panel, "👔 Closet")
             logger.info("✅ Closet panel added to panda tab")
@@ -796,14 +808,21 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Closet not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "👔 Closet")
-        
+
         # 5. Achievements Tab
         try:
             from ui.achievement_panel_qt import AchievementDisplayWidget
             from features.achievements import AchievementSystem
-            
-            achievement_system = AchievementSystem()
-            achievement_panel = AchievementDisplayWidget(achievement_system, tooltip_manager=self.tooltip_manager)
+
+            self.achievement_system = AchievementSystem()
+            # Register callback to show popup + play sound when achievement unlocked
+            self.achievement_system.register_unlock_callback(self._on_achievement_unlocked)
+            # Count this startup as a new session
+            try:
+                self.achievement_system.increment_sessions()
+            except Exception:
+                pass
+            achievement_panel = AchievementDisplayWidget(self.achievement_system, tooltip_manager=self.tooltip_manager)
             panda_tabs.addTab(achievement_panel, "🏆 Achievements")
             logger.info("✅ Achievements panel added to panda tab")
         except Exception as e:
@@ -1484,6 +1503,23 @@ class TextureSorterMainWindow(QMainWindow):
         self.setStyleSheet(stylesheet)
         self.apply_cursor()
 
+        # Unlock theme-related achievements
+        try:
+            if self.achievement_system:
+                self.achievement_system.unlock_achievement('theme_switcher')
+                _theme_ach = {
+                    'dark': 'dark_side',
+                    'nord': 'nordic_explorer',
+                    'dracula': 'shadow_walker',
+                    'solarized_dark': 'bamboo_sage',
+                    'light': 'angelic_sorter',
+                }
+                ach_id = _theme_ach.get(theme)
+                if ach_id:
+                    self.achievement_system.unlock_achievement(ach_id)
+        except Exception:
+            pass
+
     def apply_cursor(self):
         """Apply the cursor style saved in config to the whole application."""
         try:
@@ -1787,6 +1823,8 @@ class TextureSorterMainWindow(QMainWindow):
             log_callback(f"   Successfully moved: {moved_count} files")
             if failed_count > 0:
                 log_callback(f"   Failed: {failed_count} files")
+            # Store for operation_finished achievement tracking
+            self._last_sorted_count = moved_count
                 
         except Exception as e:
             import traceback
@@ -1835,16 +1873,43 @@ class TextureSorterMainWindow(QMainWindow):
         
         self.statusbar.showMessage(message)
     
-    def operation_finished(self, success: bool, message: str):
+    def operation_finished(self, success: bool, message: str, files_processed: int = 0):
         """Handle operation completion."""
         self.set_operation_running(False)
-        
+        # Use count stored by perform_sorting when caller doesn't supply it
+        if files_processed == 0:
+            files_processed = getattr(self, '_last_sorted_count', 0)
+            self._last_sorted_count = 0
+
         if success:
             self.log(f"✅ {message}")
             QMessageBox.information(self, "Success", message)
+            # Play completion sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.COMPLETE)
+            except Exception:
+                pass
+            # Update achievement progress
+            try:
+                if self.achievement_system and files_processed > 0:
+                    self.achievement_system.increment_textures_sorted(files_processed)
+                    # unlock_achievement() is idempotent — safe to call every sort;
+                    # the system only fires the callback the first time it's unlocked.
+                    self.achievement_system.unlock_achievement('first_sort')
+            except Exception:
+                pass
         else:
             self.log(f"❌ {message}")
             QMessageBox.critical(self, "Error", message)
+            # Play error sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.ERROR)
+            except Exception:
+                pass
     
     def log(self, message: str):
         """Add message to log."""
@@ -1980,15 +2045,24 @@ class TextureSorterMainWindow(QMainWindow):
     def on_panda_clicked(self):
         """Handle panda widget click events."""
         try:
-            # Log the interaction
             self.log("🐼 Panda clicked!")
             logger.info("Panda widget clicked")
-            
-            # You can add custom behavior here, such as:
-            # - Playing a sound
-            # - Showing a message
-            # - Updating panda state
-            
+
+            # Play panda click sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.PANDA_CLICK)
+            except Exception:
+                pass
+
+            # Unlock panda_lover achievement on first click
+            try:
+                if self.achievement_system:
+                    self.achievement_system.unlock_achievement('panda_lover')
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling panda click: {e}", exc_info=True)
     
@@ -2007,12 +2081,10 @@ class TextureSorterMainWindow(QMainWindow):
     def on_panda_animation_changed(self, animation: str):
         """Handle panda animation state changes."""
         try:
-            # Log animation state changes
             logger.debug(f"Panda animation changed to: {animation}")
-            
-            # You can add custom behavior here based on animation state
-            # For example, update UI elements or trigger other animations
-            
+            # Forward animation state to panda widget if it supports it
+            if self.panda_widget and hasattr(self.panda_widget, 'set_animation'):
+                self.panda_widget.set_animation(animation)
         except Exception as e:
             logger.error(f"Error handling panda animation change: {e}", exc_info=True)
     
@@ -2047,27 +2119,88 @@ class TextureSorterMainWindow(QMainWindow):
         try:
             logger.info(f"Item purchased: {item_id}")
             self.log(f"🛒 Purchased item: {item_id}")
-            
-            # You can add additional logic here:
-            # - Play purchase sound
-            # - Show achievement notification
-            # - Update panda appearance if item is clothing
-            
+
+            # Play purchase sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.BUTTON_CLICK)
+            except Exception:
+                pass
+
+            # If item is clothing/accessory, equip it on the panda closet
+            try:
+                if self.panda_closet:
+                    item = self.panda_closet.get_item(item_id)
+                    if item:
+                        item.unlocked = True
+                        self.panda_closet.equip_item(item_id)
+                        logger.info(f"Equipped item on panda: {item_id}")
+            except Exception as _e:
+                logger.debug(f"Could not equip item {item_id}: {_e}")
+
+            # Unlock fashionista achievement for any clothing purchase.
+            # AchievementSystem.unlock_achievement() is idempotent — calling it
+            # multiple times only unlocks once (it's a no-op if already unlocked).
+            try:
+                if self.achievement_system:
+                    self.achievement_system.unlock_achievement('fashionista_fur')
+                    self.achievement_system.unlock_achievement('closet_explorer')
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling shop purchase: {e}", exc_info=True)
-    
+
     def on_inventory_item_selected(self, item_id: str):
         """Handle item selection from inventory panel."""
         try:
             logger.info(f"Inventory item selected: {item_id}")
-            
-            # You can add custom behavior here:
-            # - Show item details
-            # - Allow equipping/unequipping
-            # - Preview item on panda
-            
+
+            # Equip the selected item on the panda closet
+            try:
+                if self.panda_closet:
+                    item = self.panda_closet.get_item(item_id)
+                    if item and item.unlocked:
+                        self.panda_closet.equip_item(item_id)
+                        self.log(f"👔 Equipped: {item.name if hasattr(item, 'name') else item_id}")
+                        logger.info(f"Equipped item from inventory: {item_id}")
+            except Exception as _e:
+                logger.debug(f"Could not equip inventory item {item_id}: {_e}")
+
+            # Preview item on the panda widget if it supports it
+            try:
+                if self.panda_widget and hasattr(self.panda_widget, 'preview_item'):
+                    self.panda_widget.preview_item(item_id)
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling inventory selection: {e}", exc_info=True)
+
+    def _on_achievement_unlocked(self, achievement):
+        """Callback fired by AchievementSystem when an achievement is unlocked.
+
+        Shows a Qt achievement popup and plays the achievement sound.
+        """
+        try:
+            # Play achievement sound
+            if self.sound_manager:
+                from features.sound_manager import SoundEvent
+                self.sound_manager.play_sound(SoundEvent.ACHIEVEMENT)
+        except Exception:
+            pass
+
+        try:
+            from ui.qt_achievement_popup import show_achievement_popup
+            popup_data = {
+                'name': getattr(achievement, 'name', str(achievement)),
+                'emoji': getattr(achievement, 'icon', '🏆'),
+                'description': getattr(achievement, 'description', ''),
+            }
+            show_achievement_popup(popup_data, parent=self, parent_geometry=self.geometry())
+        except Exception as _e:
+            logger.debug(f"Could not show achievement popup: {_e}")
     
     def show_about(self):
         """Show about dialog."""
