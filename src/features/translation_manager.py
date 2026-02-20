@@ -160,9 +160,21 @@ class TranslationManager:
     
     def _load_translations(self) -> None:
         """Load translations from resource files."""
-        # Try to load from resources directory (uses centralized path helper)
-        from ..config import get_resource_path
-        resources_dir = get_resource_path('translations')
+        # Resolve get_resource_path regardless of how this module was imported.
+        def _get_resource_path(*parts):
+            """Try multiple import strategies to locate get_resource_path."""
+            for mod_name in ('config', 'src.config'):
+                try:
+                    import importlib
+                    mod = importlib.import_module(mod_name)
+                    return mod.get_resource_path(*parts)
+                except (ImportError, AttributeError):
+                    continue
+            # Ultimate fallback: resources/ next to the top-level src/ package
+            from pathlib import Path
+            return Path(__file__).parent.parent / 'resources' / Path(*parts)
+
+        resources_dir = _get_resource_path('translations')
         
         if not resources_dir.exists():
             logger.warning(f"Translations directory not found: {resources_dir}")

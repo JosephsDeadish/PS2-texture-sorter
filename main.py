@@ -973,13 +973,11 @@ class TextureSorterMainWindow(QMainWindow):
 
             self.quest_system = QuestSystem()
             # Wire quest completion → achievement & currency reward
-            if self.quest_system.quest_completed is not None:
-                self.quest_system.quest_completed.connect(self._on_quest_completed)
+            self.quest_system.quest_completed.connect(self._on_quest_completed)
             # Wire quest started notification → status bar
-            if self.quest_system.quest_started is not None:
-                self.quest_system.quest_started.connect(
-                    lambda qid: self.statusBar().showMessage(f"📜 Quest started: {qid}", 3000)
-                )
+            self.quest_system.quest_started.connect(
+                lambda qid: self.statusBar().showMessage(f"📜 Quest started: {qid}", 3000)
+            )
             # Activate first set of quests
             self.quest_system.check_quests(0)
 
@@ -2192,8 +2190,7 @@ class TextureSorterMainWindow(QMainWindow):
             # Update quest progress for texture sorting
             try:
                 if self.quest_system and files_processed > 0:
-                    self.quest_system.update_quest_progress('texture_sorter', files_processed)
-                    self.quest_system.update_quest_progress('bulk_sorter', files_processed)
+                    # check_quests() handles auto-start + progress update for texture_sorter/bulk_sorter
                     self.quest_system.check_quests(files_processed)
             except Exception:
                 pass
