@@ -227,6 +227,8 @@ class TextureSorterMainWindow(QMainWindow):
         self.currency_system = None
         self.shop_system = None
         self.panda_closet = None
+        self.level_system = None  # UserLevelSystem – XP / levelling
+        self.auto_backup = None   # AutoBackupSystem – periodic state backup
         
         # Worker thread
         self.worker = None
@@ -1626,6 +1628,32 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize sound manager: {e}")
 
+            # Initialize user level / XP system
+            try:
+                from features.level_system import UserLevelSystem
+                self.level_system = UserLevelSystem()
+                self.level_system.load()
+                self.level_system.register_level_up_callback(self._on_level_up)
+                logger.info("User level system initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize level system: {e}")
+
+            # Initialize auto-backup system (backs up app_data/config on interval)
+            try:
+                from features.auto_backup import AutoBackupSystem, BackupConfig
+                _backup_cfg = BackupConfig(
+                    enabled=True,
+                    interval_seconds=int(config.get('backup', 'interval_seconds', default=300)),
+                    max_backups=int(config.get('backup', 'max_backups', default=10)),
+                )
+                _app_dir = Path(__file__).parent / 'app_data'
+                _app_dir.mkdir(parents=True, exist_ok=True)
+                self.auto_backup = AutoBackupSystem(app_dir=_app_dir, config=_backup_cfg)
+                self.auto_backup.start()
+                logger.info("Auto-backup system started")
+            except Exception as e:
+                logger.warning(f"Could not initialize auto-backup: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -1881,6 +1909,18 @@ class TextureSorterMainWindow(QMainWindow):
             files_processed = getattr(self, '_last_sorted_count', 0)
             self._last_sorted_count = 0
 
+        # Snapshot app state for auto-backup so it knows "last processed count"
+        try:
+            if self.auto_backup:
+                self.auto_backup.update_state({
+                    'last_operation_success': success,
+                    'files_processed': files_processed,
+                    'input_path': str(self.input_path) if self.input_path else None,
+                    'output_path': str(self.output_path) if self.output_path else None,
+                })
+        except Exception:
+            pass
+
         if success:
             self.log(f"✅ {message}")
             QMessageBox.information(self, "Success", message)
@@ -1898,6 +1938,13 @@ class TextureSorterMainWindow(QMainWindow):
                     # unlock_achievement() is idempotent — safe to call every sort;
                     # the system only fires the callback the first time it's unlocked.
                     self.achievement_system.unlock_achievement('first_sort')
+            except Exception:
+                pass
+            # Award XP for each file processed
+            try:
+                if self.level_system and files_processed > 0:
+                    self.level_system.add_xp(files_processed, reason='file_processed')
+                    self.level_system.save()
             except Exception:
                 pass
         else:
@@ -2181,13 +2228,25 @@ class TextureSorterMainWindow(QMainWindow):
     def _on_achievement_unlocked(self, achievement):
         """Callback fired by AchievementSystem when an achievement is unlocked.
 
-        Shows a Qt achievement popup and plays the achievement sound.
+        Shows a Qt achievement popup, plays the achievement sound, and awards XP.
         """
         try:
             # Play achievement sound
             if self.sound_manager:
                 from features.sound_manager import SoundEvent
                 self.sound_manager.play_sound(SoundEvent.ACHIEVEMENT)
+        except Exception:
+            pass
+
+        try:
+            # Award XP for the achievement tier
+            if self.level_system:
+                rarity = getattr(achievement, 'rarity', 'bronze')
+                xp_reward_key = f'achievement_{rarity}'  # e.g. 'achievement_gold'
+                _leveled_up, _new_xp = self.level_system.add_xp(
+                    self.level_system.get_xp_reward(xp_reward_key), reason=xp_reward_key
+                )
+                self.level_system.save()
         except Exception:
             pass
 
@@ -2201,6 +2260,23 @@ class TextureSorterMainWindow(QMainWindow):
             show_achievement_popup(popup_data, parent=self, parent_geometry=self.geometry())
         except Exception as _e:
             logger.debug(f"Could not show achievement popup: {_e}")
+
+    # Coins awarded per new level on level-up (e.g. reaching level 10 gives 500 coins)
+    _COINS_PER_LEVEL = 50
+
+    def _on_level_up(self, old_level: int, new_level: int):
+        """Callback fired by UserLevelSystem when the user gains a level."""
+        try:
+            title = self.level_system.get_title_for_level() if self.level_system else ''
+            self.statusBar().showMessage(
+                f"🎉 Level up! {old_level} → {new_level}  {title}", 8000
+            )
+            # Award currency bonus for levelling up
+            if self.currency_system:
+                bonus = new_level * self._COINS_PER_LEVEL
+                self.currency_system.earn_money(bonus, f'level_up_{new_level}')
+        except Exception as _e:
+            logger.debug(f"Level-up callback error: {_e}")
     
     def show_about(self):
         """Show about dialog."""
@@ -2251,6 +2327,19 @@ class TextureSorterMainWindow(QMainWindow):
                 event.ignore()
         else:
             event.accept()
+
+        if event.isAccepted():
+            # Stop background services gracefully
+            try:
+                if self.auto_backup:
+                    self.auto_backup.stop()
+            except Exception:
+                pass
+            try:
+                if self.level_system:
+                    self.level_system.save()
+            except Exception:
+                pass
     
     def on_tab_detached(self, index: int, tab_name: str, widget: QWidget):
         """Handle tab being dragged out - create floating dock widget."""
@@ -2708,11 +2797,26 @@ def log_startup_diagnostics(window):
 
 def main():
     """Main entry point."""
+    # Optimize memory before creating any Qt objects
+    _startup_validation = None
+    try:
+        import startup_validation as _startup_validation
+        _startup_validation.optimize_memory()
+    except Exception:
+        pass
+
     # Create Qt application
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setOrganizationName("JosephsDeadish")
     app.setOrganizationDomain("github.com/JosephsDeadish")
+
+    # Validate frozen-EXE extraction integrity (no-op in dev mode)
+    try:
+        if _startup_validation and not _startup_validation.run_startup_validation():
+            sys.exit(1)
+    except Exception:
+        pass
     
     # Set application icon for taskbar
     icon_path = Path(__file__).parent / 'assets' / 'icon.ico'
@@ -2736,6 +2840,15 @@ def main():
     window = TextureSorterMainWindow()
     window.show()
     
+    # Show first-run tutorial if this is a new installation
+    try:
+        from features.tutorial_system import TutorialManager
+        _tm = TutorialManager()
+        if _tm.should_show_tutorial():
+            _tm.start_tutorial(window)
+    except Exception as _te:
+        logger.debug(f"Tutorial check skipped: {_te}")
+
     # Log startup
     logger.info(f"{APP_NAME} v{APP_VERSION} started with Qt6")
     window.log(f"🐼 {APP_NAME} v{APP_VERSION}")
