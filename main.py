@@ -310,7 +310,13 @@ class TextureSorterMainWindow(QMainWindow):
         self.travel_system = None        # TravelSystem – location/dungeon navigation
         self.adventure_level = None      # AdventureLevel – combat XP tracking
         self.weapon_collection = None    # WeaponCollection – panda weapons
-        
+        self.texture_analyzer = None     # TextureAnalyzer – per-file advanced analysis
+        self.similarity_search = None    # SimilaritySearch – embedding-based search
+        self.duplicate_detector = None   # DuplicateDetector – find near-duplicate textures
+        self.widget_detector = None      # WidgetDetector – Qt hit-testing for panda overlay
+        self.panda_interaction = None    # PandaInteractionBehavior – mischievous AI
+        self.preview_viewer = None       # PreviewViewer – standalone non-blocking preview
+
         # Paths
         self.input_path = None
         self.output_path = None
@@ -1397,6 +1403,17 @@ class TextureSorterMainWindow(QMainWindow):
         reset_layout_action.triggered.connect(self.reset_window_layout)
         view_menu.addAction(reset_layout_action)
 
+        # ── Tools menu ────────────────────────────────────────────────────────
+        tools_menu = menubar.addMenu("&Tools")
+
+        find_dupes_action = QAction("🔍 Find Duplicate Textures…", self)
+        find_dupes_action.triggered.connect(self._find_duplicate_textures)
+        tools_menu.addAction(find_dupes_action)
+
+        analyze_action = QAction("🔬 Analyze Selected Texture…", self)
+        analyze_action.triggered.connect(self._analyze_selected_texture)
+        tools_menu.addAction(analyze_action)
+
         # ── Help menu ────────────────────────────────────────────────────────
         help_menu = menubar.addMenu("&Help")
 
@@ -2311,6 +2328,59 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize WeaponCollection: {e}")
 
+            # Initialize TextureAnalyzer — advanced per-file analysis
+            try:
+                from features.texture_analysis import TextureAnalyzer
+                self.texture_analyzer = TextureAnalyzer()
+                logger.info("TextureAnalyzer initialized")
+            except Exception as e:
+                self.texture_analyzer = None
+                logger.warning(f"Could not initialize TextureAnalyzer: {e}")
+
+            # Initialize SimilaritySearch + DuplicateDetector — duplicate finding
+            try:
+                from similarity.similarity_search import SimilaritySearch
+                from similarity.duplicate_detector import DuplicateDetector
+                self.similarity_search = SimilaritySearch()
+                self.duplicate_detector = DuplicateDetector(self.similarity_search)
+                logger.info("SimilaritySearch and DuplicateDetector initialized")
+            except Exception as e:
+                self.similarity_search = None
+                self.duplicate_detector = None
+                logger.warning(f"Could not initialize similarity search: {e}")
+
+            # Initialize WidgetDetector + PandaInteractionBehavior (optional, requires PyQt6)
+            try:
+                from features.widget_detector import WidgetDetector
+                self.widget_detector = WidgetDetector(self)
+                logger.info("WidgetDetector initialized")
+                # Wire panda interaction behavior if overlay is available
+                if self.panda_overlay:
+                    try:
+                        from features.panda_interaction_behavior import PandaInteractionBehavior
+                        self.panda_interaction = PandaInteractionBehavior(
+                            self.panda_overlay, self.widget_detector
+                        )
+                        logger.info("PandaInteractionBehavior initialized")
+                    except Exception as _ie:
+                        self.panda_interaction = None
+                        logger.debug(f"PandaInteractionBehavior unavailable: {_ie}")
+                else:
+                    self.panda_interaction = None
+            except Exception as e:
+                self.widget_detector = None
+                self.panda_interaction = None
+                logger.debug(f"WidgetDetector unavailable: {e}")
+
+            # Initialize PreviewViewer — non-blocking image preview window
+            try:
+                from features.preview_viewer import PreviewViewer
+                self.preview_viewer = PreviewViewer()
+                logger.info("PreviewViewer initialized")
+            except Exception as e:
+                self.preview_viewer = None
+                logger.debug(f"PreviewViewer unavailable: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -2559,6 +2629,16 @@ class TextureSorterMainWindow(QMainWindow):
                         if _lod:
                             lod_group = getattr(_lod, 'group', None)
                             lod_level = getattr(_lod, 'level', None)
+                    except Exception:
+                        pass
+
+                # Run TextureAnalyzer on each file for richer DB metadata
+                _tex_analysis: dict = {}
+                if self.texture_analyzer and HAS_PIL:
+                    try:
+                        _tex_analysis = self.texture_analyzer.analyze(file_path)
+                        if _tex_analysis.get('has_alpha') is True:
+                            category = category if category != 'unknown' else 'alpha_textures'
                     except Exception:
                         pass
 
@@ -3313,6 +3393,20 @@ class TextureSorterMainWindow(QMainWindow):
         try:
             self.log(f"📄 File selected: {path}")
             self.statusBar().showMessage(f"Selected: {path}", 3000)
+            # Update live preview pane if present
+            if self.live_preview_widget:
+                try:
+                    _pix = QPixmap(str(path))
+                    if not _pix.isNull():
+                        self.live_preview_widget.set_original_image(_pix)
+                except Exception:
+                    pass
+            # Show in standalone PreviewViewer when double-clicked (path non-empty)
+            if self.preview_viewer and path:
+                try:
+                    self.preview_viewer.show_preview(path)
+                except Exception:
+                    pass
         except Exception as _e:
             logger.debug(f"File browser file_selected error: {_e}")
 
@@ -3398,6 +3492,70 @@ class TextureSorterMainWindow(QMainWindow):
                     QMessageBox.warning(self, "Create Restore Point", "Failed to create restore point.")
         except Exception as e:
             logger.error(f"Error creating restore point: {e}", exc_info=True)
+
+    def _find_duplicate_textures(self):
+        """Find and display duplicate/near-duplicate textures using SimilaritySearch."""
+        try:
+            if not self.duplicate_detector:
+                QMessageBox.information(
+                    self, "Find Duplicates",
+                    "SimilaritySearch not available.\n"
+                    "Install torch + faiss to enable duplicate detection."
+                )
+                return
+            if not self.input_path:
+                QMessageBox.warning(self, "Find Duplicates", "Please select an input folder first.")
+                return
+            self.statusBar().showMessage("🔍 Scanning for duplicates…")
+            groups = self.duplicate_detector.find_duplicates(threshold=0.95)
+            if not groups:
+                QMessageBox.information(self, "Find Duplicates", "No duplicate textures found.")
+            else:
+                msg = "\n".join(
+                    f"Group {i + 1}: {len(g)} files ({g[0]}…)"
+                    for i, g in enumerate(groups[:10])
+                )
+                if len(groups) > 10:
+                    msg += f"\n…and {len(groups) - 10} more groups"
+                QMessageBox.information(self, f"Found {len(groups)} Duplicate Group(s)", msg)
+            self.statusBar().showMessage(f"✅ Duplicate scan complete — {len(groups)} group(s)", 4000)
+            logger.info(f"Duplicate scan complete: {len(groups)} group(s)")
+        except Exception as e:
+            logger.error(f"Duplicate scan error: {e}", exc_info=True)
+            QMessageBox.critical(self, "Find Duplicates", f"Error during duplicate scan:\n{e}")
+
+    def _analyze_selected_texture(self):
+        """Analyze a user-selected texture file and display results."""
+        try:
+            from PyQt6.QtWidgets import QFileDialog
+            path_str, _ = QFileDialog.getOpenFileName(
+                self, "Select Texture to Analyze", str(self.input_path or ""),
+                "Images (*.png *.dds *.tga *.jpg *.bmp *.tif *.tiff);;All Files (*)"
+            )
+            if not path_str:
+                return
+            if not self.texture_analyzer:
+                QMessageBox.information(
+                    self, "Analyze Texture",
+                    "TextureAnalyzer not available.\n"
+                    "Install Pillow to enable texture analysis."
+                )
+                return
+            from pathlib import Path as _Path
+            analysis = self.texture_analyzer.analyze(_Path(path_str))
+            lines = [f"<b>{Path(path_str).name}</b>"]
+            for key, val in list(analysis.items())[:20]:
+                if isinstance(val, float):
+                    val = f"{val:.3f}"
+                lines.append(f"<b>{key}:</b> {val}")
+            QMessageBox.information(
+                self, "Texture Analysis",
+                "<br>".join(lines)
+            )
+            logger.info(f"Texture analyzed: {path_str}")
+        except Exception as e:
+            logger.error(f"Texture analysis error: {e}", exc_info=True)
+            QMessageBox.critical(self, "Analyze Texture", f"Error during analysis:\n{e}")
 
     def show_about(self):
         """Show about dialog."""

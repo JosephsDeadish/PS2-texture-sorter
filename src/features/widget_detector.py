@@ -47,7 +47,12 @@ class WidgetDetector:
             main_window: The main QMainWindow or QWidget to detect widgets in
         """
         if not PYQT_AVAILABLE:
-            raise ImportError("PyQt6 required for WidgetDetector")
+            logger.warning("WidgetDetector: PyQt6 not available; detection disabled")
+            self.main_window = main_window
+            self.collision_map = {}
+            self.cached_widgets = []
+            self.cache_valid = False
+            return
         
         self.main_window = main_window
         self.collision_map = {}

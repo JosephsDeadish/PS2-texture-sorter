@@ -61,7 +61,10 @@ class PandaInteractionBehavior:
             widget_detector: WidgetDetector instance
         """
         if not PYQT_AVAILABLE:
-            raise ImportError("PyQt6 required for PandaInteractionBehavior")
+            logger.warning("PandaInteractionBehavior: PyQt6 not available; interactions disabled")
+            self.overlay = panda_overlay
+            self.detector = widget_detector
+            return
         
         self.overlay = panda_overlay
         self.detector = widget_detector
