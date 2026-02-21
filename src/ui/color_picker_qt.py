@@ -5,6 +5,7 @@ Replaces canvas-based color wheel with Qt color dialog and custom widgets
 
 
 from __future__ import annotations
+import logging
 try:
     from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                                  QLabel, QColorDialog, QLineEdit)
@@ -26,6 +27,8 @@ except ImportError:
         """Fallback stub when PyQt6 is not installed."""
         return None
 
+
+logger = logging.getLogger(__name__)
 
 
 class ColorPickerWidget(QWidget):

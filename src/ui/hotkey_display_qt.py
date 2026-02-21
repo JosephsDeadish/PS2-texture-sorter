@@ -5,6 +5,7 @@ Replaces canvas-based hotkey settings display
 
 
 from __future__ import annotations
+import logging
 try:
     from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
                                  QTableWidget, QTableWidgetItem, QHeaderView,
@@ -24,6 +25,8 @@ except ImportError:
         """Fallback stub when PyQt6 is not installed."""
         return None
 
+
+logger = logging.getLogger(__name__)
 
 
 class HotkeyDisplayWidget(QWidget):

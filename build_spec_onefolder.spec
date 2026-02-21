@@ -265,6 +265,7 @@ a = Analysis(
     hookspath=HOOKSPATH,  # Use validated hookspath variable
     hooksconfig={},
     runtime_hooks=[
+        str(SCRIPT_DIR / 'runtime-hook-qt-platform.py'),  # Set QT_QPA_PLATFORM=offscreen on headless Linux
         str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers for onnxruntime
         str(SCRIPT_DIR / 'runtime-hook-torch.py'),  # Graceful CUDA handling for torch
     ],

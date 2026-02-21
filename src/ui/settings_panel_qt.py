@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import json
 
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtWidgets import (
         QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLabel, 
