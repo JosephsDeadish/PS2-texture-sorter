@@ -30,6 +30,122 @@ src_dir = Path(__file__).parent / 'src'
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
+# Handle lightweight CLI flags BEFORE importing Qt (no display needed)
+# These must run early — before any module-level Qt import — so they work
+# even when PyQt6 is not installed.
+def _handle_early_cli() -> None:
+    """Check for --version / --check-features / --help before Qt import."""
+    if len(sys.argv) < 2:
+        return
+
+    arg = sys.argv[1]
+
+    if arg in ('--version', '-V'):
+        # APP_NAME / APP_VERSION are in src/config.py; import lazily so we
+        # don't pull in the full Qt stack just for a version string.
+        try:
+            from config import APP_NAME, APP_VERSION
+        except Exception:
+            APP_NAME, APP_VERSION = "Game Texture Sorter", "1.0.0"
+        print(f"{APP_NAME} v{APP_VERSION}")
+        print("Author: Dead On The Inside / JosephsDeadish")
+        print("https://github.com/JosephsDeadish/Panda-Sorter-Converter-Upscaler-background-remover-and-line-art-too")
+        sys.exit(0)
+
+    if arg in ('--help', '-h'):
+        try:
+            from config import APP_NAME
+        except Exception:
+            APP_NAME = "Game Texture Sorter"
+        print(f"Usage: python main.py [options]")
+        print()
+        print("Options:")
+        print("  --version, -V        Show version and exit")
+        print("  --check-features     Show which optional features are available")
+        print("  --help, -h           Show this help message")
+        print()
+        print(f"Running without options launches the {APP_NAME} GUI.")
+        sys.exit(0)
+
+    if arg == '--check-features':
+        # Import only what we need for feature detection (no Qt)
+        try:
+            from config import APP_NAME, APP_VERSION
+        except Exception:
+            APP_NAME, APP_VERSION = "Game Texture Sorter", "1.0.0"
+
+        print(f"{APP_NAME} v{APP_VERSION} — Feature Check")
+        print("=" * 55)
+
+        def _line(label: str, available: bool, hint: str = "") -> None:
+            status = "✅" if available else "❌"
+            print(f"  {status}  {label}")
+            if not available and hint:
+                print(f"        Install: {hint}")
+
+        def _try_import(mod: str) -> bool:
+            try:
+                __import__(mod)
+                return True
+            except Exception:
+                return False
+
+        _line("Image loading (Pillow)",
+              _try_import('PIL'),
+              "pip install pillow")
+        _line("ONNX Runtime (batch inference / offline AI)",
+              _try_import('onnxruntime'),
+              "pip install onnxruntime")
+        _line("ONNX format (model export)",
+              _try_import('onnx'),
+              "pip install onnx")
+        _line("PyTorch (training + advanced vision models)",
+              _try_import('torch'),
+              "pip install torch torchvision  # see pytorch.org for CUDA")
+        _line("Transformers / CLIP search",
+              _try_import('transformers'),
+              "pip install transformers")
+        _line("Open CLIP",
+              _try_import('open_clip'),
+              "pip install open-clip-torch")
+        _line("timm (EfficientNet, etc.)",
+              _try_import('timm'),
+              "pip install timm")
+        _line("Background removal (rembg)",
+              _try_import('rembg'),
+              "pip install rembg[cpu]")
+        _line("SVG support (cairosvg)",
+              _try_import('cairosvg'),
+              "pip install cairosvg cairocffi")
+        _line("OCR text detection (pytesseract)",
+              _try_import('pytesseract'),
+              "pip install pytesseract  # + install Tesseract system package")
+        _line("Vector similarity search (faiss)",
+              _try_import('faiss'),
+              "pip install faiss-cpu")
+        try:
+            from preprocessing.upscaler import REALESRGAN_AVAILABLE
+            upscaler_ok = REALESRGAN_AVAILABLE
+        except Exception:
+            upscaler_ok = False
+        _line("Real-ESRGAN upscaler",
+              upscaler_ok,
+              "pip install basicsr realesrgan")
+        try:
+            from native_ops import NATIVE_AVAILABLE
+            native_ok = NATIVE_AVAILABLE
+        except Exception:
+            native_ok = False
+        _line("Native Lanczos acceleration (Rust)",
+              native_ok,
+              "cd native && maturin develop --release")
+
+        print("=" * 55)
+        sys.exit(0)
+
+
+_handle_early_cli()
+
 # Qt imports - REQUIRED, no fallbacks
 def _ensure_qt_platform():
     """
