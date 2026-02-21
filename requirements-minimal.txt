@@ -64,8 +64,11 @@ pyinstaller>=6.0.0
 # cairosvg>=2.7.0
 # cairocffi>=1.6.0
 
-# Lightweight AI inference
-# onnxruntime>=1.16.0
+# ONNX Runtime — lightweight inference for batch pipelines (ai/inference.py)
+# Strongly recommended: enables offline AI classification, batch upscaling,
+# and automation pipelines without requiring PyTorch.  The app runs without
+# it but AI inference features will be unavailable.
+onnxruntime>=1.16.0
 
 # OCR Support (requires tesseract-ocr system package)
 # pytesseract>=0.3.10
@@ -75,10 +78,20 @@ pyinstaller>=6.0.0
 # ============================================================================
 #
 # This minimal installation uses Qt6/OpenGL for the UI and EXCLUDES:
-#   - PyTorch (torch, torchvision) - saves ~1GB
-#   - Transformers, CLIP models - saves ~500MB
+#   - PyTorch (torch, torchvision) - saves ~1GB  [training features only]
+#   - Transformers, CLIP models - saves ~500MB   [advanced vision models]
 #   - Vector search (FAISS, ChromaDB) - saves ~200MB
 #   - Super-resolution models - saves ~100MB
+#
+# Hybrid architecture:
+#   - ONNX Runtime (included above): inference, batch pipelines, automation
+#   - PyTorch (NOT included): training, fine-tuning, experimentation
+#     To enable training: pip install torch torchvision
+#
+# Background removal (optional):
+#   pip install "rembg[cpu]"   # CPU backend
+#   pip install "rembg[gpu]"   # GPU backend
+#   The app works without rembg; background removal is disabled gracefully.
 #
 # For full feature set including advanced AI classification:
 #   pip install -r requirements.txt
