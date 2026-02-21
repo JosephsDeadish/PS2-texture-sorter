@@ -312,8 +312,7 @@ a = Analysis(
         'onnx.reference',  # Causes exit code 3221225477 (DLL initialization failure)
         'onnx.reference.ops',
         'onnx.reference.ops._op_list',
-        'onnxscript',  # Optional scripting extension
-        'onnxscript.onnx_opset',
+        'onnxscript',  # Optional scripting extension (covers all onnxscript.* submodules)
         'torch.onnx._internal.exporter._torchlib.ops',  # Tries to use onnxscript
         
         # Upscaler modules - download at runtime via AI Model Manager
