@@ -109,6 +109,11 @@ jobs:
       - name: Build with PyInstaller (One-Folder)
         env:
           PYTHONWARNINGS: "ignore::DeprecationWarning"
+          # Prevent onnxruntime from attempting to load CUDA DLLs in PyInstaller's
+          # isolated analysis subprocesses (they inherit this environment).
+          ORT_DISABLE_CUDA: "1"
+          CUDA_VISIBLE_DEVICES: ""
+          ORT_TENSORRT_UNAVAILABLE: "1"
         run: |
           echo "Starting PyInstaller build..."
           echo "Using hooks from:"
