@@ -20,9 +20,13 @@ except ImportError:
     class QWidget(QObject):  # type: ignore[no-redef]
         """Fallback stub when PyQt6 is not installed."""
         pass
-    def pyqtSignal(*args, **kwargs):  # type: ignore[no-redef]
-        """Fallback stub when PyQt6 is not installed."""
-        return None
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
 
 
 

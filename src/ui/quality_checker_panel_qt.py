@@ -21,7 +21,12 @@ except ImportError:
     QSplitter = object
     QScrollArea = object
     QGroupBox = object
-    def pyqtSignal(*args, **kwargs): return property(lambda self: None)
+    class _SignalStub:  # noqa: E301
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
     class Qt:
         class AlignmentFlag:
             AlignLeft = AlignRight = AlignCenter = AlignTop = AlignBottom = AlignHCenter = AlignVCenter = 0
