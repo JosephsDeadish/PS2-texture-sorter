@@ -61,7 +61,7 @@ try:
         QLabel, QPushButton, QProgressBar, QTextEdit, QTabWidget,
         QFileDialog, QMessageBox, QStatusBar, QMenuBar, QMenu,
         QSplitter, QFrame, QComboBox, QGridLayout, QStackedWidget,
-        QScrollArea, QDockWidget, QToolBar
+        QScrollArea, QDockWidget, QToolBar, QInputDialog
     )
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSize, QByteArray
     from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
@@ -1278,49 +1278,68 @@ class TextureSorterMainWindow(QMainWindow):
     def setup_menubar(self):
         """Setup menu bar."""
         menubar = self.menuBar()
-        
-        # File menu
+
+        # ── File menu ────────────────────────────────────────────────────────
         file_menu = menubar.addMenu("&File")
-        
-        open_action = QAction("&Open Input Folder...", self)
+
+        open_action = QAction("&Open Input Folder…", self)
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self.browse_input)
         file_menu.addAction(open_action)
-        
+
+        open_out_action = QAction("Open &Output Folder…", self)
+        open_out_action.setShortcut("Ctrl+Shift+O")
+        open_out_action.triggered.connect(self.browse_output)
+        file_menu.addAction(open_out_action)
+
         file_menu.addSeparator()
-        
+
+        # Profiles sub-menu (uses ProfileManager)
+        profile_menu = file_menu.addMenu("&Profiles")
+        save_profile_action = QAction("&Save Current Profile…", self)
+        save_profile_action.triggered.connect(self._save_profile)
+        profile_menu.addAction(save_profile_action)
+        load_profile_action = QAction("&Load Profile…", self)
+        load_profile_action.triggered.connect(self._load_profile)
+        profile_menu.addAction(load_profile_action)
+
+        # Backup sub-menu (uses BackupManager)
+        backup_menu = file_menu.addMenu("&Backup")
+        create_restore_action = QAction("Create &Restore Point…", self)
+        create_restore_action.triggered.connect(self._create_restore_point)
+        backup_menu.addAction(create_restore_action)
+
+        file_menu.addSeparator()
+
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
-        # View menu - for docking controls
+
+        # ── View menu ────────────────────────────────────────────────────────
         view_menu = menubar.addMenu("&View")
-        
         self.view_menu = view_menu  # Store reference for dynamic updates
-        
-        # Add "Pop Out Tab" action
+
         popout_action = QAction("Pop Out Current Tab", self)
         popout_action.setShortcut("Ctrl+Shift+P")
         popout_action.triggered.connect(self.popout_current_tab)
         view_menu.addAction(popout_action)
-        
+
         view_menu.addSeparator()
-        
+
         # Submenu for restoring docked tabs
         self.restore_menu = view_menu.addMenu("Restore Docked Tab")
         self.restore_menu.setEnabled(False)  # Disabled until tabs are popped out
-        
+
         view_menu.addSeparator()
-        
-        # Reset layout action
+
         reset_layout_action = QAction("Reset Window Layout", self)
         reset_layout_action.triggered.connect(self.reset_window_layout)
         view_menu.addAction(reset_layout_action)
-        
-        # Help menu
+
+        # ── Help menu ────────────────────────────────────────────────────────
         help_menu = menubar.addMenu("&Help")
-        
+
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
@@ -2388,6 +2407,13 @@ class TextureSorterMainWindow(QMainWindow):
             import time as _time
             from pathlib import Path
 
+            # Create a manual restore point before destructive file operations
+            try:
+                if self.backup_manager:
+                    self.backup_manager.create_restore_point(label="pre_sort")
+            except Exception:
+                pass
+
             # Resolve the selected organization style (main thread set self._sort_style_key)
             style_key = getattr(self, '_sort_style_key', None)
             org_style_cls = ORGANIZATION_STYLES.get(style_key) if style_key else None
@@ -2688,6 +2714,20 @@ class TextureSorterMainWindow(QMainWindow):
 
         if success:
             self.log(f"✅ {message}")
+            # Show statistics summary in log area
+            try:
+                if self.statistics_tracker and files_processed > 0:
+                    summary = self.statistics_tracker.get_summary()
+                    elapsed = summary.get('total_time', 0)
+                    rate = summary.get('files_per_second', 0)
+                    errors = summary.get('error_count', 0)
+                    self.log(
+                        f"📊 Stats: {files_processed} files in {elapsed:.1f}s"
+                        f" ({rate:.1f} files/sec)"
+                        + (f" | {errors} error(s)" if errors else "")
+                    )
+            except Exception:
+                pass
             QMessageBox.information(self, "Success", message)
             # Play completion sound
             try:
@@ -3242,6 +3282,62 @@ class TextureSorterMainWindow(QMainWindow):
             logger.debug(f"Panda react: {event_type}")
         except Exception as _e:
             logger.debug(f"panda_should_react callback error: {_e}")
+
+    def _save_profile(self):
+        """Save current organization settings as a named profile."""
+        try:
+            if not self.profile_manager:
+                QMessageBox.information(self, "Profiles", "Profile manager not available.")
+                return
+            name, ok = QInputDialog.getText(self, "Save Profile", "Profile name:")
+            if ok and name.strip():
+                if self.profile_manager.save_profile(name.strip()):
+                    self.statusBar().showMessage(f"✅ Profile saved: {name.strip()}", 3000)
+                    logger.info(f"Profile saved: {name.strip()}")
+                else:
+                    QMessageBox.warning(self, "Save Profile", f"Failed to save profile '{name.strip()}'.")
+        except Exception as e:
+            logger.error(f"Error saving profile: {e}", exc_info=True)
+
+    def _load_profile(self):
+        """Load a named profile from the profile manager."""
+        try:
+            if not self.profile_manager:
+                QMessageBox.information(self, "Profiles", "Profile manager not available.")
+                return
+            profiles = self.profile_manager.list_profiles()
+            if not profiles:
+                QMessageBox.information(self, "Load Profile", "No saved profiles found.")
+                return
+            names = [p.get('name', str(p)) for p in profiles]
+            name, ok = QInputDialog.getItem(self, "Load Profile", "Select profile:", names, 0, False)
+            if ok and name:
+                profile = self.profile_manager.load_profile(name)
+                if profile:
+                    self.statusBar().showMessage(f"✅ Profile loaded: {name}", 3000)
+                    logger.info(f"Profile loaded: {name}")
+                else:
+                    QMessageBox.warning(self, "Load Profile", f"Failed to load profile '{name}'.")
+        except Exception as e:
+            logger.error(f"Error loading profile: {e}", exc_info=True)
+
+    def _create_restore_point(self):
+        """Create a manual backup restore point via BackupManager."""
+        try:
+            if not self.backup_manager:
+                QMessageBox.information(self, "Backup", "Backup manager not available.")
+                return
+            name, ok = QInputDialog.getText(self, "Create Restore Point", "Restore point name (optional):")
+            if ok:
+                label = name.strip() or "manual"
+                result = self.backup_manager.create_restore_point(label=label)
+                if result:
+                    self.statusBar().showMessage(f"✅ Restore point created: {label}", 3000)
+                    logger.info(f"Restore point created: {label}")
+                else:
+                    QMessageBox.warning(self, "Create Restore Point", "Failed to create restore point.")
+        except Exception as e:
+            logger.error(f"Error creating restore point: {e}", exc_info=True)
 
     def show_about(self):
         """Show about dialog."""

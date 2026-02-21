@@ -48,6 +48,12 @@ except ImportError:
     PIL_AVAILABLE = False
     logger.warning("PIL not available - thumbnails disabled")
 
+try:
+    from features.search_filter import SearchFilter, FilterCriteria
+    _SEARCH_FILTER = SearchFilter()
+except Exception:
+    _SEARCH_FILTER = None  # type: ignore[assignment]
+
 
 
 class ThumbnailGenerator(QThread):
@@ -342,32 +348,39 @@ class FileBrowserPanelQt(QWidget):
             self.status_label.setText("Error loading folder")
     
     def filter_files(self):
-        """Filter files based on search and type"""
+        """Filter files based on search and type, using SearchFilter when available."""
         if not self.current_files:
             return
-        
+
         search_text = self.search_box.text().lower()
         type_filter = self.type_combo.currentText()
         show_archives = self.show_archives_cb.isChecked()
-        
-        filtered = []
+
+        # Apply type / archive pre-filter first (fast, no SearchFilter needed)
+        candidates = []
         for filepath in self.current_files:
-            # Type filter
             if type_filter == "Images Only" and filepath.suffix.lower() in self.ARCHIVE_EXTENSIONS:
                 continue
             if type_filter == "Archives Only" and filepath.suffix.lower() in self.IMAGE_EXTENSIONS:
                 continue
-            
-            # Archive filter
             if not show_archives and filepath.suffix.lower() in self.ARCHIVE_EXTENSIONS:
                 continue
-            
-            # Search filter
-            if search_text and search_text not in filepath.name.lower():
-                continue
-            
-            filtered.append(filepath)
-        
+            candidates.append(filepath)
+
+        # Use SearchFilter for text search when available; fall back to plain substring
+        if search_text:
+            if _SEARCH_FILTER is not None:
+                try:
+                    criteria = FilterCriteria(name=search_text)
+                    filtered = _SEARCH_FILTER.search(candidates, criteria)
+                except Exception:
+                    # Fallback to simple substring match on any error
+                    filtered = [p for p in candidates if search_text in p.name.lower()]
+            else:
+                filtered = [p for p in candidates if search_text in p.name.lower()]
+        else:
+            filtered = candidates
+
         self.display_files(filtered)
     
     def display_files(self, files: List[Path]):
