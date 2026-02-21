@@ -237,6 +237,14 @@ except ImportError as e:
     logger.warning(f"Panda widget not available: {e}")
     PandaOpenGLWidget = None
 
+# 2-D panda fallback (QPainter — no OpenGL required)
+try:
+    from ui.panda_widget_2d import PandaWidget2D
+    logger.info("✅ Panda 2D fallback widget loaded")
+except ImportError as e:
+    PandaWidget2D = None
+    logger.warning(f"Panda 2D widget not available: {e}")
+
 UI_PANELS_AVAILABLE = False
 try:
     from ui.background_remover_panel_qt import BackgroundRemoverPanelQt
@@ -510,12 +518,46 @@ class TextureSorterMainWindow(QMainWindow):
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setSpacing(10)
         
+        # ── Panda sidebar widget ─────────────────────────────────────────────
+        # Try OpenGL 3-D widget first; fall back to 2-D QPainter widget.
+        # IMPORTANT: create panda_widget HERE — before create_panda_features_tab()
+        # so that panda_char is available when the Customisation tab is built.
+        _panda_sidebar_widget = None   # will be added to splitter after content_widget
+
+        if PANDA_WIDGET_AVAILABLE:
+            try:
+                self.panda_widget = PandaOpenGLWidget()
+                self.panda_widget.setMinimumWidth(280)
+                self.panda_widget.setMaximumWidth(420)
+                self.panda_widget.clicked.connect(self.on_panda_clicked)
+                self.panda_widget.mood_changed.connect(self.on_panda_mood_changed)
+                self.panda_widget.animation_changed.connect(self.on_panda_animation_changed)
+                _panda_sidebar_widget = self.panda_widget
+                logger.info("✅ Panda 3D OpenGL widget created")
+            except Exception as e:
+                logger.warning(f"OpenGL panda failed ({e}), trying 2D fallback")
+                self.panda_widget = None
+
+        if self.panda_widget is None and PandaWidget2D is not None:
+            try:
+                self.panda_widget = PandaWidget2D()
+                self.panda_widget.setMinimumWidth(280)
+                self.panda_widget.setMaximumWidth(420)
+                self.panda_widget.clicked.connect(self.on_panda_clicked)
+                self.panda_widget.mood_changed.connect(self.on_panda_mood_changed)
+                self.panda_widget.animation_changed.connect(self.on_panda_animation_changed)
+                _panda_sidebar_widget = self.panda_widget
+                logger.info("✅ Panda 2D QPainter widget created (OpenGL unavailable)")
+            except Exception as e2:
+                logger.error(f"Panda 2D fallback also failed: {e2}")
+                self.panda_widget = None
+
         # Create draggable tabs
         self.tabs = DraggableTabWidget()
         self.tabs.setDocumentMode(True)
         self.tabs.tab_detached.connect(self.on_tab_detached)
         content_layout.addWidget(self.tabs)
-        
+
         # Create main tab (dashboard/welcome)
         self.create_main_tab()
 
@@ -525,87 +567,54 @@ class TextureSorterMainWindow(QMainWindow):
             logger.info("✅ Tools tab added to main tabs")
         except Exception as e:
             logger.error(f"Could not create Tools tab: {e}", exc_info=True)
-        
-        # Create Panda Features tab (always shown; handles missing OpenGL gracefully)
-        # NOTE: self.panda_widget is still None here — it is created later in setup_ui()
-        # after the left-side content_widget is fully assembled.  create_panda_features_tab()
-        # guards all panda_widget references with getattr(..., None), so None is safe.
+
+        # Create Panda Features tab — panda_widget is now set (or None) so panda_char
+        # is available to CustomizationPanelQt when it is built.
         try:
             panda_features_tab = self.create_panda_features_tab()
             self.tabs.addTab(panda_features_tab, "🐼 Panda")
             logger.info("✅ Panda Features tab added to main tabs")
         except Exception as e:
             logger.error(f"Could not create Panda Features tab: {e}", exc_info=True)
-        
+
         # Create file browser tab
         self.create_file_browser_tab()
-        
+
         # Create notepad tab
         self.create_notepad_tab()
-        
+
         # Create settings tab
         self.create_settings_tab()
-        
+
         # Progress bar (at bottom of content)
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
         self.progress_bar.setTextVisible(True)
         content_layout.addWidget(self.progress_bar)
-        
+
         splitter.addWidget(content_widget)
-        
-        # Right side: Panda 3D widget (OpenGL-accelerated)
-        # Load panda widget INDEPENDENTLY of UI panels
-        if PANDA_WIDGET_AVAILABLE:
-            try:
-                self.panda_widget = PandaOpenGLWidget()
-                self.panda_widget.setMinimumWidth(300)
-                self.panda_widget.setMaximumWidth(400)
-                
-                # Connect panda widget signals
-                self.panda_widget.clicked.connect(self.on_panda_clicked)
-                self.panda_widget.mood_changed.connect(self.on_panda_mood_changed)
-                self.panda_widget.animation_changed.connect(self.on_panda_animation_changed)
-                
-                splitter.addWidget(self.panda_widget)
-                splitter.setStretchFactor(0, 3)  # Content gets 75%
-                splitter.setStretchFactor(1, 1)  # Panda gets 25%
-                logger.info("✅ Panda 3D OpenGL widget loaded successfully")
-            except Exception as e:
-                logger.error(f"Could not load panda widget: {e}", exc_info=True)
-                # Create fallback placeholder
-                fallback_widget = QWidget()
-                fallback_layout = QVBoxLayout(fallback_widget)
-                fallback_label = QLabel("🐼 Panda Widget\n\nOpenGL Error\n\n" + str(e))
-                fallback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                fallback_label.setStyleSheet("color: red; font-size: 11pt;")
-                fallback_label.setWordWrap(True)
-                fallback_layout.addWidget(fallback_label)
-                splitter.addWidget(fallback_widget)
-                splitter.setStretchFactor(0, 3)
-                splitter.setStretchFactor(1, 1)
-                self.panda_widget = None
+
+        # ── Add panda sidebar to splitter ─────────────────────────────────────
+        if _panda_sidebar_widget is not None:
+            splitter.addWidget(_panda_sidebar_widget)
+            splitter.setStretchFactor(0, 3)  # content gets 75 %
+            splitter.setStretchFactor(1, 1)  # panda sidebar gets 25 %
         else:
-            # Show clear message about what's missing
-            fallback_widget = QWidget()
-            fallback_layout = QVBoxLayout(fallback_widget)
-            fallback_label = QLabel(
-                "🐼 Panda Widget\n\n"
-                "Required Dependencies Missing:\n\n"
-                "• PyQt6\n"
-                "• PyOpenGL\n\n"
-                "Install with:\n"
-                "pip install PyQt6 PyOpenGL PyOpenGL-accelerate"
+            # No panda widget at all — show a gentle placeholder
+            ph = QWidget()
+            ph_layout = QVBoxLayout(ph)
+            ph_label = QLabel(
+                "🐼\n\nPanda companion\nunavailable\n\n"
+                "Install PyOpenGL for\n3-D panda rendering"
             )
-            fallback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            fallback_label.setStyleSheet("color: orange; font-size: 10pt;")
-            fallback_label.setWordWrap(True)
-            fallback_layout.addWidget(fallback_label)
-            splitter.addWidget(fallback_widget)
+            ph_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            ph_label.setStyleSheet("color: #aaa; font-size: 10pt;")
+            ph_label.setWordWrap(True)
+            ph_layout.addWidget(ph_label)
+            splitter.addWidget(ph)
             splitter.setStretchFactor(0, 3)
             splitter.setStretchFactor(1, 1)
-            self.panda_widget = None
-            logger.warning("Panda widget dependencies not installed")
+            logger.warning("No panda widget available — placeholder shown")
     
     def create_main_tab(self):
         """Create the main tab with welcome/dashboard."""
