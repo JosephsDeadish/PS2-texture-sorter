@@ -96,13 +96,17 @@ def test_get_rembg_returns_none_when_absent():
     from tools.object_remover import _get_rembg
 
     remove_fn, session_fn = _get_rembg()
-    # In this sandbox rembg is not installed, so both must be None.
-    # If rembg IS installed but onnxruntime fails, the catch-all Exception
-    # handler ensures the same (None, None) result.
-    assert remove_fn is None or callable(remove_fn), \
-        "Expected None or callable for remove_fn"
-    assert session_fn is None or callable(session_fn), \
-        "Expected None or callable for session_fn"
+    if remove_fn is not None:
+        # rembg is actually installed – verify it returned callables and skip
+        # the 'absent' assertions (they only apply when rembg is missing).
+        assert callable(remove_fn), "Expected callable for remove_fn when rembg present"
+        assert callable(session_fn), "Expected callable for session_fn when rembg present"
+        print("  PASS (rembg present – returned callables as expected)")
+    else:
+        # rembg absent – both must be None (graceful degradation)
+        assert remove_fn is None, f"Expected None for remove_fn, got {remove_fn!r}"
+        assert session_fn is None, f"Expected None for session_fn, got {session_fn!r}"
+        print("  PASS (rembg absent – returned (None, None) as expected)")
 
     print("  PASS")
 
