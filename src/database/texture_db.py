@@ -7,6 +7,9 @@ import sqlite3
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TextureDatabase:
@@ -107,7 +110,7 @@ class TextureDatabase:
             self.conn.commit()
             return True
         except Exception as e:
-            print(f"Error adding texture to database: {e}")
+            logger.error(f"Error adding texture to database: {e}")
             return False
     
     def get_texture(self, file_path: Path) -> Optional[dict]:
@@ -180,7 +183,7 @@ class TextureDatabase:
             ''', (datetime.now().isoformat(), operation, str(file_path), status, details))
             self.conn.commit()
         except Exception as e:
-            print(f"Error logging operation: {e}")
+            logger.error(f"Error logging operation: {e}")
     
     def get_recent_operations(self, limit: int = 100) -> List[dict]:
         """Get recent operations log"""

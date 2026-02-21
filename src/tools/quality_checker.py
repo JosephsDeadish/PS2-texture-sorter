@@ -4,12 +4,24 @@ Analyzes images for resolution, compression artifacts, DPI, and quality scoring
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass
-from PIL import Image, ImageStat
+try:
+    from PIL import Image, ImageStat
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import threading
 from enum import Enum
 

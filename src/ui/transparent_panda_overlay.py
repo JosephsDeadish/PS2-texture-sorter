@@ -30,21 +30,29 @@ Features:
 NO CANVAS DRAWING - Everything uses QOpenGLWidget with OpenGL rendering
 """
 
+import logging
+import math
+import random
+import time
+
 try:
     from PyQt6.QtWidgets import QOpenGLWidget, QWidget
     from PyQt6.QtCore import Qt, QTimer, QPoint, QRect, pyqtSignal
     from PyQt6.QtGui import QPainter, QColor
     from OpenGL.GL import *
     from OpenGL.GLU import *
-    import math
-    import random
-    import logging
-    import time
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
     QOpenGLWidget = object
     QWidget = object
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
 
 logger = logging.getLogger(__name__)
 
@@ -824,7 +832,7 @@ def create_transparent_overlay(parent, main_window=None):
         TransparentPandaOverlay instance or None if PyQt6/OpenGL not available
     """
     if not PYQT_AVAILABLE:
-        print("Warning: PyQt6/OpenGL not available, cannot create overlay")
+        logger.warning("PyQt6/OpenGL not available, cannot create overlay")
         return None
     
     overlay = TransparentPandaOverlay(parent, main_window)

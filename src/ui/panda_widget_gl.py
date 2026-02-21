@@ -705,10 +705,23 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         self._draw_cube(size)
     
     def _draw_clothing_item(self, item):
-        """Draw clothing item on panda."""
-        # Clothing would be rendered as part of the panda's body
-        # This is a placeholder for future implementation
-        pass
+        """Draw clothing item dropped in the world (not yet equipped)."""
+        # Draw as a folded-cloth diamond shape using two crossed quads
+        color = item.get('color', [0.5, 0.3, 0.8])
+        glColor3f(*color)
+        s = 0.12
+        glBegin(GL_QUADS)
+        # Horizontal quad
+        glVertex3f(-s, 0.0, -s * 0.4)
+        glVertex3f(s, 0.0, -s * 0.4)
+        glVertex3f(s, 0.0, s * 0.4)
+        glVertex3f(-s, 0.0, s * 0.4)
+        # Vertical quad (crossed)
+        glVertex3f(0.0, -s, -s * 0.4)
+        glVertex3f(0.0, -s, s * 0.4)
+        glVertex3f(0.0, s, s * 0.4)
+        glVertex3f(0.0, s, -s * 0.4)
+        glEnd()
     
     def _draw_cube(self, size):
         """Draw a cube."""
@@ -1056,9 +1069,63 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
         glPopMatrix()
     
     def _draw_accessory(self, accessory_data):
-        """Draw accessory item."""
-        # Placeholder for various accessories
-        pass
+        """Draw equipped accessory item on the panda."""
+        accessory_type = accessory_data.get('type', 'bow')
+        color = accessory_data.get('color', [1.0, 0.5, 0.0])
+        glColor3f(*color)
+
+        if accessory_type == 'bow':
+            # Bow on top of head: two small spheres side-by-side
+            glPushMatrix()
+            glTranslatef(0.0, 1.35, 0.0)
+            glPushMatrix()
+            glTranslatef(-0.08, 0.0, 0.0)
+            self._draw_sphere(0.07, 8, 8)
+            glPopMatrix()
+            glPushMatrix()
+            glTranslatef(0.08, 0.0, 0.0)
+            self._draw_sphere(0.07, 8, 8)
+            glPopMatrix()
+            glPopMatrix()
+
+        elif accessory_type == 'scarf':
+            # Scarf around neck: flat torus-like ring
+            glPushMatrix()
+            glTranslatef(0.0, 0.62, 0.0)
+            glScalef(1.0, 0.3, 1.0)
+            self._draw_sphere(0.25, 16, 8)
+            glPopMatrix()
+
+        elif accessory_type == 'necklace':
+            # Necklace: small spheres in a arc at front of neck
+            glPushMatrix()
+            glTranslatef(0.0, 0.58, 0.22)
+            for i in range(7):
+                angle = (i - 3) * 15.0
+                rad = math.radians(angle)
+                glPushMatrix()
+                glTranslatef(_math.sin(rad) * 0.18, 0.0, 0.0)
+                self._draw_sphere(0.025, 6, 6)
+                glPopMatrix()
+            glPopMatrix()
+
+        elif accessory_type == 'earrings':
+            # Earrings: small dangling spheres on each side of head
+            glPushMatrix()
+            glTranslatef(-0.35, 0.85, 0.0)
+            self._draw_sphere(0.05, 8, 8)
+            glPopMatrix()
+            glPushMatrix()
+            glTranslatef(0.35, 0.85, 0.0)
+            self._draw_sphere(0.05, 8, 8)
+            glPopMatrix()
+
+        else:
+            # Generic accessory: small cube on chest
+            glPushMatrix()
+            glTranslatef(0.0, 0.5, 0.25)
+            self._draw_cube(0.06)
+            glPopMatrix()
     
     # ========================================================================
     # Weapon System (3D)
@@ -1405,7 +1472,7 @@ class PandaOpenGLWidget(QOpenGLWidget if QT_AVAILABLE else QWidget):
             callback: Optional callback function when panda reaches item
             
         Example:
-            widget.walk_to_item(0, lambda: print("Reached item!"))
+            widget.walk_to_item(0, lambda: logger.debug("Reached item!"))
         """
         if not QT_AVAILABLE or item_index >= len(self.items_3d):
             return

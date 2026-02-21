@@ -4,7 +4,12 @@ Combined analysis to detect UI textures
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
+
 import logging
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Dict, Any, Union, List
 try:
@@ -14,9 +19,13 @@ except ImportError:
     HAS_NUMPY = False
     logger.error("numpy not available - limited functionality")
     logger.error("Install with: pip install numpy")
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
-logger = logging.getLogger(__name__)
+
 
 
 class UIDetector:

@@ -130,12 +130,14 @@ class TextureClassifier:
         Classify a texture file into a category
         
         Args:
-            file_path: Path to the texture file
+            file_path: Path to the texture file (str or Path)
             use_image_analysis: Whether to use image analysis (slower but more accurate)
         
         Returns:
             Tuple of (category_id, confidence_score)
         """
+        from pathlib import Path as _Path
+        file_path = _Path(file_path)
         # Check cache first
         cache_key = str(file_path)
         if cache_key in self.classification_cache:
@@ -360,22 +362,22 @@ class TextureClassifier:
             return category, confidence
             
         except Exception as e:
-            print(f"Error analyzing image {file_path}: {e}")
+            logger.error(f"Error analyzing image {file_path}: {e}")
             return "unclassified", 0.0
     
-    def _is_simple_image(self, img_array: np.ndarray) -> bool:
+    def _is_simple_image(self, img_array: 'np.ndarray') -> bool:
         """Check if image has simple/flat colors (typical of UI)"""
         # Calculate color variance
         variance = np.var(img_array)
         return variance < 500  # Low variance = simple colors
     
-    def _is_brown_tone(self, color: np.ndarray) -> bool:
+    def _is_brown_tone(self, color: 'np.ndarray') -> bool:
         """Check if color is brown-ish"""
         r, g, b = color
         # Brown is typically R>G>B with moderate values
         return r > g and g > b and 50 < r < 200
     
-    def _has_technical_pattern(self, img_array: np.ndarray) -> bool:
+    def _has_technical_pattern(self, img_array: 'np.ndarray') -> bool:
         """Check if image has technical/normal map patterns"""
         # Normal maps typically have purple/blue tones
         avg_color = np.mean(img_array, axis=(0, 1))
@@ -384,7 +386,7 @@ class TextureClassifier:
             return True
         return False
     
-    def _has_skin_tones(self, avg_color: np.ndarray, color_std: np.ndarray) -> bool:
+    def _has_skin_tones(self, avg_color: 'np.ndarray', color_std: 'np.ndarray') -> bool:
         """Check if image has skin/flesh tones typical of character textures"""
         r, g, b = avg_color
         # Skin tones: R > G > B, warm colors, moderate values
@@ -394,7 +396,7 @@ class TextureClassifier:
                 return True
         return False
     
-    def _is_uv_unwrap(self, img, img_array: np.ndarray, width: int, height: int) -> bool:
+    def _is_uv_unwrap(self, img, img_array: 'np.ndarray', width: int, height: int) -> bool:
         """
         Detect UV unwrapped textures (flattened character/object maps).
         These look like 'origami' - disjointed body parts laid out flat with
@@ -428,7 +430,7 @@ class TextureClassifier:
             pass
         return False
     
-    def _is_metallic(self, avg_color: np.ndarray, color_std: np.ndarray) -> bool:
+    def _is_metallic(self, avg_color: 'np.ndarray', color_std: 'np.ndarray') -> bool:
         """Check if image has metallic/gray tones typical of armor/metal textures"""
         r, g, b = avg_color
         # Metallic: all channels similar (grayish), moderate values

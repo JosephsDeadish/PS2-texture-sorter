@@ -3,6 +3,8 @@ Qt implementation of the background remover panel.
 Pure PyQt6 UI for AI-powered background removal.
 """
 
+
+from __future__ import annotations
 import logging
 import shutil
 from pathlib import Path
@@ -226,6 +228,11 @@ class BackgroundRemoverPanelQt(QWidget):
             self.preview_widget = ComparisonSliderWidget()
             self.preview_widget.setMinimumHeight(300)
             self._set_tooltip(self.preview_widget, "Drag slider to compare original and processed images")
+            # Log slider position changes for debugging
+            if hasattr(self.preview_widget, 'slider_moved'):
+                self.preview_widget.slider_moved.connect(
+                    lambda pos: logger.debug(f"BG remover preview slider: {pos}%")
+                )
             preview_layout.addWidget(self.preview_widget)
             
             preview_group.setLayout(preview_layout)

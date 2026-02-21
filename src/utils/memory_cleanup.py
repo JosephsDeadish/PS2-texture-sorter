@@ -3,12 +3,20 @@ Memory Management Utilities
 Ensures proper cleanup of PIL images, caches, and prevents memory leaks
 """
 
+from __future__ import annotations
+
+
 import gc
 import logging
 import weakref
 from typing import Any, Optional, Callable, Dict, List
 from threading import Lock
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 logger = logging.getLogger(__name__)
 

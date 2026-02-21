@@ -4,11 +4,18 @@ Provides a non-blocking, moveable preview window for texture files
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from typing import Optional, List
 from collections import deque
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import os
 
 logger = logging.getLogger(__name__)

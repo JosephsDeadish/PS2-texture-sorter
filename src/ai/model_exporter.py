@@ -100,7 +100,7 @@ class ModelExporter:
     
     def __init__(self):
         """Initialize model exporter."""
-        pass
+        self.logger = logging.getLogger(__name__)
     
     def export_model(
         self,

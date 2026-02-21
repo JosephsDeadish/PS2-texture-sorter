@@ -7,12 +7,27 @@ resource usage based on user preferences and system capabilities.
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
+import cProfile
+import gc
+import io
 import logging
 import platform
-import psutil
-from dataclasses import dataclass
+import pstats
+import time
+import tracemalloc
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, Optional, Any, List
+from typing import Dict, Generator, List, Optional, Any
+
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+    HAS_PSUTIL = False
 
 # Import GPU detector
 try:
@@ -136,10 +151,14 @@ class PerformanceManager:
     def _detect_system_info(self) -> None:
         """Detect system capabilities and resources including GPU."""
         try:
-            cpu_count = psutil.cpu_count(logical=True) or 4
-            memory = psutil.virtual_memory()
-            total_memory_mb = memory.total / (1024 * 1024)
-            available_memory_mb = memory.available / (1024 * 1024)
+            cpu_count = psutil.cpu_count(logical=True) or 4 if HAS_PSUTIL else 4
+            if HAS_PSUTIL:
+                memory = psutil.virtual_memory()
+                total_memory_mb = memory.total / (1024 * 1024)
+                available_memory_mb = memory.available / (1024 * 1024)
+            else:
+                total_memory_mb = 2048.0
+                available_memory_mb = 1024.0
             
             # Detect GPUs
             gpu_info = {}
@@ -545,6 +564,7 @@ class PerformanceManager:
         # If nothing fits, return power saver
         return PerformanceMode.POWER_SAVER
 
+
     def __repr__(self) -> str:
         """String representation of the manager."""
         profile = self.get_current_profile()
@@ -553,3 +573,197 @@ class PerformanceManager:
             f"threads={profile.thread_count}, "
             f"memory_limit={profile.memory_limit_mb}MB)"
         )
+
+
+# ---------------------------------------------------------------------------
+# Profiling Tools
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ProfileResult:
+    """Result from a cProfile / tracemalloc profiling session."""
+    operation_name: str
+    elapsed_seconds: float
+    peak_memory_mb: float
+    current_memory_mb: float
+    top_functions: List[str] = field(default_factory=list)
+    top_memory_lines: List[str] = field(default_factory=list)
+
+    def summary(self) -> str:
+        """Return a human-readable one-line summary."""
+        return (
+            f"{self.operation_name}: {self.elapsed_seconds:.3f}s  "
+            f"peak={self.peak_memory_mb:.1f} MB  "
+            f"current={self.current_memory_mb:.1f} MB"
+        )
+
+    def report(self) -> str:
+        """Return a detailed multi-line report."""
+        lines = [
+            "=" * 60,
+            f"Profile: {self.operation_name}",
+            f"  Elapsed   : {self.elapsed_seconds:.3f} s",
+            f"  Peak RAM  : {self.peak_memory_mb:.1f} MB",
+            f"  Current   : {self.current_memory_mb:.1f} MB",
+        ]
+        if self.top_functions:
+            lines.append("  Top functions (cumulative time):")
+            for fn in self.top_functions:
+                lines.append(f"    {fn}")
+        if self.top_memory_lines:
+            lines.append("  Top memory allocations:")
+            for ln in self.top_memory_lines:
+                lines.append(f"    {ln}")
+        lines.append("=" * 60)
+        return "\n".join(lines)
+
+
+class OperationProfiler:
+    """
+    Lightweight profiler that wraps cProfile + tracemalloc for any operation.
+
+    Usage (explicit start/stop)::
+
+        profiler = OperationProfiler("my_task")
+        profiler.start()
+        do_work()
+        result = profiler.stop()
+        print(result.report())
+
+    Usage (context manager)::
+
+        with OperationProfiler.profile("my_task") as p:
+            do_work()
+        print(p.result.report())
+    """
+
+    def __init__(self, operation_name: str, top_n: int = 10) -> None:
+        self.operation_name = operation_name
+        self.top_n = top_n
+        self._profiler: Optional[cProfile.Profile] = None
+        self._start_time: float = 0.0
+        self._running: bool = False
+        self.result: Optional[ProfileResult] = None
+
+    # ------------------------------------------------------------------
+    def start(self) -> None:
+        """Begin profiling."""
+        if self._running:
+            logger.warning("OperationProfiler.start() called while already running")
+            return
+        gc.collect()
+        tracemalloc.start()
+        self._profiler = cProfile.Profile()
+        self._start_time = time.monotonic()
+        self._profiler.enable()
+        self._running = True
+        logger.debug("Profiling started: %s", self.operation_name)
+
+    def stop(self) -> ProfileResult:
+        """Stop profiling and return a ProfileResult."""
+        if not self._running:
+            logger.warning("OperationProfiler.stop() called without start()")
+            return ProfileResult(
+                operation_name=self.operation_name,
+                elapsed_seconds=0.0,
+                peak_memory_mb=0.0,
+                current_memory_mb=0.0,
+            )
+
+        elapsed = time.monotonic() - self._start_time
+        self._profiler.disable()
+
+        # --- Memory snapshot via tracemalloc ---
+        snapshot = tracemalloc.take_snapshot()
+        current_mem, peak_mem = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+
+        peak_mb = peak_mem / (1024 * 1024)
+        current_mb = current_mem / (1024 * 1024)
+
+        # --- Top functions by cumulative time ---
+        stream = io.StringIO()
+        stats = pstats.Stats(self._profiler, stream=stream)
+        stats.sort_stats(pstats.SortKey.CUMULATIVE)
+        stats.print_stats(self.top_n)
+        top_functions = [
+            ln.strip()
+            for ln in stream.getvalue().splitlines()
+            if ln.strip() and not ln.startswith("ncalls") and "/" in ln
+        ][:self.top_n]
+
+        # --- Top memory lines ---
+        top_stats = snapshot.statistics("lineno")[:self.top_n]
+        top_memory_lines = [str(s) for s in top_stats]
+
+        self.result = ProfileResult(
+            operation_name=self.operation_name,
+            elapsed_seconds=elapsed,
+            peak_memory_mb=peak_mb,
+            current_memory_mb=current_mb,
+            top_functions=top_functions,
+            top_memory_lines=top_memory_lines,
+        )
+        self._running = False
+        logger.debug("Profiling stopped: %s", self.result.summary())
+        return self.result
+
+    # ------------------------------------------------------------------
+    @classmethod
+    @contextmanager
+    def profile(cls, operation_name: str, top_n: int = 10) -> Generator["OperationProfiler", None, None]:
+        """Context manager that profiles the enclosed block."""
+        p = cls(operation_name, top_n=top_n)
+        p.start()
+        try:
+            yield p
+        finally:
+            p.stop()
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def optimize_memory() -> Dict[str, Any]:
+        """
+        Run garbage collection and (on Windows) trim the working set.
+
+        Returns a dict with before/after RSS memory in MB.
+        """
+        before_mb: float = 0.0
+        after_mb: float = 0.0
+
+        if HAS_PSUTIL:
+            try:
+                proc = psutil.Process()
+                before_mb = proc.memory_info().rss / (1024 * 1024)
+            except Exception:
+                pass
+
+        gc.collect()
+        gc.collect()  # two passes to handle cycles
+
+        # Windows-only: trim working set so the OS reclaims pages promptly
+        try:
+            import ctypes
+            # EmptyWorkingSet() is the correct API for flushing uncommitted pages.
+            # SetProcessWorkingSetSize(-1, -1) achieves the same on older Windows.
+            kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+            psapi = ctypes.windll.psapi       # type: ignore[attr-defined]
+            handle = kernel32.GetCurrentProcess()
+            psapi.EmptyWorkingSet(handle)
+        except (AttributeError, OSError):
+            pass
+
+        if HAS_PSUTIL:
+            try:
+                proc = psutil.Process()
+                after_mb = proc.memory_info().rss / (1024 * 1024)
+            except Exception:
+                pass
+
+        freed_mb = max(0.0, before_mb - after_mb)
+        logger.info(
+            "Memory optimized: %.1f MB → %.1f MB (freed %.1f MB)",
+            before_mb, after_mb, freed_mb,
+        )
+        return {"before_mb": before_mb, "after_mb": after_mb, "freed_mb": freed_mb}
+

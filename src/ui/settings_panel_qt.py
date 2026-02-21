@@ -4,10 +4,14 @@ Provides tabs for Appearance, Cursor, Font, Behavior, Performance, and Advanced 
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any
 import json
+
+logger = logging.getLogger(__name__)
 
 try:
     from PyQt6.QtWidgets import (
@@ -21,9 +25,16 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
-    QWidget = object
-
-logger = logging.getLogger(__name__)
+    class QWidget:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
 
 
 class ColorWheelWidget(QWidget):
@@ -109,6 +120,8 @@ class SettingsPanelQt(QWidget):
         self.tabs.addTab(self.create_behavior_tab(), "⚡ Behavior")
         self.tabs.addTab(self.create_performance_tab(), "🚀 Performance")
         self.tabs.addTab(self.create_ai_models_tab(), "🤖 AI Models")
+        self.tabs.addTab(self.create_hotkeys_tab(), "⌨️ Hotkeys")
+        self.tabs.addTab(self.create_language_tab(), "🌐 Language")
         self.tabs.addTab(self.create_advanced_tab(), "🔧 Advanced")
         
         # Bottom buttons
@@ -148,7 +161,7 @@ class SettingsPanelQt(QWidget):
         
         theme_label = QLabel("Theme Mode:")
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Dark", "Light"])
+        self.theme_combo.addItems(["Dark", "Light", "Nord", "Dracula", "Solarized Dark"])
         self.theme_combo.currentTextChanged.connect(lambda: self.on_setting_changed('ui', 'theme'))
         self.set_tooltip(self.theme_combo, 'theme_selector')
         
@@ -227,24 +240,33 @@ class SettingsPanelQt(QWidget):
             "Default",
             "Arrow",
             "Hand",
-            "Cross"
+            "Cross",
+            "Wait",
+            "Text",
+            "Forbidden",
+            "Move",
+            "Zoom In",
+            "Zoom Out",
         ]
         
         # Unlockable cursors (check achievements/purchases)
         unlockable_cursors = [
-            "Skull ⚠️",
-            "Panda 🐼",
-            "Sword ⚔️",
-            "Wand 🪄",
-            "Heart ❤️",
-            "Star ⭐",
-            "Diamond 💎",
-            "Crown 👑",
-            "Fire 🔥",
-            "Ice ❄️",
-            "Rainbow 🌈",
-            "Galaxy 🌌"
+            ("Skull ⚠️", "cursor_collector"),
+            ("Panda 🐼", "panda_lover"),
+            ("Sword ⚔️", "cursor_collector"),
+            ("Wand 🪄", "cursor_collector"),
+            ("Heart ❤️", "cursor_collector"),
+            ("Star ⭐", "cursor_collector"),
+            ("Diamond 💎", "cursor_master"),
+            ("Crown 👑", "master"),
+            ("Fire 🔥", "cursor_collector"),
+            ("Ice ❄️", "nordic_explorer"),
+            ("Rainbow 🌈", "cursor_collector"),
+            ("Galaxy 🌌", "cursor_master"),
         ]
+        
+        # Retrieve unlocked cursors from config (stored after achievement unlock)
+        unlocked_cursor_ids = set(filter(None, self.config.get('ui', 'unlocked_cursors', default='').split(',')))
         
         # Add basic cursors
         self.cursor_type_combo.addItems(basic_cursors)
@@ -252,11 +274,13 @@ class SettingsPanelQt(QWidget):
         # Add separator
         self.cursor_type_combo.insertSeparator(len(basic_cursors))
         
-        # Add unlockable cursors with lock emoji
-        for cursor in unlockable_cursors:
-            # Check if unlocked (would check achievements/shop in real implementation)
-            # For now, add them all with lock indicator
-            self.cursor_type_combo.addItem(f"🔒 {cursor}")
+        # Add unlockable cursors - show unlocked state from config
+        for cursor_name, required_achievement in unlockable_cursors:
+            cursor_key = (cursor_name.split()[0] if ' ' in cursor_name else cursor_name).lower()
+            if cursor_key in unlocked_cursor_ids or required_achievement in unlocked_cursor_ids:
+                self.cursor_type_combo.addItem(cursor_name)
+            else:
+                self.cursor_type_combo.addItem(f"🔒 {cursor_name}")
         
         self.cursor_type_combo.currentTextChanged.connect(lambda: self.on_setting_changed('ui', 'cursor'))
         self.set_tooltip(self.cursor_type_combo, 'cursor_selector')
@@ -743,7 +767,113 @@ class SettingsPanelQt(QWidget):
         )
         guide.setStandardButtons(QMessageBox.StandardButton.Ok)
         guide.exec()
-    
+
+    def create_hotkeys_tab(self):
+        """Create hotkeys settings tab with HotkeyDisplayWidget."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(8, 8, 8, 8)
+
+        try:
+            try:
+                from .hotkey_display_qt import HotkeyDisplayWidget
+            except ImportError:
+                from ui.hotkey_display_qt import HotkeyDisplayWidget
+
+            self.hotkey_widget = HotkeyDisplayWidget(
+                parent=tab,
+                tooltip_manager=self.tooltip_manager,
+            )
+
+            # Persist key rebindings: save to config and emit settingsChanged
+            def _on_hotkey_changed(action_id: str, new_key: str) -> None:
+                try:
+                    self.config.set('hotkeys', action_id, value=new_key)
+                    self.config.save()
+                    self.settingsChanged.emit(f"hotkeys.{action_id}", new_key)
+                except Exception as _e:
+                    logger.error(f"Failed to save hotkey {action_id}: {_e}")
+
+            self.hotkey_widget.hotkey_changed.connect(_on_hotkey_changed)
+
+            # Pre-populate widget from saved config
+            saved = {}
+            try:
+                hotkeys_section = self.config.config_parser.options('hotkeys') \
+                    if self.config.config_parser.has_section('hotkeys') else []
+                for key in hotkeys_section:
+                    saved[key] = self.config.get('hotkeys', key, default='')
+            except Exception:
+                pass
+            if saved:
+                self.hotkey_widget.load_hotkeys(saved)
+
+            layout.addWidget(self.hotkey_widget)
+        except ImportError as e:
+            logger.warning(f"HotkeyDisplayWidget unavailable: {e}")
+            self.hotkey_widget = None
+            info = QLabel(
+                "⌨️ Hotkey configuration requires PyQt6.\n"
+                "Install with: pip install PyQt6"
+            )
+            info.setWordWrap(True)
+            layout.addWidget(info)
+
+        layout.addStretch()
+        return tab
+
+    def create_language_tab(self):
+        """Create language selection tab."""
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setSpacing(12)
+
+        lang_group = QGroupBox("Application Language")
+        lang_layout = QVBoxLayout()
+
+        lang_layout.addWidget(QLabel(
+            "Select the display language for the application UI.\n"
+            "Some labels will update immediately; others after restart."
+        ))
+
+        self.language_combo = QComboBox()
+        _LANGUAGE_OPTIONS = [
+            ("English",    "en"),
+            ("Español",    "es"),
+            ("Français",   "fr"),
+            ("Deutsch",    "de"),
+            ("日本語",      "ja"),
+            ("中文",        "zh"),
+            ("Português",  "pt"),
+        ]
+        for label, code in _LANGUAGE_OPTIONS:
+            self.language_combo.addItem(label, userData=code)
+
+        # Pre-select saved language
+        saved_lang = self.config.get('ui', 'language', default='en')
+        for i in range(self.language_combo.count()):
+            if self.language_combo.itemData(i) == saved_lang:
+                self.language_combo.setCurrentIndex(i)
+                break
+
+        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+        lang_layout.addWidget(self.language_combo)
+        lang_group.setLayout(lang_layout)
+        layout.addWidget(lang_group)
+        layout.addStretch()
+        return tab
+
+    def _on_language_changed(self, index: int):
+        """Handle language combo box selection change."""
+        if self._updating:
+            return
+        lang_code = self.language_combo.itemData(index)
+        if lang_code:
+            self.config.set('ui', 'language', value=lang_code)
+            self.config.save()
+            self.settingsChanged.emit('ui.language', lang_code)
+            logger.info(f"Language changed to: {lang_code}")
+
     def create_advanced_tab(self):
         """Create advanced settings tab"""
         tab = QWidget()
@@ -824,7 +954,8 @@ class SettingsPanelQt(QWidget):
         try:
             # Appearance
             theme = self.config.get('ui', 'theme', default='dark')
-            self.theme_combo.setCurrentText(theme.capitalize())
+            theme_map = {'dark': 'Dark', 'light': 'Light', 'nord': 'Nord', 'dracula': 'Dracula', 'solarized dark': 'Solarized Dark', 'solarized_dark': 'Solarized Dark'}
+            self.theme_combo.setCurrentText(theme_map.get(theme.lower(), theme.capitalize()))
             
             accent = self.config.get('ui', 'accent_color', default='#0d7377')
             self.accent_color_widget.current_color = QColor(accent)
@@ -1302,40 +1433,49 @@ class SettingsPanelQt(QWidget):
     def set_tooltip(self, widget: QWidget, widget_id: str):
         """Set tooltip for a widget using the tooltip manager"""
         try:
-            if self.main_window and hasattr(self.main_window, 'tooltip_manager'):
+            if self.main_window and getattr(self.main_window, 'tooltip_manager', None):
                 tooltip_text = self.main_window.tooltip_manager.get_tooltip(widget_id)
                 widget.setToolTip(tooltip_text)
             else:
                 # Fallback tooltips
                 fallback_tooltips = {
-                    'theme_selector': "Choose between Dark and Light theme",
+                    'theme_selector': "Choose a theme: Dark, Light, Nord, Dracula, or Solarized Dark",
                     'accent_color': "Select the accent color for buttons and highlights",
-                    'opacity_slider': "Adjust window transparency",
-                    'compact_view': "Enable a more compact UI layout",
-                    'cursor_selector': "Choose cursor style",
-                    'cursor_size': "Set cursor size",
-                    'cursor_trail': "Enable cursor trail effect",
-                    'cursor_trail_color': "Choose trail color scheme",
-                    'font_family': "Select application font",
-                    'font_size': "Set font size in points",
+                    'opacity_slider': "Adjust window transparency (100% = fully opaque)",
+                    'compact_view': "Enable a more compact UI layout to fit more on screen",
+                    'cursor_selector': "Choose your cursor style. Unlock more through achievements!",
+                    'cursor_size': "Set cursor size (Small, Medium, Large, Extra Large)",
+                    'cursor_trail': "Enable a visual trail effect that follows your mouse cursor",
+                    'cursor_trail_color': "Choose the color scheme for your cursor trail",
+                    'font_family': "Select the application font family",
+                    'font_size': "Set font size in points (default: 12)",
                     'font_weight': "Choose font weight (Light, Normal, Bold)",
-                    'icon_size': "Set icon size",
-                    'animation_speed': "Adjust UI animation speed",
-                    'tooltip_enabled': "Enable or disable tooltips",
-                    'tooltip_mode': "Choose tooltip verbosity (Normal, Dumbed Down, Vulgar Panda)",
-                    'tooltip_delay': "Set delay before tooltips appear",
-                    'sound_enabled': "Enable or disable sound effects",
-                    'sound_volume': "Adjust sound effect volume",
-                    'thread_count': "Number of threads for parallel operations",
-                    'memory_limit': "Maximum memory usage in MB",
-                    'cache_size': "Cache size for thumbnails and previews",
-                    'thumbnail_quality': "Quality of generated thumbnails",
-                    'debug_mode': "Enable debug logging",
-                    'verbose_logging': "Enable verbose log output",
-                    'reset_button': "Reset all settings to defaults",
-                    'export_button': "Export settings to a JSON file",
-                    'import_button': "Import settings from a JSON file",
-                    'open_config': "Open configuration folder in file explorer"
+                    'icon_size': "Set icon size throughout the application",
+                    'animation_speed': "Adjust UI animation speed (0 = off, 1 = normal, 2 = fast)",
+                    'tooltip_enabled': "Enable or disable tooltips throughout the application",
+                    'tooltip_mode': "Choose tooltip verbosity:\n• Normal: standard tooltips\n• Dumbed Down: simpler language\n• Vulgar Panda: panda-themed humor",
+                    'tooltip_delay': "Set delay in milliseconds before tooltips appear",
+                    'sound_enabled': "Enable or disable sound effects and music",
+                    'sound_volume': "Adjust sound effect volume (0-100%)",
+                    'thread_count': "Number of parallel threads for processing (higher = faster but uses more CPU)",
+                    'memory_limit': "Maximum memory usage in MB (lower = safer, higher = faster)",
+                    'cache_size': "Cache size in MB for thumbnails and previews",
+                    'thumbnail_quality': "Quality of generated thumbnails (Low/Medium/High)",
+                    'debug_mode': "Enable debug logging for troubleshooting",
+                    'verbose_logging': "Enable verbose log output (logs more detail to file)",
+                    'reset_button': "Reset ALL settings to their default values",
+                    'export_button': "Export current settings to a JSON file for backup or sharing",
+                    'import_button': "Import settings from a previously exported JSON file",
+                    'open_config': "Open configuration folder in your file explorer",
+                    'input_archive_checkbox': "Process images inside ZIP/7Z/RAR archives",
+                    'output_archive_checkbox': "Save processed images into a ZIP archive",
+                    'recursive_search_checkbox': "Search subfolders recursively for images",
+                    'ai_suggestion_label': "AI-suggested folder for this texture based on content analysis",
+                    'ai_confidence_label': "How confident the AI is in its suggestion (0-100%)",
+                    'feedback_good_button': "Accept the AI suggestion and improve future recommendations",
+                    'feedback_bad_button': "Reject the AI suggestion and provide correct folder manually",
+                    'manual_override_input': "Type a custom folder path to override the AI suggestion",
+                    'folder_suggestions_list': "List of AI-suggested folders sorted by confidence score",
                 }
                 widget.setToolTip(fallback_tooltips.get(widget_id, ""))
         except Exception as e:

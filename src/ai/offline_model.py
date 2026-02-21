@@ -4,11 +4,18 @@ Provides CPU-optimized offline inference for texture classification
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 
 try:
     import onnxruntime as ort

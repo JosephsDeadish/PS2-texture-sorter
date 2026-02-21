@@ -31,28 +31,67 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 # Qt imports - REQUIRED, no fallbacks
+def _ensure_qt_platform():
+    """
+    Ensure QT_QPA_PLATFORM is set for headless / CI environments.
+
+    On Linux, PyQt6 requires a display server or a platform plugin.
+    When no display is available (e.g. CI, server, docker), we fall back to
+    the 'offscreen' platform so the application can still start, process
+    files, and run the GUI (rendered off-screen).
+
+    On Windows / macOS this is a no-op because those platforms always have
+    a display-compatible backend available.
+    """
+    if sys.platform.startswith('linux'):
+        # Only set if not already configured
+        if 'QT_QPA_PLATFORM' not in os.environ:
+            # Prefer xcb (real display) but fall back gracefully
+            display = os.environ.get('DISPLAY', '')
+            wayland = os.environ.get('WAYLAND_DISPLAY', '')
+            if not display and not wayland:
+                os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+                os.environ['QT_QPA_FONTDIR'] = ''  # suppress font warnings
+
+_ensure_qt_platform()
+
 try:
     from PyQt6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QLabel, QPushButton, QProgressBar, QTextEdit, QTabWidget,
         QFileDialog, QMessageBox, QStatusBar, QMenuBar, QMenu,
         QSplitter, QFrame, QComboBox, QGridLayout, QStackedWidget,
-        QScrollArea, QDockWidget, QToolBar
+        QScrollArea, QDockWidget, QToolBar, QInputDialog
     )
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QThread, QSize, QByteArray
     from PyQt6.QtGui import QAction, QIcon, QFont, QPalette, QColor
 except ImportError as e:
+    _err = str(e)
     print("=" * 70)
-    print("ERROR: PyQt6 is not installed!")
-    print("=" * 70)
-    print()
-    print("This application requires PyQt6 to run.")
-    print()
-    print("To install PyQt6, run:")
-    print("    pip install PyQt6")
-    print()
-    print("Or install all dependencies:")
-    print("    pip install -r requirements.txt")
+    # Distinguish "not installed" from "system libraries missing"
+    if 'libEGL' in _err or 'libGL' in _err or 'cannot open shared object' in _err:
+        print("ERROR: PyQt6 is installed but required system libraries are missing!")
+        print("=" * 70)
+        print()
+        print("PyQt6 is installed correctly, but a required system library is absent.")
+        print()
+        print("On Debian/Ubuntu, install the missing libraries with:")
+        print("    sudo apt-get install -y libegl1 libgl1 libgles2")
+        print("    sudo apt-get install -y libxcb-xinerama0 libxkbcommon-x11-0")
+        print()
+        print("Or run the application with an offscreen backend (headless):")
+        print("    QT_QPA_PLATFORM=offscreen python main.py")
+    else:
+        print("ERROR: PyQt6 is not installed!")
+        print("=" * 70)
+        print()
+        print("This application requires PyQt6 to run.")
+        print()
+        print("To install PyQt6, run:")
+        print("    pip install PyQt6")
+        print()
+        print("Or install all dependencies:")
+        print("    pip install -r requirements.txt")
     print()
     print(f"Technical details: {e}")
     print("=" * 70)
@@ -218,16 +257,80 @@ class TextureSorterMainWindow(QMainWindow):
         self.performance_manager = None
         self.threading_manager = None
         self.cache_manager = None
-        
+        self.memory_manager = None
+        self.hotkey_manager = None
+        self.sound_manager = None
+
+        # Gamification systems (initialised in create_panda_features_tab / initialize_components)
+        self.achievement_system = None
+        self.currency_system = None
+        self.shop_system = None
+        self.panda_closet = None
+        self.level_system = None        # UserLevelSystem – XP / levelling
+        self.auto_backup = None         # AutoBackupSystem – periodic state backup
+        self.unlockables_system = None  # UnlockablesSystem – cursors/themes/outfits
+        self.quest_system = None        # QuestSystem – quests / easter eggs
+        self.integrated_dungeon = None  # IntegratedDungeon – adventure mode
+        self.enemy_manager = None       # EnemyManager – enemy spawning
+
+        # UI sub-components declared here so setup_ui() can reference them safely
+        self.panda_widget = None        # PandaOpenGLWidget (3-D panda sidebar)
+        self.panda_overlay = None       # TransparentPandaOverlay (floating panda over UI)
+        self.perf_dashboard = None      # PerformanceDashboard dock panel
+        self.tool_panels = {}           # {panel_id: widget}
+        self.tool_dock_widgets = {}     # {panel_id: QDockWidget}
+        self._last_sorted_count = 0     # files moved in last sort (for achievements)
+        self._sort_style_key = None     # organisation style key captured before worker starts
+        self.view_menu = None           # Set by setup_menubar(); guarded in _update_tool_panels_menu
+        self.file_browser_panel = None  # FileBrowserPanelQt tab widget
+        self.live_preview_widget = None # LivePreviewWidget side-pane in file browser tab
+        self.notepad_panel = None       # NotepadPanelQt tab widget
+        self.processing_queue_panel = None  # ProcessingQueueQt archive dock
+
         # Worker thread
         self.worker = None
         
+        # Drag-drop, translation, environment monitor
+        self.drag_drop_handler = None
+        self.translation_manager = None
+        self.environment_monitor = None
+
+        # Analytics / data systems
+        self.statistics_tracker = None   # StatisticsTracker – per-op ETA/throughput
+        self.search_filter = None        # SearchFilter – file search with presets
+        self.profile_manager = None      # ProfileManager – org profile load/save
+        self.backup_manager = None       # BackupManager – manual restore-point backups
+        self.game_identifier = None      # GameIdentifier – CRC/serial game detection
+        self.lod_replacer = None         # LODReplacer – LOD group scanner/replacer
+        self.batch_queue = None          # BatchQueue – priority operation queue
+        self.panda_character = None      # PandaCharacter – panda personality/animations
+        self.panda_stats = None          # PandaStats – panda happiness/hunger/energy
+        self.panda_mood_system = None    # PandaMoodSystem – mood-based behaviour
+        self.skill_tree = None           # SkillTree – RPG skill progression
+        self.travel_system = None        # TravelSystem – location/dungeon navigation
+        self.adventure_level = None      # AdventureLevel – combat XP tracking
+        self.weapon_collection = None    # WeaponCollection – panda weapons
+        self.texture_analyzer = None     # TextureAnalyzer – per-file advanced analysis
+        self.similarity_search = None    # SimilaritySearch – embedding-based search
+        self.duplicate_detector = None   # DuplicateDetector – find near-duplicate textures
+        self.widget_detector = None      # WidgetDetector – Qt hit-testing for panda overlay
+        self.panda_interaction = None    # PandaInteractionBehavior – mischievous AI
+        self.preview_viewer = None       # PreviewViewer – standalone non-blocking preview
+
         # Paths
         self.input_path = None
         self.output_path = None
         
         # Tooltip manager (will be initialized later)
         self.tooltip_manager = None
+
+        # Persistent data paths (stored once; reused in initialize_components and closeEvent)
+        _app_data = Path(__file__).parent / 'app_data'
+        self._app_data_dir = _app_data               # base dir for all app data files
+        self._db_path = _app_data / 'textures.db'    # SQLite texture index
+        self._adventure_level_path = _app_data / 'adventure_level.json'
+        self._weapon_collection_path = _app_data / 'weapons.json'
+        self._skill_tree_path = _app_data / 'skill_tree.json'
         
         # Docking system - track floating panels
         self.docked_widgets = {}  # {tab_name: QDockWidget}
@@ -302,14 +405,16 @@ class TextureSorterMainWindow(QMainWindow):
         # Create tools tab (includes sorting + all tools)
         self.create_tools_tab()
         
-        # Create Panda Features tab (separate from tools!)
-        if PANDA_WIDGET_AVAILABLE and self.panda_widget is not None:
-            try:
-                panda_features_tab = self.create_panda_features_tab()
-                self.tabs.addTab(panda_features_tab, "🐼 Panda")
-                logger.info("✅ Panda Features tab added to main tabs")
-            except Exception as e:
-                logger.error(f"Could not create Panda Features tab: {e}", exc_info=True)
+        # Create Panda Features tab (always shown; handles missing OpenGL gracefully)
+        # NOTE: self.panda_widget is still None here — it is created later in setup_ui()
+        # after the left-side content_widget is fully assembled.  create_panda_features_tab()
+        # guards all panda_widget references with getattr(..., None), so None is safe.
+        try:
+            panda_features_tab = self.create_panda_features_tab()
+            self.tabs.addTab(panda_features_tab, "🐼 Panda")
+            logger.info("✅ Panda Features tab added to main tabs")
+        except Exception as e:
+            logger.error(f"Could not create Panda Features tab: {e}", exc_info=True)
         
         # Create file browser tab
         self.create_file_browser_tab()
@@ -557,11 +662,8 @@ class TextureSorterMainWindow(QMainWindow):
         central_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(central_info, 1)
         
-        # Initialize tool panels as dock widgets
-        self.tool_panels = {}
-        self.tool_dock_widgets = {}
-        
-        # Create all tool panels and dock them
+        # Create all tool panels and dock them (tool_panels / tool_dock_widgets
+        # are already declared as {} in __init__ so no re-init needed here)
         self._create_tool_dock_panels()
         
         return tab
@@ -593,47 +695,128 @@ class TextureSorterMainWindow(QMainWindow):
                 # Background Remover
                 bg_panel = BackgroundRemoverPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('bg_remover', '🎭 Background Remover', bg_panel, Qt.DockWidgetArea.LeftDockWidgetArea)
-                
+                bg_panel.processing_complete.connect(lambda: self.statusBar().showMessage("🎭 Background removal complete", 4000))
+                bg_panel.image_loaded.connect(lambda p: self.statusBar().showMessage(f"🎭 Loaded: {p}", 3000))
+
                 # Alpha Fixer
                 alpha_panel = AlphaFixerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('alpha_fixer', '✨ Alpha Fixer', alpha_panel, Qt.DockWidgetArea.LeftDockWidgetArea)
-                
+                alpha_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Alpha Fixer: {msg}", 4000))
+
                 # Color Correction
                 color_panel = ColorCorrectionPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('color', '🎨 Color Correction', color_panel, Qt.DockWidgetArea.RightDockWidgetArea)
-                
+                color_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Color Correction: {msg}", 4000))
+
                 # Batch Normalizer
                 norm_panel = BatchNormalizerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('normalizer', '⚙️ Batch Normalizer', norm_panel, Qt.DockWidgetArea.RightDockWidgetArea)
-                
+                norm_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Batch Normalizer: {msg}", 4000))
+
                 # Quality Checker
                 quality_panel = QualityCheckerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('quality', '✓ Quality Checker', quality_panel, Qt.DockWidgetArea.RightDockWidgetArea)
-                
+                quality_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Quality Check: {msg}", 4000))
+
                 # Image Upscaler
                 upscaler_panel = ImageUpscalerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('upscaler', '🔍 Image Upscaler', upscaler_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                upscaler_panel.error.connect(lambda msg: self.statusBar().showMessage(f"❌ Upscaler: {msg}", 5000))
+
                 # Line Art Converter
                 line_panel = LineArtConverterPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('lineart', '✏️ Line Art Converter', line_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                line_panel.error.connect(lambda msg: self.statusBar().showMessage(f"❌ Line Art: {msg}", 5000))
+
                 # Batch Rename
                 rename_panel = BatchRenamePanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('rename', '📝 Batch Rename', rename_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                rename_panel.finished.connect(lambda ok, errs: self.statusBar().showMessage(
+                    f"📝 Renamed {ok} files" + (f" ({len(errs)} errors)" if errs else ""), 4000))
+
                 # Image Repair
                 repair_panel = ImageRepairPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('repair', '🔧 Image Repair', repair_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                repair_panel.error.connect(lambda msg: self.statusBar().showMessage(f"❌ Image Repair: {msg}", 5000))
+
                 # Texture Organizer
                 organizer_panel = OrganizerPanelQt(tooltip_manager=self.tooltip_manager)
                 self._add_tool_dock('organizer', '📁 Texture Organizer', organizer_panel, Qt.DockWidgetArea.BottomDockWidgetArea)
-                
+                organizer_panel.log.connect(lambda msg: self.log(msg))
+                organizer_panel.finished.connect(lambda ok, msg, _stats: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Organizer: {msg}", 4000))
+
+                # Organizer Settings (sub-panel — add alongside the organizer)
+                try:
+                    from ui.organizer_settings_panel import OrganizerSettingsPanel
+                    org_settings_panel = OrganizerSettingsPanel(
+                        config=None, tooltip_manager=self.tooltip_manager
+                    )
+                    self._add_tool_dock(
+                        'organizer_settings', '⚙️ Organizer Settings',
+                        org_settings_panel, Qt.DockWidgetArea.BottomDockWidgetArea
+                    )
+                    org_settings_panel.settings_changed.connect(
+                        lambda s: logger.debug(f"Organizer settings changed: {s}")
+                    )
+                except Exception as _ose:
+                    logger.warning(f"Could not load OrganizerSettingsPanel: {_ose}")
+
+                # Processing Queue dock — shows archive/batch operation progress
+                try:
+                    from ui.archive_queue_widgets_qt import ProcessingQueueQt
+                    self.processing_queue_panel = ProcessingQueueQt()
+                    self._add_tool_dock(
+                        'processing_queue', '📥 Processing Queue',
+                        self.processing_queue_panel,
+                        Qt.DockWidgetArea.BottomDockWidgetArea
+                    )
+                    self.processing_queue_panel.processing_started.connect(
+                        lambda: self.statusBar().showMessage("⚙️ Archive processing started…", 2000)
+                    )
+                    self.processing_queue_panel.processing_paused.connect(
+                        lambda: self.statusBar().showMessage("⏸ Archive processing paused", 2000)
+                    )
+                    self.processing_queue_panel.processing_completed.connect(
+                        lambda: self.statusBar().showMessage("✅ Archive processing complete", 4000)
+                    )
+                    self.processing_queue_panel.item_completed.connect(
+                        lambda item_id, status: self.statusBar().showMessage(
+                            f"{'✅' if status == 'completed' else '❌'} {item_id}: {status}", 3000
+                        )
+                    )
+                    logger.info("✅ Processing queue panel added as dockable widget")
+                except Exception as _pqe:
+                    logger.warning(f"Could not load ProcessingQueueQt: {_pqe}")
+
                 self.log("✅ All tool panels created as dockable widgets")
-                
+
             except Exception as e:
                 logger.error(f"Error creating tool dock panels: {e}", exc_info=True)
+        
+        # Add Performance Dashboard dock (independent of UI_PANELS_AVAILABLE)
+        try:
+            from ui.performance_dashboard import PerformanceDashboard
+            unlockables = getattr(self, 'unlockables_system', None)
+            self.perf_dashboard = PerformanceDashboard(
+                parent=self,
+                unlockables_system=unlockables,
+                tooltip_manager=self.tooltip_manager
+            )
+            self._add_tool_dock(
+                'perf_dashboard', '📊 Performance Monitor',
+                self.perf_dashboard,
+                Qt.DockWidgetArea.RightDockWidgetArea
+            )
+            logger.info("✅ Performance dashboard added as dockable widget")
+            # Start the live-update timer immediately
+            self.perf_dashboard.start()
+        except Exception as e:
+            logger.warning(f"Performance dashboard unavailable: {e}")
         
         # Update View menu with tool panel toggles
         self._update_tool_panels_menu()
@@ -668,6 +851,8 @@ class TextureSorterMainWindow(QMainWindow):
     
     def _update_tool_panels_menu(self):
         """Update View menu with tool panel visibility toggles."""
+        if self.view_menu is None:
+            return  # Menu bar not yet created; called too early
         # Add submenu for tool panels if it doesn't exist
         if not hasattr(self, 'tool_panels_menu'):
             self.tool_panels_menu = self.view_menu.addMenu("Tool Panels")
@@ -724,16 +909,16 @@ class TextureSorterMainWindow(QMainWindow):
             from ui.shop_panel_qt import ShopPanelQt
             from features.shop_system import ShopSystem
             from features.currency_system import CurrencySystem
-            
-            # Initialize systems
-            shop_system = ShopSystem()
-            currency_system = CurrencySystem()
-            
-            shop_panel = ShopPanelQt(shop_system, currency_system, tooltip_manager=self.tooltip_manager)
-            
+
+            # Initialize systems and store as instance vars so other methods can use them
+            self.shop_system = ShopSystem()
+            self.currency_system = CurrencySystem()
+
+            shop_panel = ShopPanelQt(self.shop_system, self.currency_system, tooltip_manager=self.tooltip_manager)
+
             # Connect shop panel signals
             shop_panel.item_purchased.connect(self.on_shop_item_purchased)
-            
+
             panda_tabs.addTab(shop_panel, "🛒 Shop")
             logger.info("✅ Shop panel added to panda tab")
         except Exception as e:
@@ -742,18 +927,21 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Shop not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "🛒 Shop")
-        
+
         # 3. Inventory Tab
         try:
             from ui.inventory_panel_qt import InventoryPanelQt
-            from features.shop_system import ShopSystem
-            
-            shop_system = ShopSystem()  # Reuse or get existing
-            inventory_panel = InventoryPanelQt(shop_system, tooltip_manager=self.tooltip_manager)
-            
+
+            # Reuse self.shop_system if already created above, else create fresh
+            _shop = self.shop_system
+            if _shop is None:
+                from features.shop_system import ShopSystem as _ShopSystem
+                _shop = _ShopSystem()
+            inventory_panel = InventoryPanelQt(_shop, tooltip_manager=self.tooltip_manager)
+
             # Connect inventory panel signals
             inventory_panel.item_selected.connect(self.on_inventory_item_selected)
-            
+
             panda_tabs.addTab(inventory_panel, "📦 Inventory")
             logger.info("✅ Inventory panel added to panda tab")
         except Exception as e:
@@ -762,11 +950,17 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Inventory not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "📦 Inventory")
-        
+
         # 4. Closet Tab
         try:
             from ui.closet_display_qt import ClosetDisplayWidget
+            from features.panda_closet import PandaCloset
+
+            self.panda_closet = PandaCloset()
             closet_panel = ClosetDisplayWidget(tooltip_manager=self.tooltip_manager)
+            # Wire item equip → forward to panda_widget + closet
+            if hasattr(closet_panel, 'item_equipped'):
+                closet_panel.item_equipped.connect(self._on_closet_item_equipped)
             panda_tabs.addTab(closet_panel, "👔 Closet")
             logger.info("✅ Closet panel added to panda tab")
         except Exception as e:
@@ -775,14 +969,21 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Closet not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "👔 Closet")
-        
+
         # 5. Achievements Tab
         try:
             from ui.achievement_panel_qt import AchievementDisplayWidget
             from features.achievements import AchievementSystem
-            
-            achievement_system = AchievementSystem()
-            achievement_panel = AchievementDisplayWidget(achievement_system, tooltip_manager=self.tooltip_manager)
+
+            self.achievement_system = AchievementSystem()
+            # Register callback to show popup + play sound when achievement unlocked
+            self.achievement_system.register_unlock_callback(self._on_achievement_unlocked)
+            # Count this startup as a new session
+            try:
+                self.achievement_system.increment_sessions()
+            except Exception:
+                pass
+            achievement_panel = AchievementDisplayWidget(self.achievement_system, tooltip_manager=self.tooltip_manager)
             panda_tabs.addTab(achievement_panel, "🏆 Achievements")
             logger.info("✅ Achievements panel added to panda tab")
         except Exception as e:
@@ -799,6 +1000,9 @@ class TextureSorterMainWindow(QMainWindow):
             
             minigame_manager = MiniGameManager()
             minigame_panel = MinigamePanelQt(minigame_manager=minigame_manager, tooltip_manager=self.tooltip_manager)
+            # Wire game completion → XP reward + status bar message
+            if hasattr(minigame_panel, 'game_completed'):
+                minigame_panel.game_completed.connect(self._on_minigame_completed)
             panda_tabs.addTab(minigame_panel, "🎮 Minigames")
             logger.info("✅ Minigames panel added to panda tab")
         except Exception as e:
@@ -815,6 +1019,11 @@ class TextureSorterMainWindow(QMainWindow):
             
             widget_collection = WidgetCollection()
             widgets_panel = WidgetsPanelQt(widget_collection, self.panda_widget, tooltip_manager=self.tooltip_manager)
+            # Wire widget selection → log + achievement tracking
+            if hasattr(widgets_panel, 'widget_selected'):
+                widgets_panel.widget_selected.connect(
+                    lambda w: logger.debug(f"Widget selected: {w}")
+                )
             panda_tabs.addTab(widgets_panel, "🧸 Widgets")
             logger.info("✅ Widgets panel added to panda tab")
         except Exception as e:
@@ -823,32 +1032,259 @@ class TextureSorterMainWindow(QMainWindow):
             label = QLabel("⚠️ Widgets not available\n\nInstall required dependencies")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             panda_tabs.addTab(label, "🧸 Widgets")
-        
+
+        # 8. Adventure / Dungeon Tab
+        try:
+            from ui.dungeon_graphics_view import DungeonGraphicsView
+            from features.integrated_dungeon import IntegratedDungeon
+            from features.enemy_manager import EnemyManager
+
+            self.integrated_dungeon = IntegratedDungeon()
+            # Use a container so we can add both dungeon view and travel animation widget
+            adventure_container = QWidget()
+            adventure_layout = QVBoxLayout(adventure_container)
+            adventure_layout.setContentsMargins(0, 0, 0, 0)
+
+            dungeon_view = DungeonGraphicsView(tooltip_manager=self.tooltip_manager)
+            dungeon_view.set_dungeon(self.integrated_dungeon)
+            adventure_layout.addWidget(dungeon_view, stretch=3)
+
+            # EnemyManager needs parent widget, panda_widget, and enemy_collection
+            panda_wgt = getattr(self, 'panda_widget', None)
+            self.enemy_manager = EnemyManager(
+                parent=dungeon_view,
+                panda_widget=panda_wgt,
+                enemy_collection=self.integrated_dungeon.enemy_collection,
+            )
+
+            # Travel animation strip — wire animation_complete to advance dungeon
+            try:
+                from ui.qt_travel_animation import TravelAnimationWidget
+                from features.travel_system import TravelSystem
+                _ts = self.travel_system or TravelSystem()
+                travel_widget = TravelAnimationWidget(travel_system=_ts, parent=adventure_container)
+                if hasattr(travel_widget, 'animation_complete'):
+                    travel_widget.animation_complete.connect(
+                        lambda: logger.debug("Travel animation complete")
+                    )
+                adventure_layout.addWidget(travel_widget, stretch=1)
+            except Exception as _te:
+                logger.debug(f"Travel animation widget not available: {_te}")
+
+            panda_tabs.addTab(adventure_container, "⚔️ Adventure")
+            logger.info("✅ Adventure/Dungeon panel added to panda tab")
+        except Exception as e:
+            logger.warning(f"Could not load dungeon panel: {e}")
+            label = QLabel("⚔️ Adventure Mode\n\nDungeon exploration coming soon!\nInstall PyQt6 to enable.")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            panda_tabs.addTab(label, "⚔️ Adventure")
+
+        # 9. Quests Tab
+        try:
+            from features.quest_system import QuestSystem
+
+            self.quest_system = QuestSystem()
+            # Wire quest completion → achievement & currency reward
+            self.quest_system.quest_completed.connect(self._on_quest_completed)
+            # Wire quest started notification → status bar
+            self.quest_system.quest_started.connect(
+                lambda qid: self.statusBar().showMessage(f"📜 Quest started: {qid}", 3000)
+            )
+            # Wire quest progress → status bar so user sees progress feedback
+            if hasattr(self.quest_system, 'quest_progress') and self.quest_system.quest_progress:
+                self.quest_system.quest_progress.connect(self._on_quest_progress)
+            # Wire achievement_unlocked (quest side) → re-use achievement handler
+            if hasattr(self.quest_system, 'achievement_unlocked') and self.quest_system.achievement_unlocked:
+                self.quest_system.achievement_unlocked.connect(
+                    lambda aid: logger.info(f"🏆 Quest achievement: {aid}")
+                )
+            # Wire easter_egg_found → fun status bar message
+            if hasattr(self.quest_system, 'easter_egg_found') and self.quest_system.easter_egg_found:
+                self.quest_system.easter_egg_found.connect(
+                    lambda eid: self.statusBar().showMessage(f"🥚 Easter egg found: {eid}!", 5000)
+                )
+            # Activate first set of quests
+            self.quest_system.check_quests(0)
+
+            # Simple quests display widget
+            quests_container = QWidget()
+            quests_layout = QVBoxLayout(quests_container)
+            quests_label = QLabel("📜 Active Quests")
+            quests_label.setStyleSheet("font-weight: bold; font-size: 14px;")
+            quests_layout.addWidget(quests_label)
+            active = self.quest_system.get_active_quests() if hasattr(self.quest_system, 'get_active_quests') else []
+            if active:
+                for q in active[:10]:
+                    name = getattr(q, 'name', str(q))
+                    desc = getattr(q, 'description', '')
+                    q_label = QLabel(f"• {name}\n  {desc}")
+                    q_label.setWordWrap(True)
+                    quests_layout.addWidget(q_label)
+            else:
+                quests_layout.addWidget(QLabel("No active quests — keep using the app to unlock quests!"))
+            quests_layout.addStretch()
+            panda_tabs.addTab(quests_container, "📜 Quests")
+            logger.info("✅ Quests tab added to panda tab")
+        except Exception as e:
+            logger.warning(f"Could not load quests tab: {e}")
+            label = QLabel("📜 Quests\n\nComplete tasks to unlock quests!")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            panda_tabs.addTab(label, "📜 Quests")
+
+        # ── Skill Tree tab ────────────────────────────────────────────────────
+        try:
+            skill_container = QWidget()
+            skill_layout = QVBoxLayout(skill_container)
+
+            title = QLabel("🌳 Skill Tree")
+            title.setStyleSheet("font-size: 16px; font-weight: bold; padding: 6px;")
+            skill_layout.addWidget(title)
+
+            # Summary: unlocked / total
+            skill_tree = getattr(self, 'skill_tree', None)
+            if skill_tree is not None:
+                unlocked = len(skill_tree.get_unlocked_skills())
+                total = len(skill_tree.skills)
+                summary = QLabel(
+                    f"Skills unlocked: {unlocked}/{total}\n"
+                    f"Branches: Combat · Magic · Exploration · Panda"
+                )
+            else:
+                summary = QLabel("Skill tree loading…")
+            summary.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            skill_layout.addWidget(summary)
+
+            # List unlockable skills with Unlock button
+            scroll = QScrollArea()
+            scroll.setWidgetResizable(True)
+            scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+            inner = QWidget()
+            inner_layout = QVBoxLayout(inner)
+
+            _MAX_DISPLAYED_SKILLS = 20
+            if skill_tree is not None:
+                for skill in list(skill_tree.skills.values())[:_MAX_DISPLAYED_SKILLS]:
+                    row = QHBoxLayout()
+                    icon = "✅" if skill.unlocked else "🔒"
+                    lbl = QLabel(f"{icon} [{skill.branch}] {skill.name} — {skill.description}")
+                    lbl.setWordWrap(True)
+                    row.addWidget(lbl, stretch=1)
+                    if not skill.unlocked:
+                        btn = QPushButton("Unlock")
+                        _skill_id = skill.skill_id
+                        def create_unlock_handler(sid):
+                            def unlock_handler():
+                                lvl = getattr(self.level_system, 'level', 1) if self.level_system else 1
+                                pts = getattr(self.level_system, 'skill_points', 99) if self.level_system else 99
+                                ok = self.skill_tree.unlock_skill(sid, lvl, pts)
+                                if ok:
+                                    self.statusBar().showMessage(f"🌳 Skill unlocked!", 3000)
+                                    logger.info(f"Skill unlocked: {sid}")
+                            return unlock_handler
+                        btn.clicked.connect(create_unlock_handler(_skill_id))
+                        row.addWidget(btn)
+                    inner_layout.addLayout(row)
+                inner_layout.addStretch()
+
+            scroll.setWidget(inner)
+            skill_layout.addWidget(scroll)
+            panda_tabs.addTab(skill_container, "🌳 Skills")
+            logger.info("✅ Skill Tree tab added to panda tab")
+        except Exception as e:
+            logger.warning(f"Could not load skill tree tab: {e}")
+            label = QLabel("🌳 Skill Tree\n\nLevel up to unlock skills!")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            panda_tabs.addTab(label, "🌳 Skills")
+
+        # 11. Creative Tools tab (Paint + Weapon Positioning)
+        try:
+            from ui.paint_tools_qt import create_paint_tools
+            from ui.weapon_positioning_qt import create_weapon_positioning_widget
+            tools_container = QWidget()
+            tools_layout = QVBoxLayout(tools_container)
+            tools_layout.setContentsMargins(4, 4, 4, 4)
+            tools_sub = QTabWidget()
+            paint_widget = create_paint_tools(tools_container)
+            if paint_widget:
+                tools_sub.addTab(paint_widget, "🖌️ Paint")
+            weapon_widget = create_weapon_positioning_widget(tools_container)
+            if weapon_widget:
+                tools_sub.addTab(weapon_widget, "⚔️ Weapons")
+            tools_layout.addWidget(tools_sub)
+            panda_tabs.addTab(tools_container, "🛠️ Tools")
+            logger.info("✅ Creative Tools tab added to panda tab")
+        except Exception as e:
+            logger.warning(f"Could not load creative tools tab: {e}")
+            label = QLabel("🛠️ Creative Tools\n\nRequires PyQt6 + OpenGL.")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            panda_tabs.addTab(label, "🛠️ Tools")
+
         layout.addWidget(panda_tabs)
         return tab
     
     def create_file_browser_tab(self):
         """Create file browser tab."""
         tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-        
+        outer_layout = QVBoxLayout(tab)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Left: file browser panel
+        browser_container = QWidget()
+        browser_layout = QVBoxLayout(browser_container)
+        browser_layout.setContentsMargins(0, 0, 0, 0)
+
         try:
             if UI_PANELS_AVAILABLE:
                 tooltip_manager = getattr(self, 'tooltip_manager', None)
                 self.file_browser_panel = FileBrowserPanelQt(config, tooltip_manager)
-                layout.addWidget(self.file_browser_panel)
+                browser_layout.addWidget(self.file_browser_panel)
+                # Wire file browser signals so selections update the main path fields
+                if hasattr(self.file_browser_panel, 'file_selected'):
+                    self.file_browser_panel.file_selected.connect(self._on_file_browser_file_selected)
+                if hasattr(self.file_browser_panel, 'folder_changed'):
+                    self.file_browser_panel.folder_changed.connect(self._on_file_browser_folder_changed)
                 self.log("✅ File browser panel loaded successfully")
             else:
                 label = QLabel("⚠️ File browser requires PyQt6 and PIL\n\nInstall with: pip install PyQt6 Pillow")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                layout.addWidget(label)
+                browser_layout.addWidget(label)
         except Exception as e:
             logger.error(f"Error loading file browser panel: {e}", exc_info=True)
             label = QLabel(f"⚠️ Error loading file browser:\n{e}")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            layout.addWidget(label)
-        
+            browser_layout.addWidget(label)
+
+        # Right: optional live before/after preview pane
+        try:
+            from ui.live_preview_qt import create_live_preview
+            from PyQt6.QtWidgets import QSplitter
+            self.live_preview_widget = create_live_preview(tab)
+            if self.live_preview_widget:
+                self.live_preview_widget.setMinimumWidth(200)
+                splitter = QSplitter(Qt.Orientation.Horizontal)
+                splitter.addWidget(browser_container)
+                splitter.addWidget(self.live_preview_widget)
+                splitter.setSizes([600, 300])
+                outer_layout.addWidget(splitter)
+                # Connect file selection to populate live preview
+                if self.file_browser_panel and hasattr(self.file_browser_panel, 'file_selected'):
+                    def _on_file_for_preview(path):
+                        try:
+                            from PyQt6.QtGui import QPixmap
+                            px = QPixmap(str(path))
+                            if not px.isNull():
+                                self.live_preview_widget.set_original(px)
+                        except Exception:
+                            pass
+                    self.file_browser_panel.file_selected.connect(_on_file_for_preview)
+                logger.info("✅ Live preview pane added to file browser tab")
+            else:
+                outer_layout.addWidget(browser_container)
+        except Exception as e:
+            logger.debug(f"Live preview pane unavailable: {e}")
+            self.live_preview_widget = None
+            outer_layout.addWidget(browser_container)
+
         self.tabs.addTab(tab, "📁 File Browser")
     
     def create_notepad_tab(self):
@@ -862,6 +1298,11 @@ class TextureSorterMainWindow(QMainWindow):
                 tooltip_manager = getattr(self, 'tooltip_manager', None)
                 self.notepad_panel = NotepadPanelQt(config, tooltip_manager)
                 layout.addWidget(self.notepad_panel)
+                # Auto-save to config when user edits a note
+                if hasattr(self.notepad_panel, 'note_changed'):
+                    self.notepad_panel.note_changed.connect(
+                        lambda title: logger.debug(f"Note changed: {title}")
+                    )
                 self.log("✅ Notepad panel loaded successfully")
             else:
                 label = QLabel("⚠️ Notepad requires PyQt6\n\nInstall with: pip install PyQt6")
@@ -903,49 +1344,79 @@ class TextureSorterMainWindow(QMainWindow):
     def setup_menubar(self):
         """Setup menu bar."""
         menubar = self.menuBar()
-        
-        # File menu
+
+        # ── File menu ────────────────────────────────────────────────────────
         file_menu = menubar.addMenu("&File")
-        
-        open_action = QAction("&Open Input Folder...", self)
+
+        open_action = QAction("&Open Input Folder…", self)
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self.browse_input)
         file_menu.addAction(open_action)
-        
+
+        open_out_action = QAction("Open &Output Folder…", self)
+        open_out_action.setShortcut("Ctrl+Shift+O")
+        open_out_action.triggered.connect(self.browse_output)
+        file_menu.addAction(open_out_action)
+
         file_menu.addSeparator()
-        
+
+        # Profiles sub-menu (uses ProfileManager)
+        profile_menu = file_menu.addMenu("&Profiles")
+        save_profile_action = QAction("&Save Current Profile…", self)
+        save_profile_action.triggered.connect(self._save_profile)
+        profile_menu.addAction(save_profile_action)
+        load_profile_action = QAction("&Load Profile…", self)
+        load_profile_action.triggered.connect(self._load_profile)
+        profile_menu.addAction(load_profile_action)
+
+        # Backup sub-menu (uses BackupManager)
+        backup_menu = file_menu.addMenu("&Backup")
+        create_restore_action = QAction("Create &Restore Point…", self)
+        create_restore_action.triggered.connect(self._create_restore_point)
+        backup_menu.addAction(create_restore_action)
+
+        file_menu.addSeparator()
+
         exit_action = QAction("E&xit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
-        
-        # View menu - for docking controls
+
+        # ── View menu ────────────────────────────────────────────────────────
         view_menu = menubar.addMenu("&View")
-        
         self.view_menu = view_menu  # Store reference for dynamic updates
-        
-        # Add "Pop Out Tab" action
+
         popout_action = QAction("Pop Out Current Tab", self)
         popout_action.setShortcut("Ctrl+Shift+P")
         popout_action.triggered.connect(self.popout_current_tab)
         view_menu.addAction(popout_action)
-        
+
         view_menu.addSeparator()
-        
+
         # Submenu for restoring docked tabs
         self.restore_menu = view_menu.addMenu("Restore Docked Tab")
         self.restore_menu.setEnabled(False)  # Disabled until tabs are popped out
-        
+
         view_menu.addSeparator()
-        
-        # Reset layout action
+
         reset_layout_action = QAction("Reset Window Layout", self)
         reset_layout_action.triggered.connect(self.reset_window_layout)
         view_menu.addAction(reset_layout_action)
-        
-        # Help menu
+
+        # ── Tools menu ────────────────────────────────────────────────────────
+        tools_menu = menubar.addMenu("&Tools")
+
+        find_dupes_action = QAction("🔍 Find Duplicate Textures…", self)
+        find_dupes_action.triggered.connect(self._find_duplicate_textures)
+        tools_menu.addAction(find_dupes_action)
+
+        analyze_action = QAction("🔬 Analyze Selected Texture…", self)
+        analyze_action.triggered.connect(self._analyze_selected_texture)
+        tools_menu.addAction(analyze_action)
+
+        # ── Help menu ────────────────────────────────────────────────────────
         help_menu = menubar.addMenu("&Help")
-        
+
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
@@ -1061,7 +1532,320 @@ class TextureSorterMainWindow(QMainWindow):
                 border: 1px solid #cccccc;
             }}
             """
-        else:  # Dark theme
+        elif theme == 'nord':
+            stylesheet = f"""
+            QMainWindow {{
+                background-color: #2e3440;
+            }}
+            QWidget {{
+                background-color: #2e3440;
+                color: #d8dee9;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            QPushButton {{
+                background-color: {accent};
+                color: #eceff4;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color.name()};
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed_color.name()};
+            }}
+            QPushButton:disabled {{
+                background-color: #434c5e;
+                color: #616e88;
+            }}
+            QLabel {{
+                color: #d8dee9;
+                background-color: transparent;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid #3b4252;
+                background-color: #3b4252;
+            }}
+            QTabBar::tab {{
+                background-color: #434c5e;
+                color: #d8dee9;
+                padding: 8px 20px;
+                border: 1px solid #3b4252;
+                border-bottom: none;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {accent};
+                color: #eceff4;
+            }}
+            QTabBar::tab:hover {{
+                background-color: #4c566a;
+            }}
+            QMenuBar {{
+                background-color: #3b4252;
+                color: #d8dee9;
+                border-bottom: 1px solid #434c5e;
+            }}
+            QMenuBar::item:selected {{
+                background-color: {accent};
+                color: #eceff4;
+            }}
+            QMenu {{
+                background-color: #3b4252;
+                color: #d8dee9;
+                border: 1px solid #434c5e;
+            }}
+            QMenu::item:selected {{
+                background-color: {accent};
+                color: #eceff4;
+            }}
+            QProgressBar {{
+                border: 1px solid #434c5e;
+                border-radius: 3px;
+                text-align: center;
+                background-color: #3b4252;
+                color: #d8dee9;
+            }}
+            QProgressBar::chunk {{
+                background-color: {accent};
+            }}
+            QFrame {{
+                background-color: #3b4252;
+                border: 1px solid #434c5e;
+                border-radius: 4px;
+            }}
+            QTextEdit {{
+                background-color: #3b4252;
+                color: #d8dee9;
+                border: 1px solid #434c5e;
+            }}
+            QScrollBar:vertical {{
+                background-color: #3b4252;
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: #4c566a;
+                border-radius: 6px;
+            }}
+            QDockWidget {{
+                color: #d8dee9;
+                titlebar-close-icon: none;
+            }}
+            QDockWidget::title {{
+                background-color: #434c5e;
+                padding: 4px;
+            }}
+            """
+        elif theme == 'dracula':
+            stylesheet = f"""
+            QMainWindow {{
+                background-color: #282a36;
+            }}
+            QWidget {{
+                background-color: #282a36;
+                color: #f8f8f2;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            QPushButton {{
+                background-color: {accent};
+                color: #f8f8f2;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color.name()};
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed_color.name()};
+            }}
+            QPushButton:disabled {{
+                background-color: #44475a;
+                color: #6272a4;
+            }}
+            QLabel {{
+                color: #f8f8f2;
+                background-color: transparent;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid #44475a;
+                background-color: #44475a;
+            }}
+            QTabBar::tab {{
+                background-color: #383a4a;
+                color: #f8f8f2;
+                padding: 8px 20px;
+                border: 1px solid #44475a;
+                border-bottom: none;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {accent};
+                color: #f8f8f2;
+            }}
+            QTabBar::tab:hover {{
+                background-color: #44475a;
+            }}
+            QMenuBar {{
+                background-color: #383a4a;
+                color: #f8f8f2;
+                border-bottom: 1px solid #44475a;
+            }}
+            QMenuBar::item:selected {{
+                background-color: {accent};
+            }}
+            QMenu {{
+                background-color: #383a4a;
+                color: #f8f8f2;
+                border: 1px solid #44475a;
+            }}
+            QMenu::item:selected {{
+                background-color: {accent};
+            }}
+            QProgressBar {{
+                border: 1px solid #44475a;
+                border-radius: 3px;
+                text-align: center;
+                background-color: #383a4a;
+                color: #f8f8f2;
+            }}
+            QProgressBar::chunk {{
+                background-color: {accent};
+            }}
+            QFrame {{
+                background-color: #383a4a;
+                border: 1px solid #44475a;
+                border-radius: 4px;
+            }}
+            QTextEdit {{
+                background-color: #383a4a;
+                color: #f8f8f2;
+                border: 1px solid #44475a;
+            }}
+            QScrollBar:vertical {{
+                background-color: #383a4a;
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: #44475a;
+                border-radius: 6px;
+            }}
+            QDockWidget {{
+                color: #f8f8f2;
+                titlebar-close-icon: none;
+            }}
+            QDockWidget::title {{
+                background-color: #44475a;
+                padding: 4px;
+            }}
+            """
+        elif theme in ('solarized dark', 'solarized_dark'):
+            stylesheet = f"""
+            QMainWindow {{
+                background-color: #002b36;
+            }}
+            QWidget {{
+                background-color: #002b36;
+                color: #839496;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }}
+            QPushButton {{
+                background-color: {accent};
+                color: #fdf6e3;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color.name()};
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed_color.name()};
+            }}
+            QPushButton:disabled {{
+                background-color: #073642;
+                color: #586e75;
+            }}
+            QLabel {{
+                color: #839496;
+                background-color: transparent;
+            }}
+            QTabWidget::pane {{
+                border: 1px solid #073642;
+                background-color: #073642;
+            }}
+            QTabBar::tab {{
+                background-color: #073642;
+                color: #839496;
+                padding: 8px 20px;
+                border: 1px solid #073642;
+                border-bottom: none;
+            }}
+            QTabBar::tab:selected {{
+                background-color: {accent};
+                color: #fdf6e3;
+            }}
+            QTabBar::tab:hover {{
+                background-color: #0d4251;
+            }}
+            QMenuBar {{
+                background-color: #073642;
+                color: #839496;
+                border-bottom: 1px solid #073642;
+            }}
+            QMenuBar::item:selected {{
+                background-color: {accent};
+                color: #fdf6e3;
+            }}
+            QMenu {{
+                background-color: #073642;
+                color: #839496;
+                border: 1px solid #073642;
+            }}
+            QMenu::item:selected {{
+                background-color: {accent};
+                color: #fdf6e3;
+            }}
+            QProgressBar {{
+                border: 1px solid #073642;
+                border-radius: 3px;
+                text-align: center;
+                background-color: #073642;
+                color: #839496;
+            }}
+            QProgressBar::chunk {{
+                background-color: {accent};
+            }}
+            QFrame {{
+                background-color: #073642;
+                border: 1px solid #073642;
+                border-radius: 4px;
+            }}
+            QTextEdit {{
+                background-color: #073642;
+                color: #839496;
+                border: 1px solid #073642;
+            }}
+            QScrollBar:vertical {{
+                background-color: #073642;
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: #586e75;
+                border-radius: 6px;
+            }}
+            QDockWidget {{
+                color: #839496;
+                titlebar-close-icon: none;
+            }}
+            QDockWidget::title {{
+                background-color: #073642;
+                padding: 4px;
+            }}
+            """
+        else:  # Dark theme (default)
             stylesheet = f"""
             QMainWindow {{
                 background-color: #1e1e1e;
@@ -1148,16 +1932,73 @@ class TextureSorterMainWindow(QMainWindow):
             }}
             """
         self.setStyleSheet(stylesheet)
-    
+        self.apply_cursor()
+
+        # Unlock theme-related achievements
+        try:
+            if self.achievement_system:
+                self.achievement_system.unlock_achievement('theme_switcher')
+                _theme_ach = {
+                    'dark': 'dark_side',
+                    'nord': 'nordic_explorer',
+                    'dracula': 'shadow_walker',
+                    'solarized_dark': 'bamboo_sage',
+                    'light': 'angelic_sorter',
+                }
+                ach_id = _theme_ach.get(theme)
+                if ach_id:
+                    self.achievement_system.unlock_achievement(ach_id)
+        except Exception:
+            pass
+
+    def apply_cursor(self):
+        """Apply the cursor style saved in config to the whole application."""
+        try:
+            from PyQt6.QtGui import QCursor
+            from PyQt6.QtCore import Qt
+            cursor_name = str(config.get('ui', 'cursor', default='default')).lower().strip()
+            _cursor_map = {
+                'default':   Qt.CursorShape.ArrowCursor,
+                'arrow':     Qt.CursorShape.ArrowCursor,
+                'hand':      Qt.CursorShape.PointingHandCursor,
+                'cross':     Qt.CursorShape.CrossCursor,
+                'wait':      Qt.CursorShape.WaitCursor,
+                'text':      Qt.CursorShape.IBeamCursor,
+                'forbidden': Qt.CursorShape.ForbiddenCursor,
+                'move':      Qt.CursorShape.SizeAllCursor,
+                'zoom_in':   Qt.CursorShape.PointingHandCursor,  # "click to zoom in"
+                'zoom_out':  Qt.CursorShape.ArrowCursor,          # no native zoom-out cursor in Qt
+            }
+            shape = _cursor_map.get(cursor_name, Qt.CursorShape.ArrowCursor)
+            app = QApplication.instance()
+            if app:
+                # Restore any previous override so we don't stack overrides
+                while app.overrideCursor():
+                    app.restoreOverrideCursor()
+                # For non-default cursors set an application-wide override
+                if cursor_name not in ('default', 'arrow'):
+                    app.setOverrideCursor(QCursor(shape))
+            logger.debug(f"Cursor applied: {cursor_name} → {shape.name if hasattr(shape, 'name') else shape}")
+        except Exception as e:
+            logger.warning(f"Could not apply cursor: {e}")
+
     def initialize_components(self):
         """Initialize core components."""
         try:
             self.classifier = TextureClassifier(config=config)
             self.lod_detector = LODDetector()
             self.file_handler = FileHandler(create_backup=True, config=config)
-            # Note: OrganizationEngine requires output_dir and style_class parameters.
-            # It will be created on-demand in perform_sorting() once the output directory
-            # is selected by the user via browse_output().
+            # OrganizationEngine requires output_dir + style_class; created on-demand in
+            # perform_sorting() once the user has selected an output folder and style.
+            # TextureDatabase is initialized once per session — here if app_data exists,
+            # or on first sort run if the directory isn't created yet.
+            try:
+                self._app_data_dir.mkdir(parents=True, exist_ok=True)
+                self.database = TextureDatabase(self._db_path)
+                logger.info("Texture database initialized at %s", self._db_path)
+            except Exception as _e:
+                logger.warning("Texture database unavailable: %s", _e)
+                self.database = None
             self.log("✅ Core components initialized")
             
             # Initialize tooltip manager
@@ -1195,6 +2036,351 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as e:
                 logger.warning(f"Could not initialize cache manager: {e}")
             
+            # Initialize memory manager
+            try:
+                from utils.memory_manager import MemoryManager
+                memory_limit_mb = config.get('performance', 'memory_limit_mb', default=2048)
+                self.memory_manager = MemoryManager(max_memory_mb=memory_limit_mb)
+                self.memory_manager.start_monitoring()
+                logger.info(f"Memory manager initialized with {memory_limit_mb}MB limit")
+            except Exception as e:
+                logger.warning(f"Could not initialize memory manager: {e}")
+            
+            # Initialize hotkey manager
+            try:
+                from features.hotkey_manager import HotkeyManager
+                self.hotkey_manager = HotkeyManager()
+                logger.info("Hotkey manager initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize hotkey manager: {e}")
+
+            # Initialize sound manager
+            try:
+                from features.sound_manager import SoundManager
+                self.sound_manager = SoundManager()
+                # Apply saved volume from config
+                saved_volume = config.get('ui', 'sound_volume', default=0.7)
+                self.sound_manager.set_volume(float(saved_volume))
+                logger.info(f"Sound manager initialized (volume={saved_volume})")
+            except Exception as e:
+                logger.warning(f"Could not initialize sound manager: {e}")
+
+            # Initialize user level / XP system
+            try:
+                from features.level_system import UserLevelSystem
+                self.level_system = UserLevelSystem()
+                self.level_system.load()
+                self.level_system.register_level_up_callback(self._on_level_up)
+                logger.info("User level system initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize level system: {e}")
+
+            # Initialize auto-backup system (backs up app_data/config on interval)
+            try:
+                from features.auto_backup import AutoBackupSystem, BackupConfig
+                _backup_cfg = BackupConfig(
+                    enabled=True,
+                    interval_seconds=int(config.get('backup', 'interval_seconds', default=300)),
+                    max_backups=int(config.get('backup', 'max_backups', default=10)),
+                )
+                _app_dir = Path(__file__).parent / 'app_data'
+                _app_dir.mkdir(parents=True, exist_ok=True)
+                self.auto_backup = AutoBackupSystem(app_dir=_app_dir, config=_backup_cfg)
+                self.auto_backup.start()
+                logger.info("Auto-backup system started")
+            except Exception as e:
+                logger.warning(f"Could not initialize auto-backup: {e}")
+
+            # Initialize unlockables system (cursors, themes, outfits)
+            try:
+                from features.unlockables_system import UnlockablesSystem
+                self.unlockables_system = UnlockablesSystem()
+                logger.info("Unlockables system initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize unlockables system: {e}")
+
+            # Initialize transparent panda overlay (floating panda that reacts to UI events)
+            try:
+                from ui.transparent_panda_overlay import create_transparent_overlay
+                self.panda_overlay = create_transparent_overlay(self, main_window=self)
+                if self.panda_overlay:
+                    # Wire panda overlay signals to main window handlers
+                    if hasattr(self.panda_overlay, 'panda_clicked_widget') and self.panda_overlay.panda_clicked_widget:
+                        self.panda_overlay.panda_clicked_widget.connect(
+                            lambda w: logger.debug(f"Panda clicked widget: {w}")
+                        )
+                    if hasattr(self.panda_overlay, 'panda_moved') and self.panda_overlay.panda_moved:
+                        self.panda_overlay.panda_moved.connect(
+                            lambda x, y: logger.debug(f"Panda moved to ({x}, {y})")
+                        )
+                    if hasattr(self.panda_overlay, 'panda_triggered_button') and self.panda_overlay.panda_triggered_button:
+                        self.panda_overlay.panda_triggered_button.connect(
+                            lambda w: logger.debug(f"Panda triggered button: {w}")
+                        )
+                    logger.info("Transparent panda overlay created and signals wired")
+                else:
+                    logger.info("Panda overlay not available (PyOpenGL not installed)")
+            except Exception as e:
+                logger.debug(f"Could not create panda overlay: {e}")
+
+            # Wire drag-and-drop on the input/output path labels so users can
+            # drag folders from the file manager directly onto them.
+            try:
+                from utils.drag_drop_handler import DragDropHandler
+                self.drag_drop_handler = DragDropHandler()
+
+                def _on_input_drop(paths):
+                    folder = next((p for p in paths if Path(p).is_dir()), None)
+                    if folder:
+                        self.input_path = Path(folder)
+                        self.input_path_label.setText(folder)
+                        self.log(f"📁 Input folder (dropped): {folder}")
+                        self.update_button_states()
+
+                def _on_output_drop(paths):
+                    folder = next((p for p in paths if Path(p).is_dir()), None)
+                    if folder:
+                        self.output_path = Path(folder)
+                        self.output_path_label.setText(folder)
+                        self.log(f"📂 Output folder (dropped): {folder}")
+                        self.update_button_states()
+
+                self.drag_drop_handler.enable_drop(
+                    self.input_path_label, _on_input_drop, accept_folders=True, accept_files=False
+                )
+                self.drag_drop_handler.enable_drop(
+                    self.output_path_label, _on_output_drop, accept_folders=True, accept_files=False
+                )
+                logger.info("Drag-and-drop wired to input/output path labels")
+            except Exception as e:
+                logger.warning(f"Could not wire drag-and-drop: {e}")
+
+            # Initialize translation manager
+            try:
+                from features.translation_manager import TranslationManager, Language
+                self.translation_manager = TranslationManager()
+                saved_lang = config.get('ui', 'language', default='en')
+                lang = next((l for l in Language if l.value == saved_lang), Language.ENGLISH)
+                self.translation_manager.set_language(lang)
+                logger.info(f"Translation manager initialized (language={saved_lang})")
+            except Exception as e:
+                logger.warning(f"Could not initialize translation manager: {e}")
+
+            # Initialize EnvironmentMonitor — monitors scroll/dialog/window events
+            # and triggers panda reactions.  Requires both PyQt6 and the panda overlay.
+            try:
+                from features.environment_monitor import EnvironmentMonitor
+                _panda_overlay = getattr(self, 'panda_overlay', None)
+                self.environment_monitor = EnvironmentMonitor(self, _panda_overlay)
+                # Forward environment events to panda widget if it supports them
+                if self.environment_monitor.environment_changed:
+                    self.environment_monitor.environment_changed.connect(
+                        lambda ev, data: logger.debug(f"Env event: {ev} {data}")
+                    )
+                # Wire panda hide/show signal to panda_overlay visibility
+                if hasattr(self.environment_monitor, 'panda_should_hide') and self.environment_monitor.panda_should_hide:
+                    self.environment_monitor.panda_should_hide.connect(self._on_panda_should_hide)
+                # Wire panda reaction signal to mood system
+                if hasattr(self.environment_monitor, 'panda_should_react') and self.environment_monitor.panda_should_react:
+                    self.environment_monitor.panda_should_react.connect(self._on_panda_should_react)
+                logger.info("EnvironmentMonitor initialized and event filters installed")
+            except Exception as e:
+                logger.warning(f"Could not initialize EnvironmentMonitor: {e}")
+
+            # Initialize StatisticsTracker — tracks per-operation throughput/ETA/errors
+            try:
+                from features.statistics import StatisticsTracker
+                self.statistics_tracker = StatisticsTracker()
+                logger.info("StatisticsTracker initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize StatisticsTracker: {e}")
+
+            # Initialize SearchFilter — file search/filter with presets and favorites
+            try:
+                from features.search_filter import SearchFilter
+                self.search_filter = SearchFilter()
+                logger.info("SearchFilter initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize SearchFilter: {e}")
+
+            # Initialize ProfileManager — organization profile load/save/templates
+            try:
+                from features.profile_manager import ProfileManager
+                self.profile_manager = ProfileManager()
+                logger.info("ProfileManager initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize ProfileManager: {e}")
+
+            # Initialize BackupManager — manual restore-point backups of config/data
+            try:
+                from features.backup_system import BackupManager
+                _backup_root = Path(__file__).parent / 'app_data' / 'backups'
+                _backup_root.mkdir(parents=True, exist_ok=True)
+                self.backup_manager = BackupManager(backup_dir=_backup_root)
+                logger.info("BackupManager initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize BackupManager: {e}")
+
+            # Initialize GameIdentifier — CRC/serial-based game detection
+            try:
+                from features.game_identifier import GameIdentifier
+                self.game_identifier = GameIdentifier()
+                logger.info("GameIdentifier initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize GameIdentifier: {e}")
+
+            # Initialize LODReplacer — LOD group scanning and quality replacement
+            try:
+                from features.lod_replacement import LODReplacer
+                self.lod_replacer = LODReplacer()
+                logger.info("LODReplacer initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize LODReplacer: {e}")
+
+            # Initialize BatchQueue — priority queue for background operations
+            try:
+                from features.batch_operations import BatchQueue
+                self.batch_queue = BatchQueue()
+                logger.info("BatchQueue initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize BatchQueue: {e}")
+
+            # Initialize PandaCharacter — drives panda personality/animations
+            try:
+                from features.panda_character import PandaCharacter
+                self.panda_character = PandaCharacter()
+                logger.info("PandaCharacter initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize PandaCharacter: {e}")
+
+            # Initialize PandaStats — tracks panda happiness/hunger/energy
+            try:
+                from features.panda_stats import PandaStats
+                self.panda_stats = PandaStats()
+                # Load persisted stats if they exist
+                _stats_path = Path(__file__).parent / 'app_data' / 'panda_stats.json'
+                if _stats_path.exists():
+                    loaded = PandaStats.load_from_file(str(_stats_path))
+                    if loaded is not None:
+                        self.panda_stats = loaded
+                logger.info("PandaStats initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize PandaStats: {e}")
+
+            # Initialize PandaMoodSystem — mood-based behaviour modifiers
+            try:
+                from features.panda_mood_system import PandaMoodSystem
+                panda_overlay = getattr(self, 'panda_overlay', None)
+                self.panda_mood_system = PandaMoodSystem(panda_overlay)
+                if hasattr(self.panda_mood_system, 'mood_changed'):
+                    self.panda_mood_system.mood_changed.connect(
+                        lambda old, new, reason: logger.debug(
+                            f"Panda mood: {old} → {new} ({reason})"
+                        )
+                    )
+                # Wire mood intensity → update panda widget tint/animation speed
+                if hasattr(self.panda_mood_system, 'mood_intensity_changed'):
+                    self.panda_mood_system.mood_intensity_changed.connect(
+                        lambda intensity: logger.debug(f"Mood intensity: {intensity:.2f}")
+                    )
+                logger.info("PandaMoodSystem initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize PandaMoodSystem: {e}")
+
+            # Initialize SkillTree — RPG skill progression system
+            try:
+                from features.skill_tree import SkillTree
+                self.skill_tree = SkillTree()
+                if self._skill_tree_path.exists():
+                    import json as _json_st
+                    self.skill_tree.load_from_dict(
+                        _json_st.loads(self._skill_tree_path.read_text(encoding='utf-8'))
+                    )
+                logger.info("SkillTree initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize SkillTree: {e}")
+
+            # Initialize TravelSystem — location / dungeon navigation
+            try:
+                from features.travel_system import TravelSystem
+                self.travel_system = TravelSystem()
+                logger.info("TravelSystem initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize TravelSystem: {e}")
+
+            # Initialize AdventureLevel — combat XP and levelling
+            try:
+                from features.combat_system import AdventureLevel
+                self.adventure_level = AdventureLevel(
+                    save_path=self._adventure_level_path
+                )
+                logger.info("AdventureLevel initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize AdventureLevel: {e}")
+
+            # Initialize WeaponCollection — equippable weapons for dungeon
+            try:
+                from features.weapon_system import WeaponCollection
+                self.weapon_collection = WeaponCollection(
+                    save_path=self._weapon_collection_path
+                )
+                logger.info("WeaponCollection initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize WeaponCollection: {e}")
+
+            # Initialize TextureAnalyzer — advanced per-file analysis
+            try:
+                from features.texture_analysis import TextureAnalyzer
+                self.texture_analyzer = TextureAnalyzer()
+                logger.info("TextureAnalyzer initialized")
+            except Exception as e:
+                self.texture_analyzer = None
+                logger.warning(f"Could not initialize TextureAnalyzer: {e}")
+
+            # Initialize SimilaritySearch + DuplicateDetector — duplicate finding
+            try:
+                from similarity.similarity_search import SimilaritySearch
+                from similarity.duplicate_detector import DuplicateDetector
+                self.similarity_search = SimilaritySearch()
+                self.duplicate_detector = DuplicateDetector(self.similarity_search)
+                logger.info("SimilaritySearch and DuplicateDetector initialized")
+            except Exception as e:
+                self.similarity_search = None
+                self.duplicate_detector = None
+                logger.warning(f"Could not initialize similarity search: {e}")
+
+            # Initialize WidgetDetector + PandaInteractionBehavior (optional, requires PyQt6)
+            try:
+                from features.widget_detector import WidgetDetector
+                self.widget_detector = WidgetDetector(self)
+                logger.info("WidgetDetector initialized")
+                # Wire panda interaction behavior if overlay is available
+                if self.panda_overlay:
+                    try:
+                        from features.panda_interaction_behavior import PandaInteractionBehavior
+                        self.panda_interaction = PandaInteractionBehavior(
+                            self.panda_overlay, self.widget_detector
+                        )
+                        logger.info("PandaInteractionBehavior initialized")
+                    except Exception as _ie:
+                        self.panda_interaction = None
+                        logger.debug(f"PandaInteractionBehavior unavailable: {_ie}")
+                else:
+                    self.panda_interaction = None
+            except Exception as e:
+                self.widget_detector = None
+                self.panda_interaction = None
+                logger.debug(f"WidgetDetector unavailable: {e}")
+
+            # Initialize PreviewViewer — non-blocking image preview window
+            try:
+                from features.preview_viewer import PreviewViewer
+                self.preview_viewer = PreviewViewer()
+                logger.info("PreviewViewer initialized")
+            except Exception as e:
+                self.preview_viewer = None
+                logger.debug(f"PreviewViewer unavailable: {e}")
+
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}", exc_info=True)
             self.log(f"⚠️ Warning: Some components failed to initialize: {e}")
@@ -1206,6 +2392,11 @@ class TextureSorterMainWindow(QMainWindow):
             max_threads = config.get('performance', 'max_threads', default=4)
             memory_limit_mb = config.get('performance', 'memory_limit_mb', default=2048)
             cache_size_mb = config.get('performance', 'cache_size_mb', default=512)
+            thumbnail_quality_str = config.get('performance', 'thumbnail_quality', default='high')
+            
+            # Convert thumbnail quality string to integer
+            _tq_map = {'low': 60, 'medium': 75, 'high': 90}
+            thumbnail_quality = _tq_map.get(str(thumbnail_quality_str).lower(), 85)
             
             # Apply thread count to threading manager
             if self.threading_manager:
@@ -1223,6 +2414,22 @@ class TextureSorterMainWindow(QMainWindow):
                 except Exception as e:
                     logger.error(f"Failed to apply cache size: {e}")
             
+            # Update memory manager limit
+            if self.memory_manager:
+                try:
+                    self.memory_manager.max_memory_bytes = memory_limit_mb * 1024 * 1024
+                    logger.info(f"✅ Applied memory limit: {memory_limit_mb}MB")
+                except Exception as e:
+                    logger.error(f"Failed to apply memory limit: {e}")
+            
+            # Apply thumbnail quality to image_processing module
+            try:
+                from utils import image_processing as _img_proc
+                _img_proc.THUMBNAIL_QUALITY = thumbnail_quality
+                logger.info(f"✅ Applied thumbnail quality: {thumbnail_quality_str} ({thumbnail_quality})")
+            except Exception as e:
+                logger.error(f"Failed to apply thumbnail quality: {e}")
+            
             # Performance manager doesn't need updating - it calculates profiles dynamically
             # But we can log the current profile
             if self.performance_manager:
@@ -1235,34 +2442,6 @@ class TextureSorterMainWindow(QMainWindow):
             
         except Exception as e:
             logger.error(f"Failed to apply performance settings: {e}", exc_info=True)
-    
-    def on_settings_changed(self, setting_key: str, value):
-        """Handle settings changes from settings panel."""
-        try:
-            logger.debug(f"Setting changed: {setting_key} = {value}")
-            
-            # Performance settings
-            if setting_key == 'performance.max_threads':
-                if self.threading_manager:
-                    self.threading_manager.set_thread_count(value)
-                    logger.info(f"Thread count updated to: {value}")
-            
-            elif setting_key == 'performance.cache_size_mb':
-                if self.cache_manager:
-                    self.cache_manager.max_size_bytes = value * 1024 * 1024
-                    logger.info(f"Cache size updated to: {value}MB")
-            
-            elif setting_key == 'performance.memory_limit_mb':
-                logger.info(f"Memory limit updated to: {value}MB (will apply on next operation)")
-            
-            # Theme settings
-            elif setting_key.startswith('ui.theme') or setting_key.startswith('ui.accent'):
-                self.apply_theme()
-            
-            # Other settings can be handled here
-            
-        except Exception as e:
-            logger.error(f"Error handling settings change: {e}", exc_info=True)
     
     def browse_input(self):
         """Browse for input folder."""
@@ -1302,10 +2481,43 @@ class TextureSorterMainWindow(QMainWindow):
         if not self.input_path or not self.output_path:
             QMessageBox.warning(self, "Missing Paths", "Please select both input and output folders.")
             return
-        
+
         self.log("🚀 Starting texture sorting...")
         self.set_operation_running(True)
-        
+
+        # Tell performance dashboard a sort is starting
+        try:
+            if self.perf_dashboard:
+                self.perf_dashboard.update_queue_status(
+                    pending=0, processing=1, completed=0, failed=0
+                )
+                self.perf_dashboard.start_operation_profile("sort_operation")
+        except Exception:
+            pass
+
+        # Set panda mood to WORKING during the sort
+        try:
+            if self.panda_character:
+                from features.panda_character import PandaMood
+                self.panda_character.set_mood(PandaMood.WORKING)
+        except Exception:
+            pass
+
+        # Trigger mood system — sort start is a high-energy interactive event
+        try:
+            if self.panda_mood_system:
+                from features.panda_mood_system import PandaMood as _PMood
+                self.panda_mood_system.on_user_interaction('sort_start')
+                self.panda_mood_system.force_mood(_PMood.HAPPY)
+        except Exception:
+            pass
+
+        # Capture selected style key on the main thread (QComboBox is not thread-safe)
+        try:
+            self._sort_style_key = self.style_combo.currentData()
+        except Exception:
+            self._sort_style_key = None
+
         # Create worker thread
         self.worker = WorkerThread(self.perform_sorting)
         self.worker.progress.connect(self.update_progress)
@@ -1322,8 +2534,30 @@ class TextureSorterMainWindow(QMainWindow):
     def perform_sorting(self, progress_callback, log_callback, check_cancelled):
         """Perform actual sorting (runs in worker thread)."""
         try:
+            import time as _time
             from pathlib import Path
-            
+
+            # Create a manual restore point before destructive file operations
+            try:
+                if self.backup_manager:
+                    self.backup_manager.create_restore_point(label="pre_sort")
+            except Exception:
+                pass
+
+            # Resolve the selected organization style (main thread set self._sort_style_key)
+            style_key = getattr(self, '_sort_style_key', None)
+            org_style_cls = ORGANIZATION_STYLES.get(style_key) if style_key else None
+            if org_style_cls:
+                try:
+                    self.organizer = OrganizationEngine(
+                        style_class=org_style_cls,
+                        output_dir=str(self.output_path),
+                    )
+                    log_callback(f"🗂️ Using organisation style: {self.organizer.get_style_name()}")
+                except Exception as _e:
+                    log_callback(f"⚠️ Could not create OrganizationEngine: {_e}")
+                    self.organizer = None
+
             # Try to import AI classifier, fall back gracefully
             try:
                 from organizer.combined_feature_extractor import CombinedFeatureExtractor
@@ -1336,6 +2570,16 @@ class TextureSorterMainWindow(QMainWindow):
                 use_ai = False
             
             log_callback("🔍 Scanning input directory...")
+
+            # Auto-identify game from input path (non-blocking, best-effort)
+            if self.game_identifier:
+                try:
+                    game_info = self.game_identifier.identify_game(self.input_path)
+                    if game_info:
+                        game_name = getattr(game_info, 'name', str(game_info))
+                        log_callback(f"🎮 Detected game: {game_name}")
+                except Exception:
+                    pass
             
             # Collect texture files
             extensions = {'.dds', '.png', '.jpg', '.jpeg', '.tga', '.bmp', '.tif', '.tiff'}
@@ -1350,6 +2594,13 @@ class TextureSorterMainWindow(QMainWindow):
                 return
             
             log_callback(f"📊 Found {total_files} texture files")
+
+            # Initialize statistics tracker for this operation
+            if self.statistics_tracker:
+                try:
+                    self.statistics_tracker.set_total_files(total_files)
+                except Exception:
+                    pass
             
             # Process and move files
             moved_count = 0
@@ -1368,15 +2619,77 @@ class TextureSorterMainWindow(QMainWindow):
                         category, confidence = self._pattern_classify(file_path.name)
                 else:
                     category, confidence = self._pattern_classify(file_path.name)
-                
-                # Determine target folder
+
+                # Detect LOD group/level for this file
+                lod_group = None
+                lod_level = None
+                if self.lod_detector:
+                    try:
+                        _lod = self.lod_detector.detect_lod_level(file_path.name)
+                        if _lod:
+                            lod_group = getattr(_lod, 'group', None)
+                            lod_level = getattr(_lod, 'level', None)
+                    except Exception:
+                        pass
+
+                # Run TextureAnalyzer on each file for richer DB metadata
+                _tex_analysis: dict = {}
+                if self.texture_analyzer and HAS_PIL:
+                    try:
+                        _tex_analysis = self.texture_analyzer.analyze(file_path)
+                        if _tex_analysis.get('has_alpha') is True:
+                            category = category if category != 'unknown' else 'alpha_textures'
+                    except Exception:
+                        pass
+
+                # Determine target folder via OrganizationEngine or flat fallback
+                if self.organizer:
+                    try:
+                        from organizer.organization_engine import TextureInfo as _TI
+                        try:
+                            _ti_size = file_path.stat().st_size
+                        except OSError:
+                            _ti_size = 0
+                        _ti = _TI(
+                            file_path=str(file_path),
+                            filename=file_path.name,
+                            category=category,
+                            confidence=confidence,
+                            lod_group=lod_group,
+                            lod_level=lod_level,
+                            file_size=_ti_size,
+                            format=file_path.suffix.lstrip('.').upper(),
+                        )
+                        _t0_org = _time.monotonic()
+                        _result = self.organizer.organize_textures([_ti])
+                        _elapsed_org = _time.monotonic() - _t0_org
+                        # organize_textures moves the file itself; skip our own rename below
+                        _org_moved = _result.get('processed', _result.get('moved', 0)) if isinstance(_result, dict) else 0
+                        if _org_moved:
+                            moved_count += 1
+                            progress_callback(idx + 1, total_files, f"Organised {file_path.name} → {category}")
+                            if self.statistics_tracker:
+                                try:
+                                    self.statistics_tracker.record_file_processed(
+                                        category, _ti.file_size, _elapsed_org, success=True
+                                    )
+                                except Exception:
+                                    pass
+                            self._index_texture_in_db(
+                                file_path, category, confidence, lod_group, lod_level
+                            )
+                            continue  # organizer already moved the file
+                        # fall through to manual move if organizer didn't move it
+                    except Exception as _oe:
+                        logger.debug("OrganizationEngine error: %s", _oe)
+
                 target_folder = self.output_path / category
                 target_folder.mkdir(parents=True, exist_ok=True)
-                
+
                 # Move file
                 try:
                     target_path = target_folder / file_path.name
-                    
+
                     # Handle duplicate filenames
                     if target_path.exists():
                         base = target_path.stem
@@ -1385,26 +2698,74 @@ class TextureSorterMainWindow(QMainWindow):
                         while target_path.exists():
                             target_path = target_folder / f"{base}_{counter}{ext}"
                             counter += 1
-                    
+
+                    _t0 = _time.monotonic()
                     file_path.rename(target_path)
+                    _elapsed = _time.monotonic() - _t0
                     moved_count += 1
                     progress_callback(idx + 1, total_files, f"Moved {file_path.name} to {category}")
+                    # Index in database (best-effort; never raises)
+                    self._index_texture_in_db(
+                        file_path, category, confidence, lod_group, lod_level
+                    )
+                    # Record success in statistics tracker
+                    if self.statistics_tracker:
+                        try:
+                            _fsize = file_path.stat().st_size
+                        except OSError:
+                            _fsize = 0
+                        try:
+                            self.statistics_tracker.record_file_processed(
+                                category, _fsize, _elapsed, success=True
+                            )
+                        except Exception:
+                            pass
                 except Exception as e:
                     failed_count += 1
                     log_callback(f"⚠️ Failed to move {file_path.name}: {e}")
                     progress_callback(idx + 1, total_files, f"Failed: {file_path.name}")
+                    self._index_texture_in_db(
+                        file_path, category, confidence, lod_group, lod_level,
+                        operation='sort', error=str(e)
+                    )
+                    # Record failure in statistics tracker
+                    if self.statistics_tracker:
+                        try:
+                            self.statistics_tracker.record_error('move_failed', str(e))
+                        except Exception:
+                            pass
             
             # Report results
             log_callback(f"\n✅ Sorting completed!")
             log_callback(f"   Successfully moved: {moved_count} files")
             if failed_count > 0:
                 log_callback(f"   Failed: {failed_count} files")
+            # Store for operation_finished achievement tracking
+            self._last_sorted_count = moved_count
                 
         except Exception as e:
             import traceback
             log_callback(f"❌ Sorting failed: {str(e)}")
             log_callback(f"Traceback: {traceback.format_exc()}")
-    
+
+    def _index_texture_in_db(self, file_path: 'Path', category: str,
+                             confidence: float, lod_group, lod_level,
+                             operation: str = 'sort', error: str = '') -> None:
+        """Index a processed texture in the SQLite database (best-effort, never raises)."""
+        if not self.database:
+            return
+        try:
+            self.database.add_texture(file_path, {
+                'category': category,
+                'confidence': confidence,
+                'lod_group': lod_group,
+                'lod_level': lod_level,
+            })
+            status = 'ok' if not error else 'error'
+            self.database.log_operation(operation, file_path, status, error)
+        except Exception as _e:
+            logger.debug("Database index error: %s", _e)
+
     def _pattern_classify(self, filename: str) -> tuple:
         """Fallback pattern-based classification."""
         filename_lower = filename.lower()
@@ -1447,16 +2808,154 @@ class TextureSorterMainWindow(QMainWindow):
         
         self.statusbar.showMessage(message)
     
-    def operation_finished(self, success: bool, message: str):
+    def operation_finished(self, success: bool, message: str, files_processed: int = 0):
         """Handle operation completion."""
         self.set_operation_running(False)
-        
+        # Use count stored by perform_sorting when caller doesn't supply it
+        if files_processed == 0:
+            files_processed = getattr(self, '_last_sorted_count', 0)
+            self._last_sorted_count = 0
+
+        # Stop profiler and update performance dashboard queue status
+        try:
+            if self.perf_dashboard:
+                self.perf_dashboard.stop_operation_profile()
+                completed = files_processed if success else 0
+                failed = 0 if success else files_processed
+                self.perf_dashboard.update_queue_status(
+                    pending=0, processing=0,
+                    completed=completed, failed=failed,
+                )
+                if files_processed > 0:
+                    # Approximate: treat average file as 256 KB
+                    self.perf_dashboard.record_file_processed(files_processed * 256 * 1024)
+        except Exception:
+            pass
+
+        # Run memory optimisation after every sort to release PIL/numpy allocations
+        try:
+            from core.performance_manager import OperationProfiler
+            OperationProfiler.optimize_memory()
+        except Exception:
+            pass
+
+
+        # Snapshot app state for auto-backup so it knows "last processed count"
+        try:
+            if self.auto_backup:
+                self.auto_backup.update_state({
+                    'last_operation_success': success,
+                    'files_processed': files_processed,
+                    'input_path': str(self.input_path) if self.input_path else None,
+                    'output_path': str(self.output_path) if self.output_path else None,
+                })
+        except Exception:
+            pass
+
         if success:
             self.log(f"✅ {message}")
+            # Show statistics summary in log area
+            try:
+                if self.statistics_tracker and files_processed > 0:
+                    summary = self.statistics_tracker.get_summary()
+                    elapsed = summary.get('total_time', 0)
+                    rate = summary.get('files_per_second', 0)
+                    errors = summary.get('error_count', 0)
+                    self.log(
+                        f"📊 Stats: {files_processed} files in {elapsed:.1f}s"
+                        f" ({rate:.1f} files/sec)"
+                        + (f" | {errors} error(s)" if errors else "")
+                    )
+            except Exception:
+                pass
             QMessageBox.information(self, "Success", message)
+            # Play completion sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.COMPLETE)
+            except Exception:
+                pass
+            # Update achievement progress
+            try:
+                if self.achievement_system and files_processed > 0:
+                    self.achievement_system.increment_textures_sorted(files_processed)
+                    # unlock_achievement() is idempotent — safe to call every sort;
+                    # the system only fires the callback the first time it's unlocked.
+                    self.achievement_system.unlock_achievement('first_sort')
+            except Exception:
+                pass
+            # Award XP for each file processed
+            try:
+                if self.level_system and files_processed > 0:
+                    self.level_system.add_xp(files_processed, reason='file_processed')
+                    self.level_system.save()
+            except Exception:
+                pass
+            # Update quest progress for texture sorting
+            try:
+                if self.quest_system and files_processed > 0:
+                    # check_quests() handles auto-start + progress update for texture_sorter/bulk_sorter
+                    self.quest_system.check_quests(files_processed)
+            except Exception:
+                pass
+            # Update panda stats with files processed
+            try:
+                if self.panda_stats and files_processed > 0:
+                    # Increment files_processed counter directly (avoids O(N) loop for large counts)
+                    self.panda_stats.files_processed = getattr(self.panda_stats, 'files_processed', 0) + files_processed
+                    self.panda_stats.add_experience(files_processed * 2)
+            except Exception:
+                pass
+            # Update panda character mood (happy after a successful sort)
+            try:
+                if self.panda_character:
+                    from features.panda_character import PandaMood
+                    self.panda_character.set_mood(PandaMood.HAPPY)
+            except Exception:
+                pass
+            # Award AdventureLevel XP — 1 XP per file sorted, source 'texture_sort'
+            try:
+                if self.adventure_level and files_processed > 0:
+                    leveled_up, new_level = self.adventure_level.add_xp(files_processed, 'texture_sort')
+                    if leveled_up:
+                        self.statusBar().showMessage(
+                            f"⚔️ Adventure level up! Now level {new_level}", 5000
+                        )
+            except Exception:
+                pass
+            # Update mood system — sort complete is a positive event
+            try:
+                if self.panda_mood_system:
+                    self.panda_mood_system.on_quest_completed()
+            except Exception:
+                pass
         else:
             self.log(f"❌ {message}")
             QMessageBox.critical(self, "Error", message)
+            # Play error sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.ERROR)
+            except Exception:
+                pass
+            # Track failure in panda stats
+            try:
+                if self.panda_stats:
+                    self.panda_stats.track_operation_failure()
+                if self.panda_character:
+                    from features.panda_character import PandaMood
+                    self.panda_character.set_mood(PandaMood.TIRED)
+            except Exception:
+                pass
+            # Mood system — error makes panda annoyed
+            try:
+                if self.panda_mood_system:
+                    from features.panda_mood_system import PandaMood as _PMood
+                    self.panda_mood_system.force_mood(_PMood.ANNOYED)
+            except Exception:
+                pass
     
     def log(self, message: str):
         """Add message to log."""
@@ -1471,19 +2970,19 @@ class TextureSorterMainWindow(QMainWindow):
             # Update the config value
             keys = setting_key.split('.')
             if len(keys) == 2:
-                config.set(keys[0], keys[1], value)
+                config.set(keys[0], keys[1], value=value)
             elif len(keys) == 1:
                 # Single-level key - store in general section
-                config.set('general', keys[0], value)
+                config.set('general', keys[0], value=value)
                 logger.debug(f"Single-level setting key '{setting_key}' stored in 'general' section")
             else:
                 # Multi-level nested keys - only handle first two levels
                 logger.warning(f"Setting key '{setting_key}' has unexpected format (expected 'section.key')")
                 if len(keys) >= 2:
-                    config.set(keys[0], keys[1], value)
+                    config.set(keys[0], keys[1], value=value)
             
-            # Handle theme changes
-            if setting_key == "ui.theme":
+            # Handle theme / accent color changes
+            if setting_key in ("ui.theme", "ui.accent_color"):
                 self.apply_theme()
             
             # Handle opacity changes
@@ -1494,22 +2993,105 @@ class TextureSorterMainWindow(QMainWindow):
             elif setting_key == "ui.tooltip_mode":
                 if self.tooltip_manager:
                     from features.tutorial_system import TooltipMode
+                    # Canonical config value is 'dumbed-down'; accept 'dumbed_down' for
+                    # backward compatibility with configs written by older versions.
                     mode_map = {
                         'normal': TooltipMode.NORMAL,
-                        'dumbed_down': TooltipMode.DUMBED_DOWN,
-                        'vulgar_panda': TooltipMode.UNHINGED_PANDA
+                        'dumbed-down': TooltipMode.BEGINNER,   # canonical
+                        'dumbed_down': TooltipMode.BEGINNER,   # legacy alias
+                        'vulgar_panda': TooltipMode.PROFANE,
                     }
-                    if value in mode_map:
-                        self.tooltip_manager.set_mode(mode_map[value])
+                    mode = mode_map.get(value)
+                    if mode:
+                        self.tooltip_manager.set_mode(mode)
             
+            # Handle cursor changes — apply immediately
+            elif setting_key == "ui.cursor":
+                self.apply_cursor()
+
             # Handle font changes
-            elif setting_key in ["ui.font_family", "ui.font_size"]:
+            elif setting_key in ("ui.font_family", "ui.font_size"):
                 font_family = config.get('ui', 'font_family', default='Segoe UI')
                 font_size = config.get('ui', 'font_size', default=12)
                 app = QApplication.instance()
                 if app:
                     app.setFont(QFont(font_family, font_size))
             
+            # Handle performance settings — apply immediately to live managers
+            elif setting_key == 'performance.max_threads':
+                if self.threading_manager:
+                    try:
+                        self.threading_manager.set_thread_count(int(value))
+                        logger.info(f"Thread count updated to: {value}")
+                    except Exception as e:
+                        logger.error(f"Failed to update thread count: {e}")
+            
+            elif setting_key == 'performance.cache_size_mb':
+                if self.cache_manager:
+                    self.cache_manager.max_size_bytes = int(value) * 1024 * 1024
+                    logger.info(f"Cache size updated to: {value}MB")
+            
+            elif setting_key == 'performance.memory_limit_mb':
+                if self.memory_manager:
+                    self.memory_manager.max_memory_bytes = int(value) * 1024 * 1024
+                    logger.info(f"Memory limit updated to: {value}MB")
+                else:
+                    logger.info(f"Memory limit updated to: {value}MB (applied on next operation)")
+            
+            elif setting_key == 'performance.thumbnail_quality':
+                try:
+                    from utils import image_processing as _img_proc
+                    _tq_map = {'low': 60, 'medium': 75, 'high': 90}
+                    _img_proc.THUMBNAIL_QUALITY = _tq_map.get(str(value).lower(), 85)
+                    logger.info(f"Thumbnail quality updated to: {value} ({_img_proc.THUMBNAIL_QUALITY})")
+                except Exception as e:
+                    logger.error(f"Failed to update thumbnail quality: {e}")
+
+            elif setting_key == 'ui.sound_volume':
+                # Apply live volume change to SoundManager
+                if self.sound_manager:
+                    try:
+                        self.sound_manager.set_volume(float(value))
+                        logger.info(f"Sound volume updated to: {value}")
+                    except Exception as e:
+                        logger.warning(f"Could not update sound volume: {e}")
+
+            elif setting_key == 'ui.language':
+                # Apply language change to TranslationManager
+                if self.translation_manager:
+                    try:
+                        from features.translation_manager import Language
+                        lang = next((l for l in Language if l.value == str(value)), None)
+                        if lang:
+                            self.translation_manager.set_language(lang)
+                            logger.info(f"Language changed to: {value}")
+                        else:
+                            logger.warning(f"Unknown language code: {value}")
+                    except Exception as e:
+                        logger.warning(f"Could not change language: {e}")
+
+            elif setting_key == 'ui.animation_speed':
+                # Store animation speed in config; individual animated widgets read it on play.
+                # 0.0 = paused/disabled, 1.0 = normal, 4.0 = maximum safe speed (above this
+                # Qt timers fire too fast and animations become visually indistinguishable).
+                try:
+                    speed = float(value)
+                    speed = max(0.0, min(4.0, speed))
+                    config.set('ui', 'animation_speed', value=speed)
+                    logger.info(f"Animation speed updated to: {speed}x")
+                except Exception as e:
+                    logger.warning(f"Could not update animation speed: {e}")
+
+            elif setting_key.startswith('hotkeys.'):
+                # Apply live hotkey rebinding to HotkeyManager when available
+                action_id = setting_key[len('hotkeys.'):]
+                if self.hotkey_manager:
+                    try:
+                        self.hotkey_manager.rebind_hotkey(action_id, str(value))
+                        logger.info(f"Hotkey '{action_id}' rebound to '{value}'")
+                    except Exception as e:
+                        logger.warning(f"Could not rebind hotkey '{action_id}': {e}")
+
             # Save config after changes
             try:
                 config.save()
@@ -1523,15 +3105,40 @@ class TextureSorterMainWindow(QMainWindow):
     def on_panda_clicked(self):
         """Handle panda widget click events."""
         try:
-            # Log the interaction
             self.log("🐼 Panda clicked!")
             logger.info("Panda widget clicked")
-            
-            # You can add custom behavior here, such as:
-            # - Playing a sound
-            # - Showing a message
-            # - Updating panda state
-            
+
+            # Play panda click sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.PANDA_CLICK)
+            except Exception:
+                pass
+
+            # Unlock panda_lover achievement on first click
+            try:
+                if self.achievement_system:
+                    self.achievement_system.unlock_achievement('panda_lover')
+            except Exception:
+                pass
+
+            # Record click in panda stats
+            try:
+                if self.panda_stats:
+                    self.panda_stats.increment_clicks()
+                if self.panda_character:
+                    self.panda_character.update_mood_from_context(files_processed=0)
+            except Exception:
+                pass
+
+            # Notify mood system — click is a positive user interaction
+            try:
+                if self.panda_mood_system:
+                    self.panda_mood_system.on_user_interaction('click')
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling panda click: {e}", exc_info=True)
     
@@ -1550,12 +3157,10 @@ class TextureSorterMainWindow(QMainWindow):
     def on_panda_animation_changed(self, animation: str):
         """Handle panda animation state changes."""
         try:
-            # Log animation state changes
             logger.debug(f"Panda animation changed to: {animation}")
-            
-            # You can add custom behavior here based on animation state
-            # For example, update UI elements or trigger other animations
-            
+            # Forward animation state to panda widget if it supports it
+            if self.panda_widget and hasattr(self.panda_widget, 'set_animation'):
+                self.panda_widget.set_animation(animation)
         except Exception as e:
             logger.error(f"Error handling panda animation change: {e}", exc_info=True)
     
@@ -1590,28 +3195,368 @@ class TextureSorterMainWindow(QMainWindow):
         try:
             logger.info(f"Item purchased: {item_id}")
             self.log(f"🛒 Purchased item: {item_id}")
-            
-            # You can add additional logic here:
-            # - Play purchase sound
-            # - Show achievement notification
-            # - Update panda appearance if item is clothing
-            
+
+            # Play purchase sound
+            try:
+                if self.sound_manager:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.BUTTON_CLICK)
+            except Exception:
+                pass
+
+            # If item is clothing/accessory, equip it on the panda closet
+            try:
+                if self.panda_closet:
+                    item = self.panda_closet.get_item(item_id)
+                    if item:
+                        item.unlocked = True
+                        self.panda_closet.equip_item(item_id)
+                        logger.info(f"Equipped item on panda: {item_id}")
+            except Exception as _e:
+                logger.debug(f"Could not equip item {item_id}: {_e}")
+
+            # Unlock fashionista achievement for any clothing purchase.
+            # AchievementSystem.unlock_achievement() is idempotent — calling it
+            # multiple times only unlocks once (it's a no-op if already unlocked).
+            try:
+                if self.achievement_system:
+                    self.achievement_system.unlock_achievement('fashionista_fur')
+                    self.achievement_system.unlock_achievement('closet_explorer')
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling shop purchase: {e}", exc_info=True)
-    
+
     def on_inventory_item_selected(self, item_id: str):
         """Handle item selection from inventory panel."""
         try:
             logger.info(f"Inventory item selected: {item_id}")
-            
-            # You can add custom behavior here:
-            # - Show item details
-            # - Allow equipping/unequipping
-            # - Preview item on panda
-            
+
+            # Equip the selected item on the panda closet
+            try:
+                if self.panda_closet:
+                    item = self.panda_closet.get_item(item_id)
+                    if item and item.unlocked:
+                        self.panda_closet.equip_item(item_id)
+                        self.log(f"👔 Equipped: {item.name if hasattr(item, 'name') else item_id}")
+                        logger.info(f"Equipped item from inventory: {item_id}")
+            except Exception as _e:
+                logger.debug(f"Could not equip inventory item {item_id}: {_e}")
+
+            # Preview item on the panda widget if it supports it
+            try:
+                if self.panda_widget and hasattr(self.panda_widget, 'preview_item'):
+                    self.panda_widget.preview_item(item_id)
+            except Exception:
+                pass
+
         except Exception as e:
             logger.error(f"Error handling inventory selection: {e}", exc_info=True)
-    
+
+    def _on_achievement_unlocked(self, achievement):
+        """Callback fired by AchievementSystem when an achievement is unlocked.
+
+        Shows a Qt achievement popup, plays the achievement sound, and awards XP.
+        """
+        try:
+            # Play achievement sound
+            if self.sound_manager:
+                from features.sound_manager import SoundEvent
+                self.sound_manager.play_sound(SoundEvent.ACHIEVEMENT)
+        except Exception:
+            pass
+
+        try:
+            # Award XP for the achievement tier
+            if self.level_system:
+                rarity = getattr(achievement, 'rarity', 'bronze')
+                xp_reward_key = f'achievement_{rarity}'  # e.g. 'achievement_gold'
+                _leveled_up, _new_xp = self.level_system.add_xp(
+                    self.level_system.get_xp_reward(xp_reward_key), reason=xp_reward_key
+                )
+                self.level_system.save()
+        except Exception:
+            pass
+
+        try:
+            from ui.qt_achievement_popup import show_achievement_popup
+            popup_data = {
+                'name': getattr(achievement, 'name', str(achievement)),
+                'emoji': getattr(achievement, 'icon', '🏆'),
+                'description': getattr(achievement, 'description', ''),
+            }
+            show_achievement_popup(popup_data, parent=self, parent_geometry=self.geometry())
+        except Exception as _e:
+            logger.debug(f"Could not show achievement popup: {_e}")
+
+        # Achievement = positive event → move mood toward HAPPY/MISCHIEVOUS
+        try:
+            if self.panda_mood_system:
+                self.panda_mood_system.on_quest_completed()
+        except Exception:
+            pass
+
+    # Coins awarded per new level on level-up (e.g. reaching level 10 gives 500 coins)
+    _COINS_PER_LEVEL = 50
+
+    def _on_level_up(self, old_level: int, new_level: int):
+        """Callback fired by UserLevelSystem when the user gains a level."""
+        try:
+            title = self.level_system.get_title_for_level() if self.level_system else ''
+            self.statusBar().showMessage(
+                f"🎉 Level up! {old_level} → {new_level}  {title}", 8000
+            )
+            # Award currency bonus for levelling up
+            if self.currency_system:
+                bonus = new_level * self._COINS_PER_LEVEL
+                self.currency_system.earn_money(bonus, f'level_up_{new_level}')
+        except Exception as _e:
+            logger.debug(f"Level-up callback error: {_e}")
+
+    def _on_quest_completed(self, quest_id: str, reward_message: str):
+        """Callback fired when a quest is completed (QuestSystem.quest_completed signal)."""
+        try:
+            self.statusBar().showMessage(f"📜 Quest completed: {reward_message}", 6000)
+            # Play sound event if sound manager available
+            if self.sound_manager:
+                try:
+                    from features.sound_manager import SoundEvent
+                    self.sound_manager.play_sound(SoundEvent.ACHIEVEMENT)
+                except Exception:
+                    pass
+            # Award XP for quest completion
+            if self.level_system:
+                try:
+                    self.level_system.add_xp(50, 'quest_completed')
+                    self.level_system.save()
+                except Exception:
+                    pass
+            # Award currency reward
+            if self.currency_system:
+                try:
+                    self.currency_system.earn_money(100, f'quest_{quest_id}')
+                except Exception:
+                    pass
+            logger.info(f"Quest completed: {quest_id} — {reward_message}")
+        except Exception as _e:
+            logger.debug(f"Quest completion callback error: {_e}")
+
+    def _on_quest_progress(self, quest_id: str, current: int, goal: int):
+        """Show quest progress in the status bar."""
+        try:
+            self.statusBar().showMessage(
+                f"📜 Quest '{quest_id}': {current}/{goal}", 2000
+            )
+        except Exception as _e:
+            logger.debug(f"Quest progress callback error: {_e}")
+
+    def _on_minigame_completed(self, game_id: str, score: int):
+        """Handle minigame completion — award XP and currency."""
+        try:
+            self.statusBar().showMessage(
+                f"🎮 {game_id} complete! Score: {score}", 5000
+            )
+            self.log(f"🎮 Minigame '{game_id}' completed with score {score}")
+            if self.level_system:
+                xp = max(1, score // 10)
+                self.level_system.add_xp(xp, f'minigame_{game_id}')
+                self.level_system.save()
+            if self.currency_system:
+                coins = max(1, score // 5)
+                self.currency_system.earn_money(coins, f'minigame_{game_id}')
+            if self.achievement_system:
+                self.achievement_system.unlock_achievement('minigame_player')
+                if score >= 100:
+                    self.achievement_system.unlock_achievement('minigame_master')
+            if self.quest_system:
+                self.quest_system.update_quest_progress('minigame_enjoyer')
+        except Exception as _e:
+            logger.debug(f"Minigame completed callback error: {_e}")
+
+    def _on_closet_item_equipped(self, item_data: dict):
+        """Handle item equipped from closet display — forward to panda widget."""
+        try:
+            item_id = item_data.get('id', '')
+            item_name = item_data.get('name', item_id)
+            logger.info(f"Equipping closet item: {item_name}")
+            self.statusBar().showMessage(f"👔 Equipped: {item_name}", 3000)
+            if self.panda_widget and hasattr(self.panda_widget, 'equip_item'):
+                self.panda_widget.equip_item(item_data)
+            if self.achievement_system:
+                self.achievement_system.unlock_achievement('fashionista_fur')
+        except Exception as _e:
+            logger.debug(f"Closet item equipped callback error: {_e}")
+
+    def _on_file_browser_file_selected(self, path):
+        """Handle file selection in the file browser tab."""
+        try:
+            self.log(f"📄 File selected: {path}")
+            self.statusBar().showMessage(f"Selected: {path}", 3000)
+            # Update live preview pane if present
+            if self.live_preview_widget:
+                try:
+                    _pix = QPixmap(str(path))
+                    if not _pix.isNull():
+                        self.live_preview_widget.set_original_image(_pix)
+                except Exception:
+                    pass
+            # Show in standalone PreviewViewer when double-clicked (path non-empty)
+            if self.preview_viewer and path:
+                try:
+                    self.preview_viewer.show_preview(path)
+                except Exception:
+                    pass
+        except Exception as _e:
+            logger.debug(f"File browser file_selected error: {_e}")
+
+    def _on_file_browser_folder_changed(self, path):
+        """Handle folder navigation in the file browser tab."""
+        try:
+            logger.debug(f"File browser folder changed to: {path}")
+            self.statusBar().showMessage(f"📁 Browsing: {path}", 2000)
+        except Exception as _e:
+            logger.debug(f"File browser folder_changed error: {_e}")
+
+    def _on_panda_should_hide(self, should_hide: bool):
+        """Show/hide the panda overlay when environment events require it."""
+        try:
+            overlay = getattr(self, 'panda_overlay', None)
+            if overlay and hasattr(overlay, 'setVisible'):
+                overlay.setVisible(not should_hide)
+            logger.debug(f"Panda overlay hide={should_hide}")
+        except Exception as _e:
+            logger.debug(f"panda_should_hide callback error: {_e}")
+
+    def _on_panda_should_react(self, event_type: str, event_data):
+        """Forward environment events to the panda mood system for reactions."""
+        try:
+            if self.panda_mood_system:
+                self.panda_mood_system.on_user_interaction(event_type)
+            logger.debug(f"Panda react: {event_type}")
+        except Exception as _e:
+            logger.debug(f"panda_should_react callback error: {_e}")
+
+    def _save_profile(self):
+        """Save current organization settings as a named profile."""
+        try:
+            if not self.profile_manager:
+                QMessageBox.information(self, "Profiles", "Profile manager not available.")
+                return
+            name, ok = QInputDialog.getText(self, "Save Profile", "Profile name:")
+            if ok and name.strip():
+                if self.profile_manager.save_profile(name.strip()):
+                    self.statusBar().showMessage(f"✅ Profile saved: {name.strip()}", 3000)
+                    logger.info(f"Profile saved: {name.strip()}")
+                else:
+                    QMessageBox.warning(self, "Save Profile", f"Failed to save profile '{name.strip()}'.")
+        except Exception as e:
+            logger.error(f"Error saving profile: {e}", exc_info=True)
+
+    def _load_profile(self):
+        """Load a named profile from the profile manager."""
+        try:
+            if not self.profile_manager:
+                QMessageBox.information(self, "Profiles", "Profile manager not available.")
+                return
+            profiles = self.profile_manager.list_profiles()
+            if not profiles:
+                QMessageBox.information(self, "Load Profile", "No saved profiles found.")
+                return
+            names = [p.get('name', str(p)) for p in profiles]
+            name, ok = QInputDialog.getItem(self, "Load Profile", "Select profile:", names, 0, False)
+            if ok and name:
+                profile = self.profile_manager.load_profile(name)
+                if profile:
+                    self.statusBar().showMessage(f"✅ Profile loaded: {name}", 3000)
+                    logger.info(f"Profile loaded: {name}")
+                else:
+                    QMessageBox.warning(self, "Load Profile", f"Failed to load profile '{name}'.")
+        except Exception as e:
+            logger.error(f"Error loading profile: {e}", exc_info=True)
+
+    def _create_restore_point(self):
+        """Create a manual backup restore point via BackupManager."""
+        try:
+            if not self.backup_manager:
+                QMessageBox.information(self, "Backup", "Backup manager not available.")
+                return
+            name, ok = QInputDialog.getText(self, "Create Restore Point", "Restore point name (optional):")
+            if ok:
+                label = name.strip() or "manual"
+                result = self.backup_manager.create_restore_point(label=label)
+                if result:
+                    self.statusBar().showMessage(f"✅ Restore point created: {label}", 3000)
+                    logger.info(f"Restore point created: {label}")
+                else:
+                    QMessageBox.warning(self, "Create Restore Point", "Failed to create restore point.")
+        except Exception as e:
+            logger.error(f"Error creating restore point: {e}", exc_info=True)
+
+    def _find_duplicate_textures(self):
+        """Find and display duplicate/near-duplicate textures using SimilaritySearch."""
+        try:
+            if not self.duplicate_detector:
+                QMessageBox.information(
+                    self, "Find Duplicates",
+                    "SimilaritySearch not available.\n"
+                    "Install torch + faiss to enable duplicate detection."
+                )
+                return
+            if not self.input_path:
+                QMessageBox.warning(self, "Find Duplicates", "Please select an input folder first.")
+                return
+            self.statusBar().showMessage("🔍 Scanning for duplicates…")
+            groups = self.duplicate_detector.find_duplicates(threshold=0.95)
+            if not groups:
+                QMessageBox.information(self, "Find Duplicates", "No duplicate textures found.")
+            else:
+                msg = "\n".join(
+                    f"Group {i + 1}: {len(g)} files ({g[0]}…)"
+                    for i, g in enumerate(groups[:10])
+                )
+                if len(groups) > 10:
+                    msg += f"\n…and {len(groups) - 10} more groups"
+                QMessageBox.information(self, f"Found {len(groups)} Duplicate Group(s)", msg)
+            self.statusBar().showMessage(f"✅ Duplicate scan complete — {len(groups)} group(s)", 4000)
+            logger.info(f"Duplicate scan complete: {len(groups)} group(s)")
+        except Exception as e:
+            logger.error(f"Duplicate scan error: {e}", exc_info=True)
+            QMessageBox.critical(self, "Find Duplicates", f"Error during duplicate scan:\n{e}")
+
+    def _analyze_selected_texture(self):
+        """Analyze a user-selected texture file and display results."""
+        try:
+            from PyQt6.QtWidgets import QFileDialog
+            path_str, _ = QFileDialog.getOpenFileName(
+                self, "Select Texture to Analyze", str(self.input_path or ""),
+                "Images (*.png *.dds *.tga *.jpg *.bmp *.tif *.tiff);;All Files (*)"
+            )
+            if not path_str:
+                return
+            if not self.texture_analyzer:
+                QMessageBox.information(
+                    self, "Analyze Texture",
+                    "TextureAnalyzer not available.\n"
+                    "Install Pillow to enable texture analysis."
+                )
+                return
+            from pathlib import Path as _Path
+            analysis = self.texture_analyzer.analyze(_Path(path_str))
+            lines = [f"<b>{Path(path_str).name}</b>"]
+            for key, val in list(analysis.items())[:20]:
+                if isinstance(val, float):
+                    val = f"{val:.3f}"
+                lines.append(f"<b>{key}:</b> {val}")
+            QMessageBox.information(
+                self, "Texture Analysis",
+                "<br>".join(lines)
+            )
+            logger.info(f"Texture analyzed: {path_str}")
+        except Exception as e:
+            logger.error(f"Texture analysis error: {e}", exc_info=True)
+            QMessageBox.critical(self, "Analyze Texture", f"Error during analysis:\n{e}")
+
     def show_about(self):
         """Show about dialog."""
         QMessageBox.about(
@@ -1661,6 +3606,68 @@ class TextureSorterMainWindow(QMainWindow):
                 event.ignore()
         else:
             event.accept()
+
+        if event.isAccepted():
+            # Stop background services gracefully
+            try:
+                if self.auto_backup:
+                    self.auto_backup.stop()
+            except Exception:
+                pass
+            try:
+                if self.level_system:
+                    self.level_system.save()
+            except Exception:
+                pass
+            try:
+                if self.perf_dashboard:
+                    self.perf_dashboard.stop()
+            except Exception:
+                pass
+            try:
+                if self.panda_stats:
+                    _stats_path = Path(__file__).parent / 'app_data' / 'panda_stats.json'
+                    self.panda_stats.save_to_file(str(_stats_path))
+            except Exception:
+                pass
+            try:
+                if self.batch_queue:
+                    self.batch_queue.stop()
+            except Exception:
+                pass
+            try:
+                if self.threading_manager:
+                    self.threading_manager.stop()
+            except Exception:
+                pass
+            # Save skill tree progression
+            try:
+                if self.skill_tree:
+                    import json as _json
+                    self._skill_tree_path.parent.mkdir(parents=True, exist_ok=True)
+                    self._skill_tree_path.write_text(
+                        _json.dumps(self.skill_tree.to_dict(), indent=2), encoding='utf-8'
+                    )
+            except Exception:
+                pass
+            # Save adventure level progression
+            try:
+                if self.adventure_level:
+                    self.adventure_level.save_to_file(self._adventure_level_path)
+            except Exception:
+                pass
+            # Save weapon collection state
+            try:
+                if self.weapon_collection:
+                    self.weapon_collection.save_to_file(self._weapon_collection_path)
+            except Exception:
+                pass
+            # Close texture database cleanly
+            try:
+                if self.database:
+                    self.database.close()
+            except Exception:
+                pass
     
     def on_tab_detached(self, index: int, tab_name: str, widget: QWidget):
         """Handle tab being dragged out - create floating dock widget."""
@@ -1817,12 +3824,12 @@ class TextureSorterMainWindow(QMainWindow):
             geometry = self.saveGeometry()
             state = self.saveState()
             
-            config.set('window', 'geometry', geometry.toHex().data().decode())
-            config.set('window', 'state', state.toHex().data().decode())
+            config.set('window', 'geometry', value=geometry.toHex().data().decode())
+            config.set('window', 'state', value=state.toHex().data().decode())
             
             # Save docked tabs info
             docked_tabs = list(self.docked_widgets.keys())
-            config.set('window', 'docked_tabs', ','.join(docked_tabs))
+            config.set('window', 'docked_tabs', value=','.join(docked_tabs))
             
             # Save tool dock visibility
             tool_dock_states = {}
@@ -1831,7 +3838,7 @@ class TextureSorterMainWindow(QMainWindow):
                     'visible': dock.isVisible(),
                     'floating': dock.isFloating(),
                 }
-            config.set('window', 'tool_dock_states', str(tool_dock_states))
+            config.set('window', 'tool_dock_states', value=str(tool_dock_states))
             
             config.save()
             logger.info("Dock layout saved")
@@ -2118,11 +4125,26 @@ def log_startup_diagnostics(window):
 
 def main():
     """Main entry point."""
+    # Optimize memory before creating any Qt objects
+    _startup_validation = None
+    try:
+        import startup_validation as _startup_validation
+        _startup_validation.optimize_memory()
+    except Exception:
+        pass
+
     # Create Qt application
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setOrganizationName("JosephsDeadish")
     app.setOrganizationDomain("github.com/JosephsDeadish")
+
+    # Validate frozen-EXE extraction integrity (no-op in dev mode)
+    try:
+        if _startup_validation and not _startup_validation.run_startup_validation():
+            sys.exit(1)
+    except Exception:
+        pass
     
     # Set application icon for taskbar
     icon_path = Path(__file__).parent / 'assets' / 'icon.ico'
@@ -2146,6 +4168,15 @@ def main():
     window = TextureSorterMainWindow()
     window.show()
     
+    # Show first-run tutorial if this is a new installation
+    try:
+        from features.tutorial_system import TutorialManager
+        _tm = TutorialManager(master_window=window, config=config)
+        if _tm.should_show_tutorial():
+            _tm.start_tutorial(window)
+    except Exception as _te:
+        logger.debug(f"Tutorial check skipped: {_te}")
+
     # Log startup
     logger.info(f"{APP_NAME} v{APP_VERSION} started with Qt6")
     window.log(f"🐼 {APP_NAME} v{APP_VERSION}")

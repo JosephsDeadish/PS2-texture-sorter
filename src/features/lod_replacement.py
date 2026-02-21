@@ -12,9 +12,17 @@ from typing import Dict, List, Optional, Tuple, Set
 from dataclasses import dataclass
 from collections import defaultdict
 from threading import Lock
-from PIL import Image
 
 logger = logging.getLogger(__name__)
+
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    Image = None  # type: ignore[assignment]
+    logger.warning("Pillow not available — LOD resolution detection disabled. "
+                   "Install with: pip install Pillow")
 
 
 @dataclass
@@ -215,6 +223,9 @@ class LODReplacer:
             
             # Get image dimensions
             try:
+                if not HAS_PIL:
+                    logger.warning(f"Pillow not available, cannot read dimensions for {file_path}")
+                    return None
                 with Image.open(file_path) as img:
                     width, height = img.size
                     format_name = img.format or file_path.suffix[1:].upper()

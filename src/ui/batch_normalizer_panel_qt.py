@@ -3,17 +3,85 @@ Batch Normalizer UI Panel - PyQt6 Version
 Provides UI for batch format normalization with live preview
 """
 
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QFileDialog, QMessageBox, QProgressBar,
-    QComboBox, QSpinBox, QCheckBox, QLineEdit, QGroupBox
-)
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
-from PyQt6.QtGui import QPixmap, QImage
+
+from __future__ import annotations
+try:
+    from PyQt6.QtWidgets import (
+        QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+        QScrollArea, QFrame, QFileDialog, QMessageBox, QProgressBar,
+        QComboBox, QSpinBox, QCheckBox, QLineEdit, QGroupBox
+    )
+    from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
+    from PyQt6.QtGui import QPixmap, QImage
+    PYQT_AVAILABLE = True
+except ImportError:
+    PYQT_AVAILABLE = False
+    QWidget = object
+    QFrame = object
+    QThread = object
+    QScrollArea = object
+    QGroupBox = object
+    class _SignalStub:  # noqa: E301
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
+    class Qt:
+        class AlignmentFlag:
+            AlignLeft = AlignRight = AlignCenter = AlignTop = AlignBottom = AlignHCenter = AlignVCenter = 0
+        class WindowType:
+            FramelessWindowHint = WindowStaysOnTopHint = Tool = Window = Dialog = 0
+        class CursorShape:
+            ArrowCursor = PointingHandCursor = BusyCursor = WaitCursor = CrossCursor = 0
+        class DropAction:
+            CopyAction = MoveAction = IgnoreAction = 0
+        class Key:
+            Key_Escape = Key_Return = Key_Space = Key_Delete = Key_Up = Key_Down = Key_Left = Key_Right = 0
+        class ScrollBarPolicy:
+            ScrollBarAlwaysOff = ScrollBarAsNeeded = ScrollBarAlwaysOn = 0
+        class ItemFlag:
+            ItemIsEnabled = ItemIsSelectable = ItemIsEditable = 0
+        class CheckState:
+            Unchecked = Checked = PartiallyChecked = 0
+        class Orientation:
+            Horizontal = Vertical = 0
+        class SortOrder:
+            AscendingOrder = DescendingOrder = 0
+        class MatchFlag:
+            MatchExactly = MatchContains = 0
+        class ItemDataRole:
+            DisplayRole = UserRole = DecorationRole = 0
+    class QPixmap:
+        def __init__(self, *a): pass
+        def isNull(self): return True
+    class QImage:
+        def __init__(self, *a): pass
+    class QTimer:
+        def __init__(self, *a): pass
+        def start(self, *a): pass
+        def stop(self): pass
+        timeout = property(lambda self: type("S", (), {"connect": lambda s,f: None, "emit": lambda s: None})())
+    QCheckBox = object
+    QComboBox = object
+    QFileDialog = object
+    QHBoxLayout = object
+    QLabel = object
+    QLineEdit = object
+    QMessageBox = object
+    QProgressBar = object
+    QPushButton = object
+    QSpinBox = object
+    QVBoxLayout = object
 from pathlib import Path
 from typing import List, Optional
 import logging
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 from tools.batch_normalizer import (
     BatchFormatNormalizer, NormalizationSettings,
@@ -65,6 +133,8 @@ class NormalizationWorker(QThread):
 
 class BatchNormalizerPanelQt(QWidget):
     """PyQt6 panel for batch format normalization."""
+
+    finished = pyqtSignal(bool, str)  # success, message
     
     def __init__(self, parent=None, tooltip_manager=None):
         super().__init__(parent)

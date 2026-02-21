@@ -4,9 +4,16 @@ Object segmentation for texture analysis
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
 from typing import List, Dict, Any, Union, Optional
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -14,27 +21,33 @@ logger = logging.getLogger(__name__)
 try:
     import torch
     from PIL import Image
-    # Note: SAM requires segment-anything package
-    # pip install git+https://github.com/facebookresearch/segment-anything.git
-    # from segment_anything import sam_model_registry, SamPredictor
+    # Try to import segment-anything; it requires:
+    #   pip install git+https://github.com/facebookresearch/segment-anything.git
+    try:
+        from segment_anything import sam_model_registry, SamPredictor, SamAutomaticMaskGenerator
+        HAS_SAM = True
+    except ImportError:
+        HAS_SAM = False
     HAS_TORCH = True
 except ImportError as e:
     HAS_TORCH = False
+    HAS_SAM = False
     logger.warning(f"PyTorch not available: {e}")
     logger.warning("SAM model will be disabled.")
 except OSError as e:
     # Handle DLL initialization errors (e.g., missing CUDA DLLs)
     HAS_TORCH = False
+    HAS_SAM = False
     logger.warning(f"PyTorch DLL initialization failed: {e}")
     logger.warning("SAM model will be disabled.")
 except Exception as e:
     HAS_TORCH = False
+    HAS_SAM = False
     logger.warning(f"Unexpected error loading dependencies: {e}")
     logger.warning("SAM model will be disabled.")
 
-# SAM is not currently available - requires additional installation
-# This is a stub implementation for future use
-AVAILABLE = False
+# SAM is available only when both torch AND segment-anything are installed
+AVAILABLE = HAS_TORCH and HAS_SAM
 
 
 class SAMModel:
@@ -81,13 +94,18 @@ class SAMModel:
             self.device = 'cpu'
             logger.info("CUDA check failed, using CPU device")
         
-        # Load SAM model
-        # from segment_anything import sam_model_registry, SamPredictor
-        # self.sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
-        # self.sam.to(device=self.device)
-        # self.predictor = SamPredictor(self.sam)
+        # Load SAM model from checkpoint
+        try:
+            self.sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+            self.sam.to(device=self.device)
+            self.predictor = SamPredictor(self.sam)
+        except (FileNotFoundError, RuntimeError, OSError) as e:
+            raise RuntimeError(
+                f"Failed to load SAM checkpoint '{checkpoint_path}': {e}\n"
+                "Download model weights from https://github.com/facebookresearch/segment-anything#model-checkpoints"
+            ) from e
         
-        logger.info(f"SAM model initialized: {model_type}")
+        logger.info(f"SAM model initialized: {model_type} on {self.device}")
     
     def segment_image(
         self,
@@ -100,34 +118,42 @@ class SAMModel:
         
         Args:
             image: Input image
-            points: Optional point prompts
+            points: Optional point prompts (Nx2 array of xy coordinates)
             labels: Optional point labels (1 for foreground, 0 for background)
             
         Returns:
             List of segments with masks and metadata
         """
+        if not HAS_NUMPY:
+            logger.error("numpy required for SAM segmentation")
+            return []
+
         # Load image if path
         if isinstance(image, Path):
             image = np.array(Image.open(image).convert('RGB'))
         elif isinstance(image, Image.Image):
             image = np.array(image)
         
-        # Set image
-        # self.predictor.set_image(image)
+        # Set image in predictor
+        self.predictor.set_image(image)
         
         # Generate segments
-        # if points is not None:
-        #     masks, scores, logits = self.predictor.predict(
-        #         point_coords=points,
-        #         point_labels=labels,
-        #         multimask_output=True
-        #     )
-        # else:
-        #     # Auto-generate masks
-        #     from segment_anything import SamAutomaticMaskGenerator
-        #     mask_generator = SamAutomaticMaskGenerator(self.sam)
-        #     masks = mask_generator.generate(image)
-        
-        # Placeholder return
-        logger.warning("SAM segmentation not yet fully implemented")
-        return []
+        if points is not None:
+            masks, scores, logits = self.predictor.predict(
+                point_coords=points,
+                point_labels=labels,
+                multimask_output=True
+            )
+            return [
+                {
+                    'mask': masks[i],
+                    'score': float(scores[i]),
+                    'logits': logits[i],
+                }
+                for i in range(len(masks))
+            ]
+        else:
+            # Auto-generate masks covering the entire image
+            mask_generator = SamAutomaticMaskGenerator(self.sam)
+            masks = mask_generator.generate(image)
+            return masks

@@ -3,6 +3,8 @@ PyQt6 Weapon Positioning System
 Replaces canvas-based weapon positioning with QGraphicsView
 """
 
+
+from __future__ import annotations
 try:
     from PyQt6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsPixmapItem,
                                  QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
@@ -12,6 +14,23 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QGraphicsView(QWidget):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
+
 
 
 class WeaponPositioningView(QGraphicsView):

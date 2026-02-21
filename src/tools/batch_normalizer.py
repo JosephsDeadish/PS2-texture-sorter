@@ -4,12 +4,24 @@ Normalize images to consistent format, size, and naming patterns
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any, Callable
 from dataclasses import dataclass
-from PIL import Image, ImageOps, ImageDraw
+try:
+    from PIL import Image, ImageOps, ImageDraw
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 from enum import Enum
 import re
 

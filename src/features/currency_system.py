@@ -144,7 +144,11 @@ class CurrencySystem:
     def can_afford(self, amount: int) -> bool:
         """Check if can afford amount."""
         return self.balance >= amount
-    
+
+    def subtract(self, _unused_currency_name: str, amount: int) -> bool:
+        """Alias for spend_money(); ignores the currency-name argument."""
+        return self.spend_money(amount, reason=f'subtract:{_unused_currency_name}')
+
     def get_balance(self) -> int:
         """Get current balance."""
         return self.balance

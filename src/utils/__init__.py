@@ -4,26 +4,29 @@ Includes caching, memory management, performance utilities, and image processing
 """
 
 from .cache_manager import CacheManager
-
-# Optional imports (may not be available)
-try:
-    from .memory_manager import MemoryManager
-except ImportError:
-    MemoryManager = None
-
-try:
-    from .performance import PerformanceMonitor
-except ImportError:
-    PerformanceMonitor = None
-
-try:
-    from . import image_processing
-except ImportError:
-    image_processing = None
+from .memory_manager import MemoryManager
+from .performance import PerformanceMonitor, PerformanceMetrics, LazyLoader, JobScheduler
+from .archive_handler import ArchiveHandler, ArchiveFormat
+from .metadata_handler import MetadataHandler
+from .gpu_detector import GPUDetector, GPUDevice, GPUVendor
+from .system_detection import SystemDetector, SystemCapabilities, PerformanceModeManager
+from . import image_processing
 
 __all__ = [
     'CacheManager',
-    'MemoryManager', 
+    'MemoryManager',
     'PerformanceMonitor',
-    'image_processing'
+    'PerformanceMetrics',
+    'LazyLoader',
+    'JobScheduler',
+    'ArchiveHandler',
+    'ArchiveFormat',
+    'MetadataHandler',
+    'GPUDetector',
+    'GPUDevice',
+    'GPUVendor',
+    'SystemDetector',
+    'SystemCapabilities',
+    'PerformanceModeManager',
+    'image_processing',
 ]

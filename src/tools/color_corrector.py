@@ -9,8 +9,17 @@ Provides various color correction and enhancement features:
 - LUT support (.cube files)
 """
 
+from __future__ import annotations
+
 import logging
-from PIL import Image
+
+logger = logging.getLogger(__name__)
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 try:
     import numpy as np
     HAS_NUMPY = True
@@ -22,7 +31,6 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, List
 import re
 
-logger = logging.getLogger(__name__)
 
 
 class ColorCorrector:

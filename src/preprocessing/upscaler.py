@@ -4,12 +4,30 @@ Supports bicubic, ESRGAN, Real-ESRGAN, and native Lanczos upscaling
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Optional, Union
 from pathlib import Path
-import numpy as np
-from PIL import Image
-import cv2
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
+
 
 logger = logging.getLogger(__name__)
 

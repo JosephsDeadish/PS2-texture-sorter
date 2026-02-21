@@ -4,6 +4,8 @@ Simple text editor for recording notes, reminders, and project info
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import List, Optional
@@ -21,7 +23,16 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
-    QWidget = object
+    class QWidget:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
 
 logger = logging.getLogger(__name__)
 

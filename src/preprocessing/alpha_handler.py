@@ -4,7 +4,11 @@ Separate, analyze, and manipulate alpha channels in textures
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from typing import Optional, Tuple, Dict, Any
 try:
     import numpy as np
@@ -13,9 +17,14 @@ except ImportError:
     HAS_NUMPY = False
     logger.error("numpy not available - limited functionality")
     logger.error("Install with: pip install numpy")
-import cv2
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
 
-logger = logging.getLogger(__name__)
+
 
 
 class AlphaChannelHandler:
@@ -31,7 +40,7 @@ class AlphaChannelHandler:
     
     def __init__(self):
         """Initialize alpha channel handler."""
-        pass
+        self.logger = logging.getLogger(__name__)
     
     def separate_alpha(
         self,
@@ -289,3 +298,6 @@ class AlphaChannelHandler:
         mask = (diff > 10).astype(np.uint8) * 255
         
         return mask
+
+# Alias for backwards compatibility
+AlphaHandler = AlphaChannelHandler

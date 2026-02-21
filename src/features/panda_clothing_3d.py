@@ -13,6 +13,8 @@ Features:
     - Dynamic animations (tilt, squash, stretch)
 """
 
+from __future__ import annotations
+
 try:
     from OpenGL.GL import *
     from OpenGL.GLU import *
@@ -20,11 +22,15 @@ try:
     OPENGL_AVAILABLE = True
 except ImportError:
     OPENGL_AVAILABLE = False
+    np = None
 
 import math
 from enum import Enum
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
+
+# Identity matrix used as a safe fallback when OpenGL/numpy are unavailable
+_IDENTITY_MATRIX_4X4 = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
 
 
 class BoneType(Enum):
@@ -81,6 +87,8 @@ class Bone:
     
     def get_world_transform(self):
         """Get world space transformation matrix."""
+        if not OPENGL_AVAILABLE:
+            return _IDENTITY_MATRIX_4X4
         # Build local transform
         local_transform = self._build_transform_matrix()
         
@@ -216,7 +224,7 @@ class ClothingMesh:
 
 
     def _draw_cube(self, sx, sy, sz):
-        """Draw a simple cube."""
+        """Draw a simple cube with all 6 faces."""
         glBegin(GL_QUADS)
         # Front
         glVertex3f(-sx, -sy, sz)
@@ -228,7 +236,26 @@ class ClothingMesh:
         glVertex3f(-sx, sy, -sz)
         glVertex3f(sx, sy, -sz)
         glVertex3f(sx, -sy, -sz)
-        # ... (other faces omitted for brevity)
+        # Top
+        glVertex3f(-sx, sy, -sz)
+        glVertex3f(-sx, sy, sz)
+        glVertex3f(sx, sy, sz)
+        glVertex3f(sx, sy, -sz)
+        # Bottom
+        glVertex3f(-sx, -sy, -sz)
+        glVertex3f(sx, -sy, -sz)
+        glVertex3f(sx, -sy, sz)
+        glVertex3f(-sx, -sy, sz)
+        # Right
+        glVertex3f(sx, -sy, -sz)
+        glVertex3f(sx, sy, -sz)
+        glVertex3f(sx, sy, sz)
+        glVertex3f(sx, -sy, sz)
+        # Left
+        glVertex3f(-sx, -sy, -sz)
+        glVertex3f(-sx, -sy, sz)
+        glVertex3f(-sx, sy, sz)
+        glVertex3f(-sx, sy, -sz)
         glEnd()
 
 
@@ -254,6 +281,8 @@ class SpriteAccessory:
     
     def update_physics(self, delta_time, panda_velocity, wind_force=(0, 0, 0)):
         """Update physics simulation."""
+        if not OPENGL_AVAILABLE:
+            return
         # Convert to mutable
         vx, vy, vz = self.velocity
         
@@ -505,6 +534,8 @@ class ClothingSystem:
     
     def update(self, delta_time, panda_velocity, animation_state, animation_phase):
         """Update clothing system."""
+        if not OPENGL_AVAILABLE:
+            return
         # Update skeleton animation
         self.skeleton.update_animation(animation_state, animation_phase)
         
@@ -612,7 +643,9 @@ class ClothingSystem:
 # Factory functions for common clothing items
 
 def create_shirt(color=(0.8, 0.2, 0.2)):
-    """Create a simple shirt mesh."""
+    """Create a simple shirt mesh.  Requires OpenGL/numpy."""
+    if not OPENGL_AVAILABLE:
+        return None
     # Simplified shirt vertices (torso-shaped)
     vertices = np.array([
         # Front

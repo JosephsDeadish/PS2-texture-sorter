@@ -1,15 +1,67 @@
+from __future__ import annotations
 """
 Performance Dashboard - Pure Qt Implementation
 Real-time monitoring of processing speed, memory, and queue status.
 Uses PyQt6 with QTimer for updates. Pure Qt implementation.
 """
 
-from PyQt6.QtWidgets import (
-    QWidget, QFrame, QLabel, QSlider, QVBoxLayout, QHBoxLayout, QGridLayout
-)
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont
-import psutil
+try:
+    from PyQt6.QtWidgets import (
+        QWidget, QFrame, QLabel, QSlider, QVBoxLayout, QHBoxLayout,
+        QGridLayout, QPushButton, QTextEdit,
+    )
+    from PyQt6.QtCore import Qt, QTimer
+    from PyQt6.QtGui import QFont
+    PYQT_AVAILABLE = True
+except ImportError:
+    PYQT_AVAILABLE = False
+    QWidget = object
+    QFrame = object
+    class Qt:
+        class AlignmentFlag:
+            AlignLeft = AlignRight = AlignCenter = AlignTop = AlignBottom = AlignHCenter = AlignVCenter = 0
+        class WindowType:
+            FramelessWindowHint = WindowStaysOnTopHint = Tool = Window = Dialog = 0
+        class CursorShape:
+            ArrowCursor = PointingHandCursor = BusyCursor = WaitCursor = CrossCursor = 0
+        class DropAction:
+            CopyAction = MoveAction = IgnoreAction = 0
+        class Key:
+            Key_Escape = Key_Return = Key_Space = Key_Delete = Key_Up = Key_Down = Key_Left = Key_Right = 0
+        class ScrollBarPolicy:
+            ScrollBarAlwaysOff = ScrollBarAsNeeded = ScrollBarAlwaysOn = 0
+        class ItemFlag:
+            ItemIsEnabled = ItemIsSelectable = ItemIsEditable = 0
+        class CheckState:
+            Unchecked = Checked = PartiallyChecked = 0
+        class Orientation:
+            Horizontal = Vertical = 0
+        class SortOrder:
+            AscendingOrder = DescendingOrder = 0
+        class MatchFlag:
+            MatchExactly = MatchContains = 0
+        class ItemDataRole:
+            DisplayRole = UserRole = DecorationRole = 0
+    class QFont:
+        def __init__(self, *a): pass
+    class QTimer:
+        def __init__(self, *a): pass
+        def start(self, *a): pass
+        def stop(self): pass
+        timeout = property(lambda self: type("S", (), {"connect": lambda s,f: None, "emit": lambda s: None})())
+    QGridLayout = object
+    QHBoxLayout = object
+    QLabel = object
+    QPushButton = object
+    QSlider = object
+    QTextEdit = object
+    QVBoxLayout = object
+try:
+    import psutil
+    HAS_PSUTIL = True
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+    HAS_PSUTIL = False
 import time
 from typing import Dict, Optional
 from collections import deque
@@ -17,6 +69,15 @@ from datetime import timedelta
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Import profiling tools
+try:
+    from core.performance_manager import OperationProfiler, ProfileResult
+    PROFILER_AVAILABLE = True
+except ImportError:
+    OperationProfiler = None  # type: ignore[assignment,misc]
+    ProfileResult = None  # type: ignore[assignment]
+    PROFILER_AVAILABLE = False
 
 # Try to import tooltip system
 try:
@@ -68,19 +129,25 @@ class PerformanceMetrics:
         self.timestamps.append(now)
         
         # Memory usage
-        process = psutil.Process()
-        memory_mb = process.memory_info().rss / (1024 * 1024)
+        if HAS_PSUTIL:
+            process = psutil.Process()
+            memory_mb = process.memory_info().rss / (1024 * 1024)
+        else:
+            memory_mb = 0.0
         self.memory_usage.append(memory_mb)
         self.peak_memory = max(self.peak_memory, memory_mb)
         
         # CPU usage
-        try:
-            cpu_percent = process.cpu_percent(interval=None)
-            self.cpu_usage.append(cpu_percent)
-            self.peak_cpu = max(self.peak_cpu, cpu_percent)
-        except Exception as e:
-            # If CPU monitoring fails, append 0
-            logger.debug(f"Could not get CPU usage: {e}")
+        if HAS_PSUTIL:
+            try:
+                cpu_percent = psutil.Process().cpu_percent(interval=None)
+                self.cpu_usage.append(cpu_percent)
+                self.peak_cpu = max(self.peak_cpu, cpu_percent)
+            except Exception as e:
+                # If CPU monitoring fails, append 0
+                logger.debug(f"Could not get CPU usage: {e}")
+                self.cpu_usage.append(0)
+        else:
             self.cpu_usage.append(0)
         
         # Processing speed (files per second)
@@ -161,7 +228,7 @@ class PerformanceDashboard(QFrame):
         self.update_timer.timeout.connect(self._update)
         
         # Parallel processing control
-        self.max_workers = psutil.cpu_count()
+        self.max_workers = psutil.cpu_count() if HAS_PSUTIL else 4
         self.current_workers = 1
         
         self._tooltips = []
@@ -231,7 +298,7 @@ class PerformanceDashboard(QFrame):
         self.cpu_label.setFont(normal_font)
         resources_layout.addWidget(self.cpu_label)
         
-        available_memory = psutil.virtual_memory().available / (1024 * 1024 * 1024)
+        available_memory = psutil.virtual_memory().available / (1024 * 1024 * 1024) if HAS_PSUTIL else 0.0
         self.available_label = QLabel(f"Available: {available_memory:.1f} GB")
         self.available_label.setFont(normal_font)
         resources_layout.addWidget(self.available_label)
@@ -303,7 +370,56 @@ class PerformanceDashboard(QFrame):
         parallel_layout.addWidget(self.workers_label)
         
         main_layout.addWidget(parallel_frame)
-    
+
+        # ---- Profiling Panel ----
+        if PROFILER_AVAILABLE:
+            prof_frame = QFrame()
+            prof_frame.setFrameStyle(QFrame.Shape.StyledPanel | QFrame.Shadow.Raised)
+            prof_layout = QVBoxLayout(prof_frame)
+
+            prof_header = QHBoxLayout()
+            prof_title = QLabel("🔬 Profiling Tools")
+            prof_title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+            prof_header.addWidget(prof_title)
+            prof_header.addStretch()
+
+            self.profile_btn = QPushButton("▶ Start Profile")
+            self.profile_btn.setFixedWidth(140)
+            self.profile_btn.setToolTip(
+                "Run cProfile + tracemalloc on the next sort operation"
+            )
+            self.profile_btn.clicked.connect(self._toggle_profiling)
+            prof_header.addWidget(self.profile_btn)
+
+            self.optimize_mem_btn = QPushButton("🗑 Free Memory")
+            self.optimize_mem_btn.setFixedWidth(120)
+            self.optimize_mem_btn.setToolTip("Run GC and trim process working set")
+            self.optimize_mem_btn.clicked.connect(self._run_optimize_memory)
+            prof_header.addWidget(self.optimize_mem_btn)
+
+            prof_layout.addLayout(prof_header)
+
+            self.profile_output = QTextEdit()
+            self.profile_output.setReadOnly(True)
+            self.profile_output.setMaximumHeight(120)
+            self.profile_output.setPlaceholderText(  # type: ignore[attr-defined]
+                "Profile results will appear here after a sort operation…"
+            )
+            self.profile_output.setFont(QFont("Courier New", 9))
+            prof_layout.addWidget(self.profile_output)
+
+            main_layout.addWidget(prof_frame)
+
+            # Internal profiler state
+            self._active_profiler: Optional[OperationProfiler] = None
+            self._profiling_active: bool = False
+        else:
+            self.profile_btn = None
+            self.optimize_mem_btn = None
+            self.profile_output = None
+            self._active_profiler = None
+            self._profiling_active = False
+
     def start(self):
         """Start performance monitoring using Qt timer."""
         self.running = True
@@ -391,7 +507,76 @@ class PerformanceDashboard(QFrame):
     def get_worker_count(self) -> int:
         """Get current number of parallel workers."""
         return self.current_workers
-    
+
+    # ------------------------------------------------------------------
+    # Profiling helpers
+    # ------------------------------------------------------------------
+
+    def _toggle_profiling(self) -> None:
+        """Start or stop the active profiling session."""
+        if not PROFILER_AVAILABLE or self.profile_btn is None:
+            return
+        if self._profiling_active:
+            self._stop_profiling()
+        else:
+            self._start_profiling()
+
+    def _start_profiling(self) -> None:
+        """Begin a cProfile + tracemalloc session."""
+        if not PROFILER_AVAILABLE:
+            return
+        self._active_profiler = OperationProfiler("sort_operation")
+        self._active_profiler.start()
+        self._profiling_active = True
+        if self.profile_btn:
+            self.profile_btn.setText("⏹ Stop Profile")
+        if self.profile_output:
+            self.profile_output.setPlainText("⏱ Profiling active — run a sort operation then click Stop Profile…")
+        logger.info("Profiling session started from Performance Dashboard")
+
+    def _stop_profiling(self) -> Optional["ProfileResult"]:
+        """Stop the active profiling session and display results."""
+        if not PROFILER_AVAILABLE or not self._profiling_active or self._active_profiler is None:
+            return None
+        result = self._active_profiler.stop()
+        self._profiling_active = False
+        if self.profile_btn:
+            self.profile_btn.setText("▶ Start Profile")
+        if self.profile_output and result:
+            self.profile_output.setPlainText(result.report())
+        logger.info("Profiling session stopped: %s", result.summary() if result else "no result")
+        return result
+
+    def start_operation_profile(self, operation_name: str = "sort_operation") -> None:
+        """Called by main window when a sort starts with profiling active."""
+        if self._profiling_active and self._active_profiler is not None:
+            # Already running — no-op (started by button)
+            return
+        if PROFILER_AVAILABLE:
+            self._active_profiler = OperationProfiler(operation_name)
+            self._active_profiler.start()
+            self._profiling_active = True
+
+    def stop_operation_profile(self) -> None:
+        """Called by main window when a sort finishes."""
+        if self._profiling_active:
+            self._stop_profiling()
+
+    def _run_optimize_memory(self) -> None:
+        """Run GC + working-set trim and show result."""
+        if not PROFILER_AVAILABLE:
+            return
+        stats = OperationProfiler.optimize_memory()
+        freed = stats.get("freed_mb", 0.0)
+        msg = (
+            f"🗑 Memory freed: {freed:.1f} MB  "
+            f"(before: {stats.get('before_mb', 0):.1f} MB, "
+            f"after: {stats.get('after_mb', 0):.1f} MB)"
+        )
+        if self.profile_output:
+            self.profile_output.setPlainText(msg)
+        logger.info(msg)
+
     def _add_tooltips(self):
         """Add tooltips to widgets if available."""
         if not TOOLTIPS_AVAILABLE:

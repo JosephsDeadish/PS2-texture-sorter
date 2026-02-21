@@ -1,11 +1,75 @@
+from __future__ import annotations
 """
 Qt Travel Animation Widget - Replaces canvas travel animation
 Uses Qt animations and QLabel for clean widget-based animation
 """
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
+import logging
+logger = logging.getLogger(__name__)
+
+try:
+    from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
+    from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve
+    from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
+    PYQT_AVAILABLE = True
+except ImportError:
+    PYQT_AVAILABLE = False
+    QWidget = object
+    QPropertyAnimation = object
+    class _SignalStub:  # noqa: E301
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
+    class Qt:
+        class AlignmentFlag:
+            AlignLeft = AlignRight = AlignCenter = AlignTop = AlignBottom = AlignHCenter = AlignVCenter = 0
+        class WindowType:
+            FramelessWindowHint = WindowStaysOnTopHint = Tool = Window = Dialog = 0
+        class CursorShape:
+            ArrowCursor = PointingHandCursor = BusyCursor = WaitCursor = CrossCursor = 0
+        class DropAction:
+            CopyAction = MoveAction = IgnoreAction = 0
+        class Key:
+            Key_Escape = Key_Return = Key_Space = Key_Delete = Key_Up = Key_Down = Key_Left = Key_Right = 0
+        class ScrollBarPolicy:
+            ScrollBarAlwaysOff = ScrollBarAsNeeded = ScrollBarAlwaysOn = 0
+        class ItemFlag:
+            ItemIsEnabled = ItemIsSelectable = ItemIsEditable = 0
+        class CheckState:
+            Unchecked = Checked = PartiallyChecked = 0
+        class Orientation:
+            Horizontal = Vertical = 0
+        class SortOrder:
+            AscendingOrder = DescendingOrder = 0
+        class MatchFlag:
+            MatchExactly = MatchContains = 0
+        class ItemDataRole:
+            DisplayRole = UserRole = DecorationRole = 0
+    class QColor:
+        def __init__(self, *a): pass
+        def name(self): return "#000000"
+        def isValid(self): return False
+    class QFont:
+        def __init__(self, *a): pass
+    class QPixmap:
+        def __init__(self, *a): pass
+        def isNull(self): return True
+    class QPainter:
+        def __init__(self, *a): pass
+    class QTimer:
+        def __init__(self, *a): pass
+        def start(self, *a): pass
+        def stop(self): pass
+        timeout = _SignalStub()
+    class QPropertyAnimation:
+        def __init__(self, *a): pass
+        def start(self): pass
+        def stop(self): pass
+    QEasingCurve = object
+    QLabel = object
+    QVBoxLayout = object
 from enum import Enum
 from typing import List, NamedTuple
 
@@ -34,11 +98,14 @@ class TravelAnimationWidget(QWidget):
     
     animation_complete = pyqtSignal()
     
-    def __init__(self, scenes: List[TravelScene] = None, parent=None):
+    def __init__(self, scenes: List[TravelScene] = None, travel_system=None, parent=None):
         super().__init__(parent)
+        self.travel_system = travel_system
         self.scenes = scenes or self._get_default_scenes()
         self.current_scene = 0
         self._setup_ui()
+        # Default handler logs completion; callers can connect their own handlers
+        self.animation_complete.connect(lambda: logger.debug("TravelAnimationWidget: animation complete"))
         
     def _setup_ui(self):
         """Setup the widget UI"""

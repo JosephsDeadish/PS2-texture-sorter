@@ -96,41 +96,69 @@ for hook_dir in HOOKSPATH:
     else:
         print(f"[build_spec] Using hooks from: {hook_dir}")
 
+# Build the datas list, only including directories that exist and are non-empty
+def _collect_data_dir(src_path, dest_name):
+    """Return (src, dest) tuple only if src_path exists with content."""
+    p = Path(src_path)
+    if p.exists() and (p.is_file() or any(p.iterdir())):
+        return (str(p), dest_name)
+    return None
+
+_datas_candidates = [
+    _collect_data_dir(ASSETS_DIR, 'assets'),
+    _collect_data_dir(RESOURCES_DIR / 'icons', 'resources/icons'),
+    _collect_data_dir(RESOURCES_DIR / 'icons' / 'svg', 'resources/icons/svg'),
+    _collect_data_dir(RESOURCES_DIR / 'cursors', 'resources/cursors'),
+    _collect_data_dir(RESOURCES_DIR / 'sounds', 'resources/sounds'),
+    _collect_data_dir(RESOURCES_DIR / 'translations', 'resources/translations'),
+    PIL_DATA,
+    TORCH_DATA,
+]
+_datas = [d for d in _datas_candidates if d is not None]
+print(f"[build_spec] Including {len(_datas)} data directories")
+
+# Collect all src/ application submodules so PyInstaller bundles them in the EXE.
+# Many of these are imported inside try blocks or function bodies, so PyInstaller's
+# static analysis misses them.  collect_submodules() walks the package tree and
+# returns every importable name, guaranteeing nothing is left out.
+from PyInstaller.utils.hooks import collect_submodules  # noqa: E402
+
+_app_hidden = []
+for _pkg in [
+    'ui', 'features', 'tools', 'utils', 'core',
+    'ai', 'vision_models', 'organizer', 'classifier',
+    'preprocessing', 'similarity', 'structural_analysis',
+    'database', 'file_handler', 'lod_detector',
+    'upscaler', 'cli',
+]:
+    try:
+        _app_hidden += collect_submodules(_pkg)
+    except Exception as _e:
+        # Non-fatal: package may be an optional runtime dependency (e.g. basicsr,
+        # realesrgan).  The build will continue; the feature that requires this
+        # package will be unavailable in the frozen exe until the dep is installed.
+        print(f"[build_spec] WARNING: collect_submodules({_pkg!r}) failed (non-fatal): {_e}")
+
 # Collect all Python files
 a = Analysis(
     ['main.py'],
     pathex=[str(SCRIPT_DIR), str(SRC_DIR)],  # Include src directory for module imports
     binaries=[],
-    datas=[
-        # Include entire assets directory
-        (str(ASSETS_DIR), 'assets'),
-        # Include resources
-        (str(RESOURCES_DIR / 'icons'), 'resources/icons'),
-        (str(RESOURCES_DIR / 'icons' / 'svg'), 'resources/icons/svg'),  # Explicitly include SVG icons
-        (str(RESOURCES_DIR / 'cursors'), 'resources/cursors'),
-        (str(RESOURCES_DIR / 'sounds'), 'resources/sounds'),
-        (str(RESOURCES_DIR / 'translations'), 'resources/translations'),
-    ] + (
-        # Explicitly add PIL package if available
-        [PIL_DATA] if PIL_DATA else []
-    ) + (
-        # Explicitly add torch package if available  
-        [TORCH_DATA] if TORCH_DATA else []
-    ),
-    hiddenimports=[
-        # Core application modules from src/
+    datas=_datas,
+    hiddenimports=_app_hidden + [
+        # Flat top-level application modules (not in a sub-package).
+        # preprocessing.* is already covered by collect_submodules('preprocessing')
+        # above, but the top-level namespace aliases are listed here for clarity.
         'config',
         'classifier',
         'lod_detector',
         'file_handler',
         'database',
         'organizer',
-        'preprocessing',
-        'preprocessing.alpha_correction',
-        'preprocessing.alpha_handler',
-        'preprocessing.preprocessing_pipeline',
-        'preprocessing.upscaler',
-        'preprocessing.filters',
+        'advanced_analyzer',
+        'native_ops',
+        'startup_validation',
+        'qt_platform_setup',   # sets QT_QPA_PLATFORM=offscreen on headless Linux
         # Core image processing
         'PIL',
         'PIL.Image',
@@ -221,10 +249,23 @@ a = Analysis(
         # Upscaling models - Real-ESRGAN (REMOVED - will download at runtime)
         # Note: basicsr and realesrgan are now optional runtime dependencies
         # Models will be downloaded on first use via the AI Model Manager
+        # Rembg (AI background removal) - collected by hook-rembg.py
+        'rembg',
+        'rembg.sessions',
+        'rembg.sessions.base',
+        'rembg.sessions.u2net',
+        'rembg.sessions.u2netp',
+        'rembg.sessions.u2net_human_seg',
+        'rembg.sessions.silueta',
+        # Additional Qt submodules used by the app
+        'PyQt6.QtMultimedia',
+        'PyQt6.QtPrintSupport',
+        'PyQt6.QtNetwork',
     ],
     hookspath=HOOKSPATH,  # Use validated hookspath variable
     hooksconfig={},
     runtime_hooks=[
+        str(SCRIPT_DIR / 'runtime-hook-qt-platform.py'),  # Set QT_QPA_PLATFORM=offscreen on headless Linux
         str(SCRIPT_DIR / 'runtime-hook-onnxruntime.py'),  # Disable CUDA providers for onnxruntime
         str(SCRIPT_DIR / 'runtime-hook-torch.py'),  # Graceful CUDA handling for torch
     ],
@@ -244,7 +285,6 @@ a = Analysis(
         
         # Heavy scientific libraries (not needed)
         'matplotlib',
-        'scipy',
         'pandas',
         'jupyter',
         'notebook',

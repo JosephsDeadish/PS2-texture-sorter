@@ -4,6 +4,8 @@ Provides comprehensive file browsing with thumbnails, filtering, and preview
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import List, Optional, Set
@@ -21,7 +23,25 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
-    QWidget = object
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QThread(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QPixmap:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +51,13 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
     logger.warning("PIL not available - thumbnails disabled")
+
+try:
+    from features.search_filter import SearchFilter, FilterCriteria
+    _SEARCH_FILTER = SearchFilter()
+except Exception:
+    _SEARCH_FILTER = None  # type: ignore[assignment]
+
 
 
 class ThumbnailGenerator(QThread):
@@ -325,32 +352,39 @@ class FileBrowserPanelQt(QWidget):
             self.status_label.setText("Error loading folder")
     
     def filter_files(self):
-        """Filter files based on search and type"""
+        """Filter files based on search and type, using SearchFilter when available."""
         if not self.current_files:
             return
-        
+
         search_text = self.search_box.text().lower()
         type_filter = self.type_combo.currentText()
         show_archives = self.show_archives_cb.isChecked()
-        
-        filtered = []
+
+        # Apply type / archive pre-filter first (fast, no SearchFilter needed)
+        candidates = []
         for filepath in self.current_files:
-            # Type filter
             if type_filter == "Images Only" and filepath.suffix.lower() in self.ARCHIVE_EXTENSIONS:
                 continue
             if type_filter == "Archives Only" and filepath.suffix.lower() in self.IMAGE_EXTENSIONS:
                 continue
-            
-            # Archive filter
             if not show_archives and filepath.suffix.lower() in self.ARCHIVE_EXTENSIONS:
                 continue
-            
-            # Search filter
-            if search_text and search_text not in filepath.name.lower():
-                continue
-            
-            filtered.append(filepath)
-        
+            candidates.append(filepath)
+
+        # Use SearchFilter for text search when available; fall back to plain substring
+        if search_text:
+            if _SEARCH_FILTER is not None:
+                try:
+                    criteria = FilterCriteria(name=search_text)
+                    filtered = _SEARCH_FILTER.search(candidates, criteria)
+                except Exception:
+                    # Fallback to simple substring match on any error
+                    filtered = [p for p in candidates if search_text in p.name.lower()]
+            else:
+                filtered = [p for p in candidates if search_text in p.name.lower()]
+        else:
+            filtered = candidates
+
         self.display_files(filtered)
     
     def display_files(self, files: List[Path]):
@@ -378,7 +412,7 @@ class FileBrowserPanelQt(QWidget):
             if filepath.suffix.lower() in self.ARCHIVE_EXTENSIONS:
                 item.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_FileDialogContentsView))
             else:
-                # Placeholder icon, will be replaced by thumbnail
+                # Initial icon — replaced by async thumbnail when ready
                 item.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_FileIcon))
             
             self.file_list.addItem(item)

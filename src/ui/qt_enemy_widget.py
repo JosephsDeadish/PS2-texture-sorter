@@ -5,6 +5,10 @@ Pure PyQt6 implementation for enemy display and combat.
 Uses QLabel with animated QPixmap for 2D enemies, or QOpenGLWidget for 3D.
 """
 
+
+from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
 try:
     from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -12,6 +16,20 @@ try:
     PYQT_AVAILABLE = True
 except ImportError:
     PYQT_AVAILABLE = False
+    class QObject:  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class QWidget(QObject):  # type: ignore[no-redef]
+        """Fallback stub when PyQt6 is not installed."""
+        pass
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
+
 
 
 class EnemyDisplayWidget(QWidget):
@@ -227,8 +245,8 @@ class EnemyListWidget(QWidget):
         self.enemy_widgets = []
         
         self._setup_ui()
-        
-    def _setup_ui(self):
+        # Default handler logs clicks; callers can add their own handlers
+        self.enemy_clicked.connect(lambda e: logger.debug(f"EnemyListWidget: enemy clicked {getattr(e, 'name', e)}"))
         """Create UI layout."""
         from PyQt6.QtWidgets import QHBoxLayout, QScrollArea
         

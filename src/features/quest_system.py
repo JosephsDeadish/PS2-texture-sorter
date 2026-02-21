@@ -19,6 +19,10 @@ Features:
     - Persistent progress (optional)
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 try:
     from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QPoint
     from PyQt6.QtWidgets import QLabel, QGraphicsOpacityEffect
@@ -27,6 +31,34 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     QObject = object
+
+    class _SignalStub:
+        """No-op signal stub used when PyQt6 is absent."""
+        def connect(self, *a, **kw): pass
+        def disconnect(self, *a, **kw): pass
+        def emit(self, *a, **kw): pass
+
+    def pyqtSignal(*args):  # noqa: N802
+        return _SignalStub()
+
+    class QTimer:  # minimal stub
+        @staticmethod
+        def singleShot(ms, callback): pass
+        def start(self, ms=None): pass
+        def stop(self): pass
+        timeout = _SignalStub()
+
+    class QLabel:  # minimal stub
+        def __init__(self, *a, **kw): pass
+
+    class QFont:  # minimal stub
+        def __init__(self, *a, **kw): pass
+
+    class QGraphicsOpacityEffect:  # minimal stub
+        pass
+
+    class QPoint:  # minimal stub
+        def __init__(self, x=0, y=0): self.x, self.y = x, y
 
 import random
 import time
@@ -91,18 +123,18 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
     - Adds engagement and replayability
     """
     
-    # Signals
-    quest_started = pyqtSignal(str) if PYQT_AVAILABLE else None
-    quest_progress = pyqtSignal(str, int, int) if PYQT_AVAILABLE else None  # quest_id, current, goal
-    quest_completed = pyqtSignal(str, str) if PYQT_AVAILABLE else None  # quest_id, reward
-    achievement_unlocked = pyqtSignal(str) if PYQT_AVAILABLE else None
-    easter_egg_found = pyqtSignal(str) if PYQT_AVAILABLE else None
-    
+    # Signals (always available — stub when PyQt6 absent)
+    quest_started = pyqtSignal(str)
+    quest_progress = pyqtSignal(str, int, int)  # quest_id, current, goal
+    quest_completed = pyqtSignal(str, str)       # quest_id, reward
+    achievement_unlocked = pyqtSignal(str)
+    easter_egg_found = pyqtSignal(str)
+
     def __init__(self, main_window=None):
-        if not PYQT_AVAILABLE:
-            raise ImportError("PyQt6 required for QuestSystem")
-        
-        super().__init__()
+        if PYQT_AVAILABLE:
+            super().__init__()
+        else:
+            object.__init__(self)
         
         self.main_window = main_window
         
@@ -126,10 +158,11 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
         # Initialize default achievements
         self._create_default_achievements()
         
-        # Update timer
+        # Update timer (only functional with PyQt6 event loop)
         self.update_timer = QTimer()
-        self.update_timer.timeout.connect(self._update_quests)
-        self.update_timer.start(1000)  # Update every second
+        if PYQT_AVAILABLE:
+            self.update_timer.timeout.connect(self._update_quests)
+            self.update_timer.start(1000)  # Update every second
     
     def _create_default_quests(self):
         """Create default quest definitions."""
@@ -217,6 +250,22 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
                 goal_value=10,
                 reward_message="You've mastered the UI with panda! 🎯",
             ),
+            Quest(
+                id="texture_sorter",
+                name="Texture Sorter",
+                description="Sort your first 10 textures",
+                quest_type=QuestType.INTERACT_COUNT,
+                goal_value=10,
+                reward_message="Textures organized! Panda approves! 🗂️",
+            ),
+            Quest(
+                id="bulk_sorter",
+                name="Bulk Sorter",
+                description="Sort 100 textures in total",
+                quest_type=QuestType.INTERACT_COUNT,
+                goal_value=100,
+                reward_message="100 textures sorted — you're a sorting legend! 🏆",
+            ),
         ]
         
         for quest in quests:
@@ -276,7 +325,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
                 if self.quest_started:
                     self.quest_started.emit(quest_id)
                 
-                print(f"Quest started: {quest.name}")
+                logger.info(f"Quest started: {quest.name}")
     
     def update_quest_progress(self, quest_id, amount=1):
         """
@@ -324,7 +373,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
             # Check achievements
             self._check_achievements()
             
-            print(f"Quest completed: {quest.name} - {quest.reward_message}")
+            logger.info(f"Quest completed: {quest.name} - {quest.reward_message}")
     
     def on_widget_interaction(self, widget_type, widget_name):
         """
@@ -366,7 +415,7 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
             item_type: Type of item (food, toy, etc.)
             item_name: Name of item
         """
-        print(f"Panda found: {item_name} ({item_type})")
+        logger.debug(f"Panda found: {item_name} ({item_type})")
         
         # Update relevant quests
         if item_type == 'food':
@@ -463,11 +512,12 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
                 message = f"{achievement.icon_emoji} {achievement.name}\n{achievement.description}"
                 self._show_reward_tooltip(message)
                 
-                print(f"Achievement unlocked: {achievement.name}")
+                logger.info(f"Achievement unlocked: {achievement.name}")
     
     def _show_reward_tooltip(self, message):
         """Show reward tooltip on screen."""
-        if not self.main_window:
+        if not self.main_window or not PYQT_AVAILABLE:
+            logger.info(f"Quest reward: {message}")
             return
         
         # Create tooltip label
@@ -533,20 +583,41 @@ class QuestSystem(QObject if PYQT_AVAILABLE else object):
             'easter_eggs_found': len(self.easter_eggs_found),
         }
 
+    def get_quest(self, quest_id: str):
+        """Get a quest by ID, or None if not found."""
+        return self.quests.get(quest_id)
 
-# Convenience function
+    def check_quests(self, files_processed: int = 0) -> None:
+        """
+        Ensure texture-sorting quests are started and reflect latest progress.
+
+        Called by the main window after each sort operation so that quests whose
+        type is INTERACT_COUNT (texture_sorter, bulk_sorter) are auto-started
+        the first time files are processed and their progress is kept current.
+
+        Args:
+            files_processed: Number of files just processed (incremental amount).
+        """
+        for qid in ('texture_sorter', 'bulk_sorter'):
+            if qid not in self.quests:
+                continue
+            quest = self.quests[qid]
+            if quest.status == QuestStatus.NOT_STARTED and files_processed > 0:
+                self.start_quest(qid)
+                # start_quest sets status to IN_PROGRESS; fall through to record progress
+            elif quest.status == QuestStatus.IN_PROGRESS and files_processed > 0:
+                # update_quest_progress handles completion and signal emission
+                self.update_quest_progress(qid, files_processed)
+
+
 def create_quest_system(main_window=None):
     """
     Create a quest system.
-    
+
     Args:
         main_window: Optional main window for tooltips
-        
+
     Returns:
-        QuestSystem instance or None
+        QuestSystem instance (always; signals are stubs when PyQt6 absent)
     """
-    if not PYQT_AVAILABLE:
-        print("Warning: PyQt6 not available, cannot create quest system")
-        return None
-    
     return QuestSystem(main_window)

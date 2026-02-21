@@ -15,11 +15,18 @@ When the native module is unavailable, the pure-Python fallbacks in this
 file are used instead.  They produce similar results but are slower.
 """
 
+from __future__ import annotations
+
 import logging
 import math
 from typing import List, Optional, Tuple
 
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 
 logger = logging.getLogger(__name__)
 

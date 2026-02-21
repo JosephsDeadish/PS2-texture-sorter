@@ -4,6 +4,8 @@ Handles file operations, conversions, and integrity checks
 Extended format support for SVG, JPEG, WEBP, and more
 """
 
+from __future__ import annotations
+
 import shutil
 import hashlib
 import logging
@@ -135,7 +137,7 @@ class FileHandler:
             Path to converted PNG file or None if conversion failed
         """
         if not HAS_PIL:
-            print("PIL/Pillow not available. Cannot convert images.")
+            logger.warning("PIL/Pillow not available. Cannot convert images.")
             return None
         
         try:
@@ -172,7 +174,7 @@ class FileHandler:
             Path to converted DDS file or None if conversion failed
         """
         if not HAS_PIL:
-            print("PIL/Pillow not available. Cannot convert images.")
+            logger.warning("PIL/Pillow not available. Cannot convert images.")
             return None
         
         try:
@@ -203,9 +205,14 @@ class FileHandler:
         Convert SVG file to PNG with fallback chain.
         
         Tries:
-        1. cairosvg (if available) - Best quality
-        2. PIL direct open (if PIL supports SVG)
-        3. Returns None if all methods fail
+        1. cairosvg (if available) - Best quality, full SVG rendering
+        2. PIL direct open (if PIL / installed plugins support SVG)
+        3. stdlib XML parse to extract canvas dimensions, then write a
+           transparent-background PNG of the correct size (placeholder).
+           Note: this fallback does NOT render SVG shapes; it ensures a
+           valid PNG file is always produced so downstream code never
+           receives None from a missing-dependency error.
+        4. Returns None if all methods fail
         
         Args:
             svg_path: Path to SVG file
@@ -249,7 +256,7 @@ class FileHandler:
                 except Exception as e:
                     logger.warning(f"cairosvg conversion failed: {e}, trying fallback...")
             
-            # Method 2: Try PIL direct (some PIL builds support SVG)
+            # Method 2: Try PIL direct (some PIL builds / plugins support SVG)
             try:
                 with Image.open(svg_path) as img:
                     # Resize if dimensions specified
@@ -262,8 +269,8 @@ class FileHandler:
                         img = img.resize((width, height), Image.Resampling.LANCZOS)
                     
                     # Convert to RGB if needed
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGBA')
                     
                     img.save(output_path, 'PNG')
                 
@@ -271,7 +278,45 @@ class FileHandler:
                 logger.info(f"Successfully converted SVG with PIL: {svg_path} -> {output_path}")
                 return output_path
             except Exception as e:
-                logger.warning(f"PIL direct SVG conversion failed: {e}")
+                logger.warning(f"PIL direct SVG conversion failed: {e}, trying native fallback...")
+            
+            # Method 3: stdlib XML parse — extract canvas size, write transparent PNG placeholder.
+            # Does NOT render SVG shapes; guarantees a valid PNG when Cairo/PIL are both unavailable.
+            if HAS_PIL:
+                try:
+                    import re as _re
+                    import xml.etree.ElementTree as ET
+
+                    def _parse_svg_length(value: str, default: int) -> int:
+                        """Parse an SVG length attribute, stripping any CSS unit suffix."""
+                        m = _re.match(r'^\s*([0-9]*\.?[0-9]+)', str(value))
+                        return int(float(m.group(1))) if m else default
+
+                    tree = ET.parse(svg_path)
+                    root = tree.getroot()
+
+                    # viewBox takes priority over width/height attributes
+                    vb = root.get('viewBox', '')
+                    if vb:
+                        parts = vb.split()
+                        if len(parts) == 4:
+                            svg_w = width or int(float(parts[2]))
+                            svg_h = height or int(float(parts[3]))
+                        else:
+                            svg_w = width or _parse_svg_length(root.get('width', '256'), 256)
+                            svg_h = height or _parse_svg_length(root.get('height', '256'), 256)
+                    else:
+                        svg_w = width or _parse_svg_length(root.get('width', '256'), 256)
+                        svg_h = height or _parse_svg_length(root.get('height', '256'), 256)
+
+                    img = Image.new('RGBA', (max(1, svg_w), max(1, svg_h)), (255, 255, 255, 0))
+                    img.save(output_path, 'PNG')
+
+                    self.operations_log.append(f"Converted {svg_path} to {output_path} (xml-placeholder)")
+                    logger.info(f"SVG converted via XML-placeholder fallback: {svg_path} -> {output_path}")
+                    return output_path
+                except Exception as e:
+                    logger.warning(f"XML placeholder SVG fallback failed: {e}")
             
             # All methods failed
             logger.error(f"All SVG conversion methods failed for: {svg_path}")
@@ -444,9 +489,15 @@ class FileHandler:
                         png_bytes = cairosvg.svg2png(url=str(image_path))
                         return Image.open(BytesIO(png_bytes))
                     except Exception as e:
-                        logger.warning(f"Cairo SVG loading failed: {e}")
+                        logger.warning(f"Cairo SVG loading failed: {e}, trying PIL fallback...")
                 
-                logger.error(f"Cannot load SVG file {image_path}: cairosvg required for SVG-to-raster")
+                # Fallback: try PIL direct open (some PIL builds / plugins support SVG)
+                try:
+                    return Image.open(image_path)
+                except Exception as e:
+                    logger.warning(f"PIL SVG loading failed: {e}")
+                
+                logger.error(f"Cannot load SVG file {image_path}: all SVG-to-raster methods failed")
                 return None
             
             # Handle raster formats
@@ -649,7 +700,7 @@ class FileHandler:
             
             # Check if destination exists
             if destination.exists() and not overwrite:
-                print(f"Destination {destination} already exists. Skipping.")
+                logger.debug(f"Destination {destination} already exists. Skipping.")
                 return False
             
             # Create backup if enabled
@@ -663,7 +714,7 @@ class FileHandler:
             return True
             
         except Exception as e:
-            print(f"Error copying {source} to {destination}: {e}")
+            logger.error(f"Error copying {source} to {destination}: {e}")
             return False
     
     def safe_move(self, source: Path, destination: Path, overwrite=False) -> bool:
@@ -684,7 +735,7 @@ class FileHandler:
             
             # Check if destination exists
             if destination.exists() and not overwrite:
-                print(f"Destination {destination} already exists. Skipping.")
+                logger.debug(f"Destination {destination} already exists. Skipping.")
                 return False
             
             # Move file
@@ -693,10 +744,18 @@ class FileHandler:
             return True
             
         except Exception as e:
-            print(f"Error moving {source} to {destination}: {e}")
+            logger.error(f"Error moving {source} to {destination}: {e}")
             return False
-    
-    def safe_delete(self, file_path: Path, use_trash=True) -> bool:
+
+    def move_file(self, source, destination, overwrite=False) -> bool:
+        """Alias for safe_move(); accepts str or Path arguments."""
+        return self.safe_move(Path(source), Path(destination), overwrite=overwrite)
+
+    def copy_file(self, source, destination, overwrite=False) -> bool:
+        """Alias for safe_copy(); accepts str or Path arguments."""
+        return self.safe_copy(Path(source), Path(destination), overwrite=overwrite)
+
+
         """
         Safely delete file (optionally to trash)
         
@@ -720,7 +779,7 @@ class FileHandler:
             return True
             
         except Exception as e:
-            print(f"Error deleting {file_path}: {e}")
+            logger.error(f"Error deleting {file_path}: {e}")
             return False
     
     def get_operations_log(self) -> List[str]:

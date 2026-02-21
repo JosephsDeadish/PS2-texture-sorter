@@ -4,7 +4,11 @@ Sharpening, denoising, edge detection, color normalization
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from typing import Optional, Tuple, Dict, Any
 try:
     import numpy as np
@@ -13,9 +17,14 @@ except ImportError:
     HAS_NUMPY = False
     logger.error("numpy not available - limited functionality")
     logger.error("Install with: pip install numpy")
-import cv2
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
 
-logger = logging.getLogger(__name__)
+
 
 
 class TextureFilters:
@@ -31,7 +40,7 @@ class TextureFilters:
     
     def __init__(self):
         """Initialize texture filters."""
-        pass
+        self.logger = logging.getLogger(__name__)
     
     def sharpen(
         self,

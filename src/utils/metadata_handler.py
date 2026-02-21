@@ -4,10 +4,18 @@ Handles EXIF and other metadata preservation for image processing operations.
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
+
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
-from PIL import Image
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 
 logger = logging.getLogger(__name__)
 

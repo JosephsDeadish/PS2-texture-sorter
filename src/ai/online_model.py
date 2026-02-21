@@ -4,12 +4,19 @@ Optional OpenAI CLIP API wrapper with fallback support
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
 import time
 import threading
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 
 try:
     import requests

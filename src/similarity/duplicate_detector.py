@@ -4,7 +4,11 @@ Detect duplicates and variants using embeddings
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
 try:
@@ -15,7 +19,6 @@ except ImportError:
     logger.error("numpy not available - limited functionality")
     logger.error("Install with: pip install numpy")
 
-logger = logging.getLogger(__name__)
 
 
 class DuplicateDetector:

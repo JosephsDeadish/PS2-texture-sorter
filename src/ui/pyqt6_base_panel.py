@@ -4,8 +4,12 @@ Provides common functionality for tool panels
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
 from typing import Optional, Callable
+
+logger = logging.getLogger(__name__)
 
 try:
     from PyQt6.QtWidgets import (
@@ -19,8 +23,13 @@ try:
 except ImportError:
     PYQT_AVAILABLE = False
     QWidget = object
-
-logger = logging.getLogger(__name__)
+    class _SignalStub:  # noqa: E301
+        """Stub signal — active only when PyQt6 is absent."""
+        def __init__(self, *a): pass
+        def connect(self, *a): pass
+        def disconnect(self, *a): pass
+        def emit(self, *a): pass
+    def pyqtSignal(*a): return _SignalStub()  # noqa: E301
 
 
 class BasePyQtPanel(QWidget):
@@ -275,12 +284,19 @@ class BasePyQtPanel(QWidget):
     # ========================================================================
     
     def _on_status_changed(self, message: str):
-        """Handle status change (override in subclass)."""
-        pass
+        """Handle status change — update status label if available."""
+        try:
+            self.set_status(message)
+        except AttributeError:
+            logger.debug("_on_status_changed: set_status not available on %s", type(self).__name__)
     
     def _on_progress_changed(self, current: int, total: int):
-        """Handle progress change (override in subclass)."""
-        pass
+        """Handle progress change — update progress bar if available."""
+        try:
+            if total > 0:
+                self.update_progress(current, total)
+        except AttributeError:
+            logger.debug("_on_progress_changed: update_progress not available on %s", type(self).__name__)
     
     def _on_operation_complete(self):
         """Handle operation completion (override in subclass)."""
@@ -290,7 +306,35 @@ class BasePyQtPanel(QWidget):
         """Handle operation error (override in subclass)."""
         self.show_progress(False)
         logger.error(f"Operation error: {error}")
-    
+
+    def _set_tooltip(self, widget, text_or_key: str):
+        """
+        Set tooltip on a widget, routing through tooltip_manager when available.
+
+        All panels that inherit BasePyQtPanel can call ``self._set_tooltip(w, key)``
+        without defining their own method.  Individual panels may override this
+        to customise the lookup behaviour (e.g. using a different key schema).
+
+        Args:
+            widget: QWidget to annotate (or None, which is silently ignored).
+            text_or_key: Plain tooltip text **or** a key looked up in the
+                tooltip manager's dictionary.
+        """
+        if widget is None:
+            return
+        tooltip_mgr = getattr(self, 'tooltip_manager', None)
+        if tooltip_mgr is not None:
+            try:
+                tooltip_mgr.set_tooltip(widget, text_or_key)
+                return
+            except Exception:
+                pass
+        # Fallback: treat text_or_key as literal tooltip text
+        try:
+            widget.setToolTip(str(text_or_key))
+        except Exception:
+            pass
+
     # ========================================================================
     # Thread Management
     # ========================================================================

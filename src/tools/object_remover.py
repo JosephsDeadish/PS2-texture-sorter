@@ -3,11 +3,23 @@ Object Remover - Interactive object removal with mask painting
 Allows users to highlight/paint objects they want to remove from images
 """
 
+
+from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Optional, Tuple, List
-from PIL import Image, ImageDraw
-import numpy as np
+try:
+    from PIL import Image, ImageDraw
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 
 logger = logging.getLogger(__name__)
 

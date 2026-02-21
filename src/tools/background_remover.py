@@ -4,12 +4,24 @@ Removes backgrounds from images using AI-powered subject isolation
 Author: Dead On The Inside / JosephsDeadish
 """
 
+
+from __future__ import annotations
 import logging
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 from pathlib import Path
 from typing import List, Optional, Tuple, Callable
 from dataclasses import dataclass
-from PIL import Image, ImageFilter
+try:
+    from PIL import Image, ImageFilter
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
 import threading
 import queue
 

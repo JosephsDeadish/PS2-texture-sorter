@@ -3,9 +3,12 @@ Extensive skill tree system for the panda character.
 Includes combat, magic, and utility skill branches with dependencies.
 """
 
+import json
+import logging
 from typing import Dict, List, Optional, Set
 from dataclasses import dataclass, field
-import json
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -585,9 +588,14 @@ class SkillTree:
     
     @classmethod
     def load_from_file(cls, filepath: str) -> 'SkillTree':
-        """Load skill tree state from file."""
+        """Load skill tree state from file; returns fresh tree if file absent."""
         tree = cls()
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-        tree.load_from_dict(data)
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            tree.load_from_dict(data)
+        except FileNotFoundError:
+            pass
+        except (json.JSONDecodeError, KeyError) as exc:
+            logger.warning("skill_tree: malformed save file %s — starting fresh: %s", filepath, exc)
         return tree

@@ -23,8 +23,12 @@ if sys.platform == 'win32':
     # Also set environment variable for child processes
     os.environ['PYTHONIOENCODING'] = 'utf-8'
 
-from ..preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets
-from ..config import APP_NAME, APP_VERSION
+try:
+    from ..preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets
+    from ..config import APP_NAME, APP_VERSION
+except ImportError:
+    from preprocessing.alpha_correction import AlphaCorrector, AlphaCorrectionPresets  # type: ignore[no-redef]
+    from config import APP_NAME, APP_VERSION  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 

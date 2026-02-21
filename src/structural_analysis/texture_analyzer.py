@@ -4,7 +4,11 @@ Size, aspect ratio, color histogram analysis
 Author: Dead On The Inside / JosephsDeadish
 """
 
+from __future__ import annotations
+
 import logging
+
+logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Dict, Any, Union, Tuple
 try:
@@ -14,11 +18,27 @@ except ImportError:
     HAS_NUMPY = False
     logger.error("numpy not available - limited functionality")
     logger.error("Install with: pip install numpy")
-from PIL import Image
-import cv2
-from sklearn.cluster import KMeans
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
-logger = logging.getLogger(__name__)
+try:
+    import cv2
+    HAS_CV2 = True
+except ImportError:
+    HAS_CV2 = False
+    cv2 = None  # type: ignore[assignment]
+
+try:
+    from sklearn.cluster import KMeans
+    HAS_SKLEARN = True
+except ImportError:
+    HAS_SKLEARN = False
+    KMeans = None  # type: ignore[assignment]
+
+
 
 
 class TextureStructuralAnalyzer:

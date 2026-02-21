@@ -4,9 +4,11 @@ Tracks base stats, combat stats, and system stats with leveling and persistence.
 """
 
 import json
+import logging
 from typing import Dict, Optional
 from dataclasses import dataclass, asdict
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class PandaStats:
@@ -399,10 +401,16 @@ class PandaStats:
     
     @classmethod
     def load_from_file(cls, filepath: str) -> 'PandaStats':
-        """Load stats from JSON file."""
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-        return cls(**data)
+        """Load stats from JSON file; returns a new instance if file absent."""
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return cls(**data)
+        except FileNotFoundError:
+            return cls()
+        except (json.JSONDecodeError, TypeError) as exc:
+            logger.warning("panda_stats: malformed save file %s — starting fresh: %s", filepath, exc)
+            return cls()
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'PandaStats':

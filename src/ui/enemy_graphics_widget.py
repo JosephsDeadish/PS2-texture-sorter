@@ -1,11 +1,69 @@
+from __future__ import annotations
 """
 PyQt6-based enemy widget using QGraphicsView.
 Pure PyQt implementation for enemy rendering and animation.
 """
 
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsPolygonItem
-from PyQt6.QtCore import Qt, QTimer, QPointF, QRectF
-from PyQt6.QtGui import QColor, QPen, QBrush, QPolygonF, QPainter
+try:
+    from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsPolygonItem
+    from PyQt6.QtCore import Qt, QTimer, QPointF, QRectF
+    from PyQt6.QtGui import QColor, QPen, QBrush, QPolygonF, QPainter
+    PYQT_AVAILABLE = True
+except ImportError:
+    PYQT_AVAILABLE = False
+    QGraphicsView = object
+    QGraphicsScene = object
+    QGraphicsEllipseItem = object
+    class Qt:
+        class AlignmentFlag:
+            AlignLeft = AlignRight = AlignCenter = AlignTop = AlignBottom = AlignHCenter = AlignVCenter = 0
+        class WindowType:
+            FramelessWindowHint = WindowStaysOnTopHint = Tool = Window = Dialog = 0
+        class CursorShape:
+            ArrowCursor = PointingHandCursor = BusyCursor = WaitCursor = CrossCursor = 0
+        class DropAction:
+            CopyAction = MoveAction = IgnoreAction = 0
+        class Key:
+            Key_Escape = Key_Return = Key_Space = Key_Delete = Key_Up = Key_Down = Key_Left = Key_Right = 0
+        class ScrollBarPolicy:
+            ScrollBarAlwaysOff = ScrollBarAsNeeded = ScrollBarAlwaysOn = 0
+        class ItemFlag:
+            ItemIsEnabled = ItemIsSelectable = ItemIsEditable = 0
+        class CheckState:
+            Unchecked = Checked = PartiallyChecked = 0
+        class Orientation:
+            Horizontal = Vertical = 0
+        class SortOrder:
+            AscendingOrder = DescendingOrder = 0
+        class MatchFlag:
+            MatchExactly = MatchContains = 0
+        class ItemDataRole:
+            DisplayRole = UserRole = DecorationRole = 0
+    class QColor:
+        def __init__(self, *a): pass
+        def name(self): return "#000000"
+        def isValid(self): return False
+    class QPainter:
+        def __init__(self, *a): pass
+    class QPen:
+        def __init__(self, *a): pass
+    class QBrush:
+        def __init__(self, *a): pass
+    class QPoint:
+        def __init__(self, x=0, y=0): self.x_=x; self.y_=y
+        def x(self): return self.x_
+        def y(self): return self.y_
+    QPointF = QPoint
+    class QRect:
+        def __init__(self, *a): pass
+    QRectF = QRect
+    class QTimer:
+        def __init__(self, *a): pass
+        def start(self, *a): pass
+        def stop(self): pass
+        timeout = property(lambda self: type("S", (), {"connect": lambda s,f: None, "emit": lambda s: None})())
+    QGraphicsPolygonItem = object
+    QPolygonF = object
 import math
 import random
 from typing import Optional, Callable
@@ -150,14 +208,39 @@ class EnemyGraphicsWidget(QGraphicsView):
             )
     
     def _update_movement(self):
-        """Update position toward target."""
+        """Update position toward target — move this widget toward target_widget."""
         if not self.target_widget:
             return
-        
-        # Simple movement logic
-        # In full implementation, would move toward target
-        # For now, just animate in place
-        pass
+
+        try:
+            # Convert both widgets' centres to global coordinates, then to the
+            # parent's local coordinate system so we can call move().
+            parent = self.parent()
+            if parent is None:
+                return
+
+            target_global = self.target_widget.mapToGlobal(
+                self.target_widget.rect().center()
+            )
+            target_local = parent.mapFromGlobal(target_global)
+
+            my_center = self.geometry().center()
+            dx = target_local.x() - my_center.x()
+            dy = target_local.y() - my_center.y()
+            dist = math.hypot(dx, dy)
+
+            if dist < self.ATTACK_RANGE:
+                self.attack_target()
+                return
+
+            speed = self.MOVE_SPEED_BASE * getattr(self.enemy, 'speed', 1.0)
+            if dist > 0:
+                step_x = (dx / dist) * speed
+                step_y = (dy / dist) * speed
+                new_pos = self.pos() + QPointF(step_x, step_y).toPoint()
+                self.move(new_pos)
+        except Exception:
+            pass
     
     def is_alive(self):
         """Check if enemy is still alive."""

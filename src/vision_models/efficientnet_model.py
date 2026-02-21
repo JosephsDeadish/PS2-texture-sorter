@@ -8,9 +8,16 @@ must NOT be compiled with TorchScript. Avoid JIT script/trace compilation
 as it causes source access errors in packaged builds.
 """
 
+from __future__ import annotations
+
 import logging
 from typing import List, Union, Optional
-import numpy as np
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    np = None  # type: ignore[assignment]
+    HAS_NUMPY = False
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
