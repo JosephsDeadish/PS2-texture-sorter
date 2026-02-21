@@ -20,7 +20,9 @@ except ImportError:
 try:
     import onnxruntime as ort
     ONNX_AVAILABLE = True
-except ImportError:
+except (ImportError, Exception):
+    # Also catches OSError / DLL load failures (e.g. "Not enough memory resources"
+    # from onnxruntime_pybind11_state in PyInstaller isolated subprocesses).
     ONNX_AVAILABLE = False
     logging.warning("ONNX Runtime not available. Offline AI models disabled.")
 

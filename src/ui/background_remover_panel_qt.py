@@ -444,7 +444,7 @@ class BackgroundRemoverPanelQt(QWidget):
         try:
             import rembg
             rembg_available = True
-        except ImportError:
+        except (ImportError, Exception, SystemExit):
             rembg_available = False
         
         if not rembg_available:

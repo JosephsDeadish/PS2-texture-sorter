@@ -28,13 +28,16 @@ import queue
 logger = logging.getLogger(__name__)
 
 # Check for rembg availability (AI background removal)
-# Lazy import pattern: rembg is NOT imported at module level.
+# rembg is NOT imported directly at module level.  Instead we call a helper
+# function once at module initialization.  This is thread-safe: Python's
+# import lock serializes module initialization so _try_import_rembg() is
+# called exactly once regardless of how many threads import this module.
 # rembg.bg calls sys.exit(1) when onnxruntime fails to initialize its DLL
 # (e.g. on Windows CI without a full GPU driver stack).  We also catch the
 # broad Exception family to handle OSError / RuntimeError / DLL-provider init
 # failures that can surface before the sys.exit path is reached.
 def _try_import_rembg():
-    """Lazily import rembg and return (remove_fn, new_session_fn) or (None, None)."""
+    """Attempt to import rembg; return (remove_fn, new_session_fn) or (None, None)."""
     try:
         from rembg import remove, new_session  # type: ignore[import-untyped]
         return remove, new_session

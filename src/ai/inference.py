@@ -69,12 +69,29 @@ except ImportError:  # pragma: no cover
 try:
     import onnxruntime as ort  # type: ignore[import-untyped]
     _ORT_AVAILABLE = True
-except (ImportError, Exception):  # catches DLL errors on restricted envs
+except ImportError:
     ort = None  # type: ignore[assignment]
     _ORT_AVAILABLE = False
     logger.warning(
-        "onnxruntime not available – ONNX inference disabled. "
+        "onnxruntime is not installed – ONNX inference disabled. "
         "Install with: pip install onnxruntime"
+    )
+except OSError as _ort_os_err:
+    # DLL load failure (e.g. "Not enough memory resources" on Windows CI,
+    # missing Visual C++ runtime, or incompatible CPU instruction set).
+    ort = None  # type: ignore[assignment]
+    _ORT_AVAILABLE = False
+    logger.warning(
+        "onnxruntime failed to load its native DLL – ONNX inference disabled. "
+        "Error: %s", _ort_os_err
+    )
+except Exception as _ort_err:
+    # Catch-all for any other initialisation failure (provider init, etc.)
+    ort = None  # type: ignore[assignment]
+    _ORT_AVAILABLE = False
+    logger.warning(
+        "onnxruntime raised an unexpected error during import – "
+        "ONNX inference disabled. Error: %s", _ort_err
     )
 
 

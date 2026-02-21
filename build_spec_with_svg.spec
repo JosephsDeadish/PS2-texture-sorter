@@ -248,10 +248,16 @@ a = Analysis(
         # rembg.bg calls sys.exit(1) when onnxruntime fails to load in PyInstaller's
         # isolated binary-dependency analysis subprocesses, killing the build.
         # onnxruntime binaries are still collected by hook-onnxruntime.py.
-        'onnxruntime',  # Required for offline AI model inference (src/ai/offline_model.py)
+        # rembg is now lazy-imported at call time in tools/ and ui/ so it cannot
+        # crash module-level import.
+        'onnxruntime',  # Required for offline AI model inference (src/ai/inference.py, src/ai/offline_model.py)
         'pooch',  # Required for ML model downloads (used by various AI/ML libraries)
         'requests',
-        # PyTorch - Core deep learning
+        # Hybrid inference modules (ONNX – always-on, no torch dependency)
+        'ai.inference',           # OnnxInferenceSession / run_batch_inference
+        # PyTorch training modules – optional; NOT required for normal app operation.
+        'ai.training_pytorch',    # PyTorchTrainer, export_to_onnx
+        # PyTorch - Core deep learning (optional: EXE works without torch)
         'torch',
         'torch._C',
         'torch.nn',
@@ -351,14 +357,12 @@ a = Analysis(
         'setuptools',
         'distutils',
         
-        # rembg - excluded to prevent build failure:
-        # rembg.bg calls sys.exit(1) when onnxruntime fails to load.
-        # PyInstaller's find_binary_dependencies spawns isolated child subprocesses
-        # to call import_library(package) for every collected package.  In those
-        # subprocesses sys.exit() is NOT patched, so the call is fatal and raises
-        # RuntimeError in the parent, aborting the build.
-        # onnxruntime DLLs are still collected via hook-onnxruntime.py; rembg can be
-        # added back once onnxruntime initialises cleanly in isolated subprocesses.
+        # rembg - kept in excludes as a safety net even though it is now
+        # lazy-imported at call time (tools/background_remover.py,
+        # tools/object_remover.py, ui/background_remover_panel_qt.py).
+        # Excluding it ensures PyInstaller never tries to statically analyse
+        # rembg.bg, which calls sys.exit(1) on onnxruntime DLL failure.
+        # onnxruntime DLLs are still collected via hook-onnxruntime.py.
         'rembg',
         'rembg.bg',
         'rembg.sessions',
