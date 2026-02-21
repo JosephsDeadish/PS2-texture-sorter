@@ -215,13 +215,13 @@ a = Analysis(
         'pynput',
         'pynput.keyboard',
         'pynput.mouse',
-        # Background removal and AI tools
+        # AI inference and model download utilities
         # Note: rembg is excluded from analysis (see excludes list below) because
         # rembg.bg calls sys.exit(1) when onnxruntime fails to load in PyInstaller's
         # isolated binary-dependency analysis subprocesses, killing the build.
         # onnxruntime binaries are still collected by hook-onnxruntime.py.
-        'onnxruntime',  # Required for rembg background removal
-        'pooch',  # Required for rembg model downloads
+        'onnxruntime',  # Required for offline AI model inference (src/ai/offline_model.py)
+        'pooch',  # Required for ML model downloads (used by various AI/ML libraries)
         'requests',
         # PyTorch - Core deep learning
         'torch',
@@ -354,7 +354,6 @@ a = Analysis(
         # added back once onnxruntime initialises cleanly in isolated subprocesses.
         'rembg',
         'rembg.bg',
-        'rembg.session',
         'rembg.sessions',
         'rembg.sessions.base',
         'rembg.sessions.u2net',
