@@ -20,7 +20,7 @@ hiddenimports = [
 # Collect .py source files so TorchScript can call inspect.getsource() at runtime
 try:
     datas = collect_data_files('realesrgan', include_py_files=True)
-except ImportError as _e:
+except (ImportError, Exception) as _e:
     print(f"[realesrgan hook] Could not collect data files: {_e!r} — datas left empty")
     datas = []
 

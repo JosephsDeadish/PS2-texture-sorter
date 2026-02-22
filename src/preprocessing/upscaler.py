@@ -32,13 +32,13 @@ except (ImportError, OSError):
 logger = logging.getLogger(__name__)
 
 # Import model manager for smart model downloads
+# Try direct import first (frozen EXE / src/ on sys.path), then src-prefixed fallback
 try:
-    from src.upscaler.model_manager import AIModelManager, ModelStatus
+    from upscaler.model_manager import AIModelManager, ModelStatus
     model_manager = AIModelManager()
 except (ImportError, OSError):
-    # Fallback if running in different context
     try:
-        from upscaler.model_manager import AIModelManager, ModelStatus
+        from src.upscaler.model_manager import AIModelManager, ModelStatus
         model_manager = AIModelManager()
     except (ImportError, OSError):
         logger.warning("Model manager not available - model downloads disabled")
