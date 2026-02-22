@@ -55,9 +55,9 @@ def get_closet_panel(parent, panda_closet, panda_character=None, panda_preview=N
     if not PYQT6_AVAILABLE:
         raise ImportError("PyQt6 required for closet panel. Install with: pip install PyQt6")
     
-    from ui.closet_display_qt import ClosetDisplayQt
+    from ui.closet_display_qt import ClosetDisplayWidget
     logger.info("Using Qt closet panel")
-    return ClosetDisplayQt(parent)
+    return ClosetDisplayWidget(parent)
 
 
 def get_hotkey_settings_panel(parent, hotkey_manager):

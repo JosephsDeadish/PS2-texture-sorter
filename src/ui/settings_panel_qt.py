@@ -649,11 +649,26 @@ class SettingsPanelQt(QWidget):
         error_type = "general"
         
         try:
+            # Three-tier fallback mirrors ai_models_settings_tab._import_model_manager()
+            # so the AI models tab works in dev, running from repo root, and frozen EXE.
+            _AIModelsSettingsTab = None
             try:
-                from .ai_models_settings_tab import AIModelsSettingsTab
-            except ImportError:
-                from ui.ai_models_settings_tab import AIModelsSettingsTab
-            return AIModelsSettingsTab(self.config)
+                from .ai_models_settings_tab import AIModelsSettingsTab as _AIModelsSettingsTab  # noqa: PLC0415
+            except (ImportError, ValueError):
+                pass
+            if _AIModelsSettingsTab is None:
+                try:
+                    from ui.ai_models_settings_tab import AIModelsSettingsTab as _AIModelsSettingsTab  # noqa: PLC0415
+                except ImportError:
+                    pass
+            if _AIModelsSettingsTab is None:
+                import sys
+                from pathlib import Path
+                _src = str(Path(__file__).resolve().parent.parent)  # .../src/
+                if _src not in sys.path:
+                    sys.path.insert(0, _src)
+                from ui.ai_models_settings_tab import AIModelsSettingsTab as _AIModelsSettingsTab  # noqa: PLC0415
+            return _AIModelsSettingsTab(self.config)
         except ImportError as e:
             # Specific handling for import errors
             error_msg = str(e)
