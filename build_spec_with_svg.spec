@@ -182,6 +182,8 @@ a = Analysis(
         'preprocessing.preprocessing_pipeline',
         'preprocessing.upscaler',
         'preprocessing.filters',
+        'native_ops',
+        'texture_ops',         # Native Rust Lanczos acceleration (built by maturin in CI)
         # Core image processing
         'PIL',
         'PIL.Image',
@@ -292,6 +294,16 @@ a = Analysis(
         'tokenizers',
         'safetensors',
         'regex',
+        # Upscaling models - Real-ESRGAN (bundled when available on build machine)
+        # basicsr/realesrgan are installed in CI; models (.pth) download at runtime
+        # via the AI Model Manager once the user requests Real-ESRGAN upscaling.
+        'basicsr',
+        'basicsr.archs',
+        'basicsr.archs.rrdbnet_arch',
+        'basicsr.utils',
+        'basicsr.utils.download_util',
+        'realesrgan',
+        'realesrgan.utils',
     ],
     hookspath=[
         str(SCRIPT_DIR),  # Use hooks in project root (hook-torch.py, hook-*.py files)
@@ -386,9 +398,10 @@ a = Analysis(
         'onnxscript',
         'torch.onnx._internal.exporter._torchlib.ops',  # Tries to use onnxscript
         
-        # Upscaler modules - download at runtime via AI Model Manager
-        'basicsr',
-        'realesrgan',
+        # Upscaler modules - included when available (installed in CI via pip)
+        # Models (.pth files) download at runtime via the AI Model Manager.
+        # Removing from excludes lets PyInstaller bundle the libraries themselves.
+        # 'basicsr' and 'realesrgan' intentionally NOT excluded here.
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,

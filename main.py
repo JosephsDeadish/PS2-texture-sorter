@@ -4009,11 +4009,15 @@ class TextureSorterMainWindow(QMainWindow):
             except (RuntimeError, TypeError):
                 pass  # Already disconnected or C++ object gone
 
+            # Prefer the widget reference we stored at detach time because
+            # dock.widget() returns None after setWidget(None) is called.
+            widget = self.tab_widgets.get(name)
             try:
-                widget = dock.widget()
+                if widget is None:
+                    widget = dock.widget()
                 dock.setWidget(None)  # Detach widget so Qt doesn't delete it
             except RuntimeError:
-                widget = None  # C++ object already destroyed
+                widget = self.tab_widgets.get(name)  # Last resort from stored ref
 
             try:
                 self.removeDockWidget(dock)
@@ -4021,9 +4025,11 @@ class TextureSorterMainWindow(QMainWindow):
                 pass
 
             del self.docked_widgets[name]
+            # Clean up stored reference too
+            self.tab_widgets.pop(name, None)
 
             # Restore to tabs
-            if widget is not None and widget in self.tab_widgets.values():
+            if widget is not None:
                 tab_name = original_name if original_name else name
                 self.tabs.addTab(widget, tab_name)
                 self.statusbar.showMessage(f"Restored: {name}", 3000)

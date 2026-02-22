@@ -162,7 +162,17 @@ def apply_post_processing(img, settings):
 try:
     from preprocessing.upscaler import TextureUpscaler
     UPSCALER_AVAILABLE = True
-except ImportError as e:
+except ImportError:
+    try:
+        import sys as _sys
+        import os as _os
+        _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), '..'))
+        from preprocessing.upscaler import TextureUpscaler
+        UPSCALER_AVAILABLE = True
+    except Exception as e:
+        logger.warning(f"Upscaler not available: {e}")
+        UPSCALER_AVAILABLE = False
+except Exception as e:
     logger.warning(f"Upscaler not available: {e}")
     UPSCALER_AVAILABLE = False
 
@@ -672,15 +682,22 @@ class ImageUpscalerPanelQt(QWidget):
     
     def _update_method_description(self, method):
         """Update the method description based on selection."""
-        # Import to check availability
+        # Import to check availability — three-tier fallback for frozen EXE
+        REALESRGAN_AVAILABLE = False
+        NATIVE_AVAILABLE = False
         try:
             from preprocessing.upscaler import REALESRGAN_AVAILABLE, NATIVE_AVAILABLE
         except ImportError:
-            REALESRGAN_AVAILABLE = False
-            NATIVE_AVAILABLE = False
+            try:
+                import sys as _sys, os as _os
+                _src = _os.path.join(_os.path.dirname(__file__), '..')
+                if _src not in _sys.path:
+                    _sys.path.insert(0, _src)
+                from preprocessing.upscaler import REALESRGAN_AVAILABLE, NATIVE_AVAILABLE
+            except Exception:
+                pass
         except Exception:
-            REALESRGAN_AVAILABLE = False
-            NATIVE_AVAILABLE = False
+            pass
         
         # Helper function for availability status
         def get_status(available):

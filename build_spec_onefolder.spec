@@ -157,6 +157,7 @@ a = Analysis(
         'organizer',
         'advanced_analyzer',
         'native_ops',
+        'texture_ops',         # Native Rust Lanczos acceleration (built by maturin in CI)
         'startup_validation',
         'qt_platform_setup',   # sets QT_QPA_PLATFORM=offscreen on headless Linux
         # Core image processing
@@ -268,9 +269,16 @@ a = Analysis(
         'tokenizers',
         'safetensors',
         'regex',
-        # Upscaling models - Real-ESRGAN (REMOVED - will download at runtime)
-        # Note: basicsr and realesrgan are now optional runtime dependencies
-        # Models will be downloaded on first use via the AI Model Manager
+        # Upscaling models - Real-ESRGAN (bundled when available on build machine)
+        # basicsr/realesrgan are installed in CI; models (.pth) download at runtime
+        # via the AI Model Manager once the user requests Real-ESRGAN upscaling.
+        'basicsr',
+        'basicsr.archs',
+        'basicsr.archs.rrdbnet_arch',
+        'basicsr.utils',
+        'basicsr.utils.download_util',
+        'realesrgan',
+        'realesrgan.utils',
         # Additional Qt submodules used by the app
         'PyQt6.QtMultimedia',
         'PyQt6.QtPrintSupport',
@@ -334,9 +342,10 @@ a = Analysis(
         'onnxscript',  # Optional scripting extension (covers all onnxscript.* submodules)
         'torch.onnx._internal.exporter._torchlib.ops',  # Tries to use onnxscript
         
-        # Upscaler modules - download at runtime via AI Model Manager
-        'basicsr',
-        'realesrgan',
+        # Upscaler modules - included when available (installed in CI via pip)
+        # Models (.pth files) download at runtime via the AI Model Manager.
+        # Removing from excludes lets PyInstaller bundle the libraries themselves.
+        # 'basicsr' and 'realesrgan' intentionally NOT excluded here.
         
         # Cairo SVG: cairosvg/cairocffi require native Cairo DLL not available on Windows CI
         # SVG support is optional - the application handles missing cairosvg gracefully

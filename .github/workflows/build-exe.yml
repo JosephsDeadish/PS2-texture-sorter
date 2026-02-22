@@ -43,7 +43,7 @@ jobs:
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           # Install optional heavy deps (allow failures - app degrades gracefully)
           pip install timm transformers open-clip-torch || echo "⚠️  Some optional ML deps failed (non-fatal)"
-          pip install basicsr realesrgan || echo "⚠️  basicsr/realesrgan failed (non-fatal, downloaded at runtime)"
+          pip install basicsr realesrgan || echo "⚠️  basicsr/realesrgan failed (non-fatal, Real-ESRGAN upscaling unavailable)"
           # Pre-install optional packages that may fail on Windows CI before the main
           # requirements install.  rembg is excluded from the PyInstaller build anyway.
           pip install "rembg[cpu]>=2.0.50" || echo "⚠️  rembg failed (non-fatal, excluded from PyInstaller build)"
@@ -59,6 +59,27 @@ jobs:
           pip install -r requirements.txt --upgrade-strategy only-if-needed || echo "⚠️  Some requirements failed (non-fatal optional packages)"
           # Ensure PyInstaller is available
           pip install "pyinstaller>=6.0.0"
+
+      - name: Build Native Rust Extension (Lanczos acceleration)
+        run: |
+          echo "Installing maturin for Rust extension build..."
+          pip install maturin
+          echo "Building texture_ops Rust extension..."
+          cd native
+          maturin build --release --out ../dist_wheels 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            echo "✅ Rust extension built successfully"
+            $wheel = Get-ChildItem ../dist_wheels/*.whl | Select-Object -First 1
+            if ($wheel) {
+              pip install $wheel.FullName --force-reinstall
+              echo "✅ texture_ops installed: $($wheel.Name)"
+              python -c "import texture_ops; print('OK native Lanczos available')"
+            }
+          } else {
+            echo "⚠️  Rust extension build failed (non-fatal — PIL Lanczos fallback will be used)"
+          }
+        shell: pwsh
+        continue-on-error: true
       
       - name: Verify Critical Dependencies
         env:
@@ -71,6 +92,9 @@ jobs:
           python -c "import onnxruntime; print('OK onnxruntime available')"
           python -c "import yaml; print('OK PyYAML ' + yaml.__version__ + ' available')"
           python -c "import OpenGL; print('OK PyOpenGL available (3D panda)')" || echo "⚠️  PyOpenGL not available — 2D panda fallback will be used"
+          python -c "import basicsr; print('OK basicsr available (Real-ESRGAN)')" || echo "⚠️  basicsr not available — Real-ESRGAN upscaling disabled"
+          python -c "import realesrgan; print('OK realesrgan available')" || echo "⚠️  realesrgan not available — Real-ESRGAN upscaling disabled"
+          python -c "import texture_ops; print('OK texture_ops available (native Lanczos)')" || echo "⚠️  texture_ops not available — PIL Lanczos fallback will be used"
           echo "All critical dependencies verified"
       
       - name: Run Syntax Validation
