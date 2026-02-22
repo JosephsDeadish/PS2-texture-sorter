@@ -15,7 +15,7 @@ try:
     )
     from PyQt6.QtCore import Qt, QThread, pyqtSignal
     PYQT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     PYQT_AVAILABLE = False
     QWidget = object
     QFrame = object
@@ -68,7 +68,15 @@ except ImportError:
     QVBoxLayout = object
 from typing import List, Optional
 
-from tools.batch_renamer import BatchRenamer, RenamePattern
+try:
+    from tools.batch_renamer import BatchRenamer, RenamePattern
+    _RENAMER_TOOL_AVAILABLE = True
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(f"batch_renamer tool not available: {_e}")
+    BatchRenamer = None  # type: ignore[assignment,misc]
+    RenamePattern = None  # type: ignore[assignment]
+    _RENAMER_TOOL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +148,7 @@ class BatchRenamePanelQt(QWidget):
         super().__init__(parent)
         
         self.tooltip_manager = tooltip_manager
-        self.renamer = BatchRenamer()
+        self.renamer = BatchRenamer() if BatchRenamer is not None else None
         self.selected_files: List[str] = []
         self.preview_data: List = []
         self.worker_thread = None

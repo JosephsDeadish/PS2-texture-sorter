@@ -279,7 +279,7 @@ def _try_import(module_path: str, class_name: str):
         mod = importlib.import_module(module_path)
         return getattr(mod, class_name)
     except Exception as _e:
-        logger.warning(f"Optional UI panel {class_name} not available: {_e}")
+        logger.warning(f"Optional UI panel {class_name} not available: {_e}", exc_info=True)
         return None
 
 BackgroundRemoverPanelQt  = _try_import('ui.background_remover_panel_qt',  'BackgroundRemoverPanelQt')
@@ -830,13 +830,20 @@ class TextureSorterMainWindow(QMainWindow):
         #    does NOT prevent the other tools from loading.
         tool_tab_defs = []  # (panel_instance, label, tool_id) triples
 
-        def _make_error_label(cls_name: str, err: Exception) -> QLabel:
+        def _make_error_label(cls_name: str, err) -> 'QLabel':
             """Create a visible placeholder tab when a panel fails to load."""
-            msg = (
-                f"<b>⚠️ {cls_name} could not be loaded.</b><br><br>"
-                f"<code style='color:#ff6666'>{type(err).__name__}: {err}</code><br><br>"
-                "Check <b>app_data/logs/app.log</b> for details."
-            )
+            if err is None:
+                msg = (
+                    f"<b>⚠️ {cls_name} failed to import.</b><br><br>"
+                    "This panel's module could not be loaded. Check "
+                    "<b>app_data/logs/app.log</b> for the exact error."
+                )
+            else:
+                msg = (
+                    f"<b>⚠️ {cls_name} could not be loaded.</b><br><br>"
+                    f"<code style='color:#ff6666'>{type(err).__name__}: {err}</code><br><br>"
+                    "Check <b>app_data/logs/app.log</b> for details."
+                )
             lbl = QLabel(msg)
             lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
             lbl.setWordWrap(True)
@@ -854,6 +861,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"BackgroundRemoverPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('BackgroundRemoverPanelQt', _e), "🎭 Background Remover", 'bg_remover'))
+        else:
+            tool_tab_defs.append((_make_error_label('BackgroundRemoverPanelQt', None), "🎭 Background Remover", 'bg_remover'))
 
         if AlphaFixerPanelQt is not None:
             try:
@@ -864,6 +873,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"AlphaFixerPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('AlphaFixerPanelQt', _e), "✨ Alpha Fixer", 'alpha_fixer'))
+        else:
+            tool_tab_defs.append((_make_error_label('AlphaFixerPanelQt', None), "✨ Alpha Fixer", 'alpha_fixer'))
 
         if ColorCorrectionPanelQt is not None:
             try:
@@ -874,6 +885,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"ColorCorrectionPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('ColorCorrectionPanelQt', _e), "🎨 Color Correction", 'color'))
+        else:
+            tool_tab_defs.append((_make_error_label('ColorCorrectionPanelQt', None), "🎨 Color Correction", 'color'))
 
         if BatchNormalizerPanelQt is not None:
             try:
@@ -884,6 +897,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"BatchNormalizerPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('BatchNormalizerPanelQt', _e), "⚙️ Batch Normalizer", 'normalizer'))
+        else:
+            tool_tab_defs.append((_make_error_label('BatchNormalizerPanelQt', None), "⚙️ Batch Normalizer", 'normalizer'))
 
         if QualityCheckerPanelQt is not None:
             try:
@@ -894,6 +909,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"QualityCheckerPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('QualityCheckerPanelQt', _e), "✓ Quality Checker", 'quality'))
+        else:
+            tool_tab_defs.append((_make_error_label('QualityCheckerPanelQt', None), "✓ Quality Checker", 'quality'))
 
         if ImageUpscalerPanelQt is not None:
             try:
@@ -906,6 +923,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"ImageUpscalerPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('ImageUpscalerPanelQt', _e), "🔍 Image Upscaler", 'upscaler'))
+        else:
+            tool_tab_defs.append((_make_error_label('ImageUpscalerPanelQt', None), "🔍 Image Upscaler", 'upscaler'))
 
         if LineArtConverterPanelQt is not None:
             try:
@@ -918,6 +937,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"LineArtConverterPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('LineArtConverterPanelQt', _e), "✏️ Line Art", 'lineart'))
+        else:
+            tool_tab_defs.append((_make_error_label('LineArtConverterPanelQt', None), "✏️ Line Art", 'lineart'))
 
         if BatchRenamePanelQt is not None:
             try:
@@ -928,6 +949,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"BatchRenamePanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('BatchRenamePanelQt', _e), "📝 Batch Rename", 'rename'))
+        else:
+            tool_tab_defs.append((_make_error_label('BatchRenamePanelQt', None), "📝 Batch Rename", 'rename'))
 
         if ImageRepairPanelQt is not None:
             try:
@@ -940,6 +963,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"ImageRepairPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('ImageRepairPanelQt', _e), "🔧 Image Repair", 'repair'))
+        else:
+            tool_tab_defs.append((_make_error_label('ImageRepairPanelQt', None), "🔧 Image Repair", 'repair'))
 
         if OrganizerPanelQt is not None:
             try:
@@ -951,6 +976,8 @@ class TextureSorterMainWindow(QMainWindow):
             except Exception as _e:
                 logger.warning(f"OrganizerPanelQt unavailable: {_e}")
                 tool_tab_defs.append((_make_error_label('OrganizerPanelQt', _e), "📁 Organizer", 'organizer'))
+        else:
+            tool_tab_defs.append((_make_error_label('OrganizerPanelQt', None), "📁 Organizer", 'organizer'))
 
         for panel, label, tool_id in tool_tab_defs:
             tool_tabs.addTab(panel, label)

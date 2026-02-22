@@ -18,7 +18,7 @@ try:
     from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
     from PyQt6.QtGui import QPixmap, QImage
     PYQT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     PYQT_AVAILABLE = False
     QWidget = object
     QFrame = object
@@ -86,10 +86,18 @@ except ImportError:
     HAS_PIL = False
 
 
-from tools.lineart_converter import (
-    LineArtConverter, LineArtSettings,
-    ConversionMode, BackgroundMode, MorphologyOperation
-)
+try:
+    from tools.lineart_converter import (
+        LineArtConverter, LineArtSettings,
+        ConversionMode, BackgroundMode, MorphologyOperation
+    )
+    _LINEART_TOOL_AVAILABLE = True
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger(__name__).warning(f"lineart_converter tool not available: {_e}")
+    LineArtConverter = None  # type: ignore[assignment,misc]
+    LineArtSettings = ConversionMode = BackgroundMode = MorphologyOperation = None  # type: ignore[assignment]
+    _LINEART_TOOL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -346,7 +354,7 @@ class LineArtConverterPanelQt(QWidget):
         super().__init__(parent)
         
         self.tooltip_manager = tooltip_manager
-        self.converter = LineArtConverter()
+        self.converter = LineArtConverter() if LineArtConverter is not None else None
         self.selected_file = None
         self.selected_files: List[str] = []
         self.preview_worker = None

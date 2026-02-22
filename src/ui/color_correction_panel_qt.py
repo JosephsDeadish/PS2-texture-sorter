@@ -22,7 +22,7 @@ try:
     from PyQt6.QtCore import Qt, pyqtSignal, QThread
     from PyQt6.QtGui import QPixmap
     PYQT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     PYQT_AVAILABLE = False
     QWidget = object
     QFrame = object
