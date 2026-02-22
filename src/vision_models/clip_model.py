@@ -49,7 +49,7 @@ except ImportError:
 try:
     import open_clip
     OPEN_CLIP_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     OPEN_CLIP_AVAILABLE = False
     logger.debug("open_clip not available. Using transformers CLIP.")
 
