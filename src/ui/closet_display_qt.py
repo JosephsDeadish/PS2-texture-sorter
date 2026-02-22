@@ -9,7 +9,7 @@ try:
     from PyQt6.QtCore import Qt, pyqtSignal
     from PyQt6.QtGui import QPixmap, QPainter, QColor
     PYQT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     PYQT_AVAILABLE = False
     QWidget = object
     QFrame = object

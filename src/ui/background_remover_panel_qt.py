@@ -33,14 +33,14 @@ except (ImportError, OSError, RuntimeError):
 try:
     from PIL import Image
     PIL_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     PIL_AVAILABLE = False
     Image = None
 
 try:
     from utils.archive_handler import ArchiveHandler
     ARCHIVE_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     ARCHIVE_AVAILABLE = False
     logger.warning("Archive handler not available")
 
@@ -48,11 +48,11 @@ except ImportError:
 try:
     from ui.live_preview_slider_qt import ComparisonSliderWidget
     SLIDER_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     try:
         from live_preview_slider_qt import ComparisonSliderWidget
         SLIDER_AVAILABLE = True
-    except ImportError:
+    except (ImportError, OSError):
         SLIDER_AVAILABLE = False
         ComparisonSliderWidget = None
 

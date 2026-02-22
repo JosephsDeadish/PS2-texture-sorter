@@ -12,7 +12,7 @@ try:
     from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve
     from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
     PYQT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     PYQT_AVAILABLE = False
     QWidget = object
     QPropertyAnimation = object

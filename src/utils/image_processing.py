@@ -603,7 +603,7 @@ def compare_images(
                 gray1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
                 gray2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
                 return float(ssim(gray1, gray2))
-            except ImportError:
+            except (ImportError, OSError):
                 logger.warning("scikit-image not available, using MSE instead")
                 return float(np.mean((img1 - img2) ** 2))
         

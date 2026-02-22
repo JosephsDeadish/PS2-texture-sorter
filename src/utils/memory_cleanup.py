@@ -270,7 +270,7 @@ class MemoryManager:
             mem_info = process.memory_info()
             stats['memory_mb'] = mem_info.rss / (1024 * 1024)
             stats['memory_percent'] = process.memory_percent()
-        except ImportError:
+        except (ImportError, OSError):
             pass
         
         return stats

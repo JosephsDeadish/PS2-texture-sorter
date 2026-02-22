@@ -36,7 +36,7 @@ try:
         QPainterPath, QLinearGradient,
     )
     _QT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError):
     _QT_AVAILABLE = False
     QWidget = object  # type: ignore[misc,assignment]
 

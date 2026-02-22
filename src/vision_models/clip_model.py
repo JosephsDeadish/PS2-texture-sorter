@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional, Union, Tuple
 try:
     import numpy as np
     HAS_NUMPY = True
-except ImportError:
+except (ImportError, OSError):
     np = None  # type: ignore[assignment]
     HAS_NUMPY = False
 from pathlib import Path
