@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional, Union, Tuple
 try:
     import numpy as np
     HAS_NUMPY = True
-except ImportError:
+except (ImportError, OSError):
     np = None  # type: ignore[assignment]
     HAS_NUMPY = False
 from pathlib import Path
@@ -42,14 +42,14 @@ except Exception as e:
 try:
     from transformers import CLIPProcessor, CLIPModel as HFCLIPModel
     TRANSFORMERS_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     TRANSFORMERS_AVAILABLE = False
     logger.warning("Transformers not available. CLIP model disabled.")
 
 try:
     import open_clip
     OPEN_CLIP_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     OPEN_CLIP_AVAILABLE = False
     logger.debug("open_clip not available. Using transformers CLIP.")
 

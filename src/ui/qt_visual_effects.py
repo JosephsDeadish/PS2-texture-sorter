@@ -10,7 +10,7 @@ try:
     from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QPolygonF, QPainterPath
     from PyQt6.QtOpenGLWidgets import QOpenGLWidget as GLWidget
     PYQT_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     PYQT_AVAILABLE = False
     QWidget = object
     QOpenGLWidget = object
@@ -69,7 +69,7 @@ try:
     from OpenGL.GL import *
     from OpenGL.GLU import *
     OPENGL_AVAILABLE = True
-except ImportError:
+except (ImportError, OSError, RuntimeError):
     OPENGL_AVAILABLE = False
 
 
