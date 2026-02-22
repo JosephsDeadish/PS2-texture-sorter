@@ -29,7 +29,7 @@ try:
         logger.info("✅ OpenGL panda widget loaded (hardware-accelerated 3D)")
     else:
         raise ImportError("Qt/OpenGL not available")
-except ImportError as _gl_err:
+except (ImportError, OSError, RuntimeError) as _gl_err:
     logger.warning(f"OpenGL panda widget unavailable ({_gl_err}), trying 2D fallback")
 
 # ------------------------------------------------------------------
@@ -43,7 +43,7 @@ if PandaWidget is None:
         PandaWidget = PandaWidget2D
         PANDA_2D_AVAILABLE = True
         logger.info("✅ 2D QPainter panda widget loaded (OpenGL unavailable)")
-    except ImportError as _2d_err:
+    except (ImportError, OSError, RuntimeError) as _2d_err:
         logger.error(
             f"Both OpenGL and 2D panda widgets failed: {_2d_err}\n"
             "   Install PyQt6 and optionally PyOpenGL for 3D rendering:\n"

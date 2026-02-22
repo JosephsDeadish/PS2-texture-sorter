@@ -234,7 +234,7 @@ try:
     from ui.panda_widget_gl import PandaOpenGLWidget
     PANDA_WIDGET_AVAILABLE = True
     logger.info("✅ Panda OpenGL widget module loaded")
-except ImportError as e:
+except (ImportError, OSError, RuntimeError) as e:
     logger.warning(f"Panda widget not available: {e}")
     PandaOpenGLWidget = None
 
@@ -242,7 +242,7 @@ except ImportError as e:
 try:
     from ui.panda_widget_2d import PandaWidget2D
     logger.info("✅ Panda 2D fallback widget loaded")
-except ImportError as e:
+except (ImportError, OSError, RuntimeError) as e:
     PandaWidget2D = None
     logger.warning(f"Panda 2D widget not available: {e}")
 
@@ -253,7 +253,7 @@ def _try_import(module_path: str, class_name: str):
     try:
         mod = importlib.import_module(module_path)
         return getattr(mod, class_name)
-    except (ImportError, ModuleNotFoundError, AttributeError) as _e:
+    except Exception as _e:
         logger.warning(f"Optional UI panel {class_name} not available: {_e}")
         return None
 
@@ -887,6 +887,8 @@ class TextureSorterMainWindow(QMainWindow):
                 repair_panel = ImageRepairPanelQt(tooltip_manager=self.tooltip_manager)
                 repair_panel.error.connect(
                     lambda msg: self.statusBar().showMessage(f"❌ Image Repair: {msg}", 5000))
+                repair_panel.finished.connect(lambda ok, msg: self.statusBar().showMessage(
+                    f"{'✅' if ok else '❌'} Image Repair: {msg}", 4000))
                 tool_tab_defs.append((repair_panel, "🔧 Image Repair", 'repair'))
             except Exception as _e:
                 logger.warning(f"ImageRepairPanelQt unavailable: {_e}")

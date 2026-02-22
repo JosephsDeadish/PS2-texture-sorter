@@ -549,6 +549,8 @@ class ImageRepairPanelQt(QWidget):
         )
         
         self.progress_label.setText("Repair complete")
+        success = failures == 0
+        self.finished.emit(success, f"Repaired {successes} files" + (f" ({failures} failed)" if failures else ""))
     
     def _on_repair_error(self, error_msg):
         """Handle repair error."""
